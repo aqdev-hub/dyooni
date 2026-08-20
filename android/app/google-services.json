@@ -1,0 +1,114 @@
+{
+  "project_info": {
+    "project_number": "296742874642",
+    "project_id": "dyooni-ea39a",
+    "storage_bucket": "dyooni-ea39a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:296742874642:android:d86277cf4330b68f4232cb",
+        "android_client_info": {
+          "package_name": "com.aqdev.dyooni"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "296742874642-kg1d5rts3l8itr4g29tr3k15sbrgrad8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aqdev.dyooni",
+            "certificate_hash": "b54c6128366e66d6c29795ae216f2079e304ec08"
+          }
+        },
+        {
+          "client_id": "296742874642-ut5pud34doih5pup4ekau4kotpfoho0e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aqdev.dyooni",
+            "certificate_hash": "0a252108f8a906eb64820c9db4296bf8666f580c"
+          }
+        },
+        {
+          "client_id": "296742874642-8a31kstkgioili95n1ukntvh1a43i1fr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBr-H3eO7zD1BAzY7OZbUTmLsCJEr1K_hc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "296742874642-8a31kstkgioili95n1ukntvh1a43i1fr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "296742874642-ij01da407iiq7vjfoqing13aqai9a04b.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.aqdev.dyooni.dyooni"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:296742874642:android:ed6832a45c57be1d4232cb",
+        "android_client_info": {
+          "package_name": "com.aqdev.dyooni.dyooni"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "296742874642-155io3cms7s9kipv5pgal0nh3me2enpb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aqdev.dyooni.dyooni",
+            "certificate_hash": "b54c6128366e66d6c29795ae216f2079e304ec08"
+          }
+        },
+        {
+          "client_id": "296742874642-1t2d9d4ofj7a011l8rug9ffkqt29gudp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aqdev.dyooni.dyooni",
+            "certificate_hash": "0a252108f8a906eb64820c9db4296bf8666f580c"
+          }
+        },
+        {
+          "client_id": "296742874642-8a31kstkgioili95n1ukntvh1a43i1fr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBr-H3eO7zD1BAzY7OZbUTmLsCJEr1K_hc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "296742874642-8a31kstkgioili95n1ukntvh1a43i1fr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "296742874642-ij01da407iiq7vjfoqing13aqai9a04b.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.aqdev.dyooni.dyooni"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
