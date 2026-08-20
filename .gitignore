@@ -1,0 +1,17 @@
+.dart_tool/
+.packages
+build/
+*.g.dart
+*.freezed.dart
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Generated localization output — regenerated automatically from lib/core/l10n/*.arb on every
+# `flutter pub get` / build (see l10n.yaml, pubspec.yaml `generate: true`). Never edit by hand.
+lib/core/l10n/generated/
+lib/core/l10n/untranslated.txt
+
+# Release signing — never commit
+*.jks
+*.keystore
+key.properties
