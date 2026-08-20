@@ -1,0 +1,111 @@
+name: dyooni
+description: >
+  تطبيق تسجيل وإدارة الديون بالصوت والنص — Hybrid architecture, Riverpod state management.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management (Step 2 decision: Riverpod)
+  flutter_riverpod: ^2.5.1
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # Local persistence (onboarding "seen" flag now; full DB from Phase 1 onward)
+  shared_preferences: ^2.2.3
+
+  # Cloud backend (confirmed decision): Firebase Auth (email/password + Google/Facebook) +
+  # Firestore for cloud-synced debt records. Pinned exact (not ^) — auth SDKs are security-
+  # sensitive per quality-baseline.md §4, so a version bump here should be a deliberate, reviewed
+  # change.
+  firebase_core: 3.6.0
+  firebase_auth: 5.3.1
+  cloud_firestore: 5.4.4
+
+  # Google Sign-In (used both for Firebase Auth's Google provider AND for requesting Drive scope
+  # in the same consent flow — one sign-in, two purposes, see auth screen design notes)
+  google_sign_in: ^6.2.1
+
+  # Google Drive backup/restore (Section 3.9 — "حفظ واسترجاع / مزامنة البيانات على جوجل درايف")
+  googleapis: ^13.2.0
+  extension_google_sign_in_as_googleapis_auth: ^2.0.12
+
+  # Facebook Sign-In (replaces the earlier Apple option per the current design decision)
+  flutter_facebook_auth: ^7.1.1
+
+  # Logging (avoid_print lint — see patterns.md §5)
+  logger: ^2.4.0
+
+  # Local ID generation for the accounts feature (Phase 1)
+  uuid: ^4.5.1
+
+  # Reports export (this batch): real PDF generation + native print/share sheet, and sharing the
+  # CSV report file. NOTE: deliberately CSV, not a true .xlsx binary — the `excel` package's API
+  # has changed across major versions and I can't verify the exact installed API from this
+  # sandbox (no network); CSV has zero such risk (it's just UTF-8 text) and opens natively in
+  # Excel/Sheets, so it's the safer choice for something that must compile correctly on the first
+  # try. See README "التصدير" for the one dependency here that genuinely needs your confirmation.
+  pdf: ^3.11.1
+  printing: ^5.13.4
+  # Pinned to the 7.x line deliberately — share_plus 9/10 introduced a newer instance-based
+  # `SharePlus.instance.share(ShareParams(...))` API and I can't verify from this sandbox whether
+  # the older static `Share.shareXFiles(...)` still works unchanged on it. 7.x's API has been
+  # stable for a long time, so this is the lower-risk choice for something that must compile
+  # correctly on the first try.
+  share_plus: ^11.0.1
+  path_provider: ^2.1.4
+
+  # Arabic letter shaping for the PDF — the `pdf` package has no text-shaping engine of its own,
+  # so Arabic names/labels would render as disconnected letters without this. This is the one
+  # dependency in this whole project I could NOT verify against a real pub.dev listing from this
+  # sandbox (no network access) — it's a well-known community solution for this exact problem,
+  # but please run `flutter pub get` and tell me immediately if this specific package fails to
+  # resolve; I have a fallback ready (see core/utils/arabic_pdf_text.dart).
+  arabic_reshaper: ^0.0.1
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  mocktail: ^1.0.4
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+  generate: true # enables flutter gen-l10n from core/l10n ARB files, see l10n.yaml
+
+  assets:
+    - assets/images/
+    - assets/icons/
+
+  # Real font files confirmed present — bundled directly, no more google_fonts runtime fetch.
+  fonts:
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Regular.ttf
+        - asset: assets/fonts/Cairo-Bold.ttf
+          weight: 700
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+
+# App launcher icon — generates all platform icon sizes from the real brand logo (confirmed
+# present at assets/icons/app_logo.png). Run: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_logo.png"
+  min_sdk_android: 21
+  background_color_ios: "#0C1A2B"
