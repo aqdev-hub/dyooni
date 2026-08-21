@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
@@ -27,6 +30,8 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
   final _emailController = TextEditingController();
   bool _signatureEnabled = true;
   bool _stampEnabled = true;
+  String? _signaturePath;
+  String? _stampPath;
   bool _initialized = false;
   bool _isSaving = false;
 
@@ -50,6 +55,8 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
     _emailController.text = data.email;
     _signatureEnabled = data.signatureEnabled;
     _stampEnabled = data.stampEnabled;
+    _signaturePath = data.signaturePath;
+    _stampPath = data.stampPath;
   }
 
   Future<void> _save() async {
@@ -64,6 +71,8 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
       email: _emailController.text.trim(),
       signatureEnabled: _signatureEnabled,
       stampEnabled: _stampEnabled,
+      signaturePath: _signaturePath,
+      stampPath: _stampPath,
     );
     try {
       await ref.read(personalDataProvider.notifier).save(data);
@@ -74,6 +83,35 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
       AppSnackBar.showError(context, l10n.unexpectedError);
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  /// Opens the real drawing screen and, if the person actually saved a signature there (as
+  /// opposed to cancelling), stores the returned file path and turns the toggle on.
+  Future<void> _openSignatureCapture() async {
+    final result = await context.push<String>('/signature-capture');
+    if (result != null && mounted) {
+      setState(() {
+        _signaturePath = result;
+        _signatureEnabled = true;
+      });
+    }
+  }
+
+  /// Opens the device's real photo picker (image_picker) so the person can choose an existing
+  /// image as their stamp.
+  Future<void> _pickStampImage() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+      if (picked == null || !mounted) return; // person cancelled the picker
+      setState(() {
+        _stampPath = picked.path;
+        _stampEnabled = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.showError(context, l10n.unexpectedError);
     }
   }
 
@@ -186,18 +224,30 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
                         _ProfileField(label: l10n.phoneLabel, controller: _phoneController, keyboardType: TextInputType.phone),
                         _ProfileField(label: l10n.emailLabel, controller: _emailController, keyboardType: TextInputType.emailAddress),
                         const SizedBox(height: 10),
-                        _ToggleRow(
+                        _MediaToggleRow(
                           label: l10n.personalDataAddSignature,
-                          value: _signatureEnabled,
-                          onChanged: (v) => setState(() => _signatureEnabled = v),
-                          preview: const _SignaturePreview(),
+                          enabled: _signatureEnabled,
+                          onToggle: (v) => setState(() => _signatureEnabled = v),
+                          onTapAction: _openSignatureCapture,
+                          preview: _signaturePath != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.file(File(_signaturePath!), width: 60, height: 36, fit: BoxFit.contain),
+                                )
+                              : const _SignaturePreview(),
                         ),
                         const SizedBox(height: 12),
-                        _ToggleRow(
+                        _MediaToggleRow(
                           label: l10n.personalDataChooseStamp,
-                          value: _stampEnabled,
-                          onChanged: (v) => setState(() => _stampEnabled = v),
-                          preview: const _StampPreview(),
+                          enabled: _stampEnabled,
+                          onToggle: (v) => setState(() => _stampEnabled = v),
+                          onTapAction: _pickStampImage,
+                          preview: _stampPath != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(22),
+                                  child: Image.file(File(_stampPath!), width: 44, height: 44, fit: BoxFit.cover),
+                                )
+                              : const _StampPreview(),
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton(
@@ -307,11 +357,23 @@ class _ProfileField extends StatelessWidget {
   }
 }
 
-class _ToggleRow extends StatelessWidget {
-  const _ToggleRow({required this.label, required this.value, required this.onChanged, required this.preview});
+/// The leading `Switch` independently controls whether the report should use this signature/
+/// stamp; tapping the label OR the preview opens the real capture screen (signature) or the
+/// device's photo picker (stamp) — matching "pressing 'Add signature' opens the signature
+/// screen" / "pressing 'Choose stamp' opens the file picker" exactly as requested.
+class _MediaToggleRow extends StatelessWidget {
+  const _MediaToggleRow({
+    required this.label,
+    required this.enabled,
+    required this.onToggle,
+    required this.onTapAction,
+    required this.preview,
+  });
+
   final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
+  final bool enabled;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onTapAction;
   final Widget preview;
 
   @override
@@ -326,16 +388,23 @@ class _ToggleRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Switch(value: value, onChanged: onChanged, activeThumbColor: shell.accent),
+          Switch(value: enabled, onChanged: onToggle, activeThumbColor: shell.accent),
           Expanded(
-            child: Text(
-              label,
-              textAlign: TextAlign.end,
-              style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w600),
+            child: InkWell(
+              onTap: onTapAction,
+              child: Text(
+                label,
+                textAlign: TextAlign.end,
+                style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
           const SizedBox(width: 10),
-          if (value) preview,
+          InkWell(
+            onTap: onTapAction,
+            borderRadius: BorderRadius.circular(22),
+            child: preview,
+          ),
         ],
       ),
     );
@@ -343,8 +412,8 @@ class _ToggleRow extends StatelessWidget {
 }
 
 /// Dyooni's own placeholder signature — a stylized rendering of the app name in the brand gold,
-/// NOT a real uploaded signature image (no such asset exists yet; the actual upload flow is an
-/// honest "coming soon" placeholder here, same as several other spots in the app already).
+/// shown only until the person actually draws a real one on SignatureCaptureScreen (at which
+/// point their real signature image replaces this in the preview).
 class _SignaturePreview extends StatelessWidget {
   const _SignaturePreview();
 
@@ -363,8 +432,9 @@ class _SignaturePreview extends StatelessWidget {
   }
 }
 
-/// Dyooni's own placeholder stamp — a simple drawn badge, not a real uploaded stamp image (see
-/// the doc comment on _SignaturePreview for why).
+/// Dyooni's own placeholder stamp — a simple drawn badge, shown only until the person actually
+/// picks a real stamp image via the device's photo picker (see the doc comment on
+/// _SignaturePreview for the same pattern applied to the signature).
 class _StampPreview extends StatelessWidget {
   const _StampPreview();
 

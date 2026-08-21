@@ -10,6 +10,7 @@ import '../../view/screens/home/home_screen.dart';
 import '../../view/screens/onboarding/onboarding_screen.dart';
 import '../../view/screens/reports/reports_screen.dart';
 import '../../view/screens/settings/personal_data_screen.dart';
+import '../../view/screens/settings/signature_capture_screen.dart';
 import '../../view/screens/splash/splash_gate.dart';
 import '../../view/screens/transactions/add_transaction_screen.dart';
 
@@ -25,6 +26,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/add-account', builder: (_, __) => const AddAccountScreen()),
       GoRoute(path: '/reports', builder: (_, __) => const ReportsScreen()),
       GoRoute(path: '/personal-data', builder: (_, __) => const PersonalDataScreen()),
+      GoRoute(path: '/signature-capture', builder: (_, __) => const SignatureCaptureScreen()),
       GoRoute(
         path: '/account-details',
         builder: (_, state) => AccountDetailsScreen(account: state.extra! as Account),

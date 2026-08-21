@@ -141,19 +141,23 @@
   "switchToLightMode": "Switch to light mode",
   "switchToDarkMode": "Switch to dark mode",
   "saveAndExit": "Save & exit",
-  "saveAndAddAnother": "Save & add another"
-  ,"voiceRecordingTitle": "Voice recording"
-  ,"voiceRecordingPlaceholder": "Voice recording will be available here soon."
-  ,"personalDataLogoLabel": "Logo"
-  ,"personalDataChangeLogo": "Change logo"
-  ,"personalDataDeleteLogo": "Delete logo"
-  ,"personalDataReportHeaderNote": "Details shown in the report header"
-  ,"nameArLabel": "Name (Arabic)"
-  ,"nameEnLabel": "Name (English)"
-  ,"addressArLabel": "Address (Arabic)"
-  ,"addressEnLabel": "Address (English)"
-  ,"personalDataAddSignature": "Add signature"
-  ,"personalDataChooseStamp": "Choose stamp"
-  ,"personalDataSavedMessage": "Data saved successfully"
-  ,"personalDataFeatureNote": "This info will be used in PDF report headers soon"
+  "saveAndAddAnother": "Save & add another",
+  "voiceRecordingTitle": "Voice recording",
+  "voiceRecordingPlaceholder": "Voice recording will be available here soon.",
+  "personalDataLogoLabel": "Logo",
+  "personalDataChangeLogo": "Change logo",
+  "personalDataDeleteLogo": "Delete logo",
+  "personalDataReportHeaderNote": "Details shown in the report header",
+  "nameArLabel": "Name (Arabic)",
+  "nameEnLabel": "Name (English)",
+  "addressArLabel": "Address (Arabic)",
+  "addressEnLabel": "Address (English)",
+  "personalDataAddSignature": "Add signature",
+  "personalDataChooseStamp": "Choose stamp",
+  "personalDataSavedMessage": "Data saved successfully",
+  "personalDataFeatureNote": "This info will be used in PDF report headers soon",
+  "signatureScreenTitle": "Signature",
+  "signaturePromptLabel": "Please sign here",
+  "signatureRetryLabel": "Retry",
+  "signatureEmptyMessage": "Please draw your signature first"
 }

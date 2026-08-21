@@ -458,4 +458,16 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get personalDataFeatureNote =>
       'سيتم استخدام هذه البيانات في رأس تقارير PDF قريبًا';
+
+  @override
+  String get signatureScreenTitle => 'التوقيع';
+
+  @override
+  String get signaturePromptLabel => 'الرجاء التوقيع هنا';
+
+  @override
+  String get signatureRetryLabel => 'إعادة المحاولة';
+
+  @override
+  String get signatureEmptyMessage => 'الرجاء رسم التوقيع أولًا';
 }

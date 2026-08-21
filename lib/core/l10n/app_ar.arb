@@ -141,19 +141,23 @@
   "switchToLightMode": "التبديل للوضع الفاتح",
   "switchToDarkMode": "التبديل للوضع الداكن",
   "saveAndExit": "حفظ وخروج",
-  "saveAndAddAnother": "حفظ وإضافة عملية جديدة"
-  ,"voiceRecordingTitle": "تسجيل صوتي"
-  ,"voiceRecordingPlaceholder": "ستتوفر ميزة التسجيل الصوتي هنا قريبًا."
-  ,"personalDataLogoLabel": "الشعار"
-  ,"personalDataChangeLogo": "تغيير الشعار"
-  ,"personalDataDeleteLogo": "حذف الشعار"
-  ,"personalDataReportHeaderNote": "البيانات التي تظهر في ترويسة التقارير"
-  ,"nameArLabel": "الإسم (عربي)"
-  ,"nameEnLabel": "الإسم (إنجليزي)"
-  ,"addressArLabel": "العنوان (عربي)"
-  ,"addressEnLabel": "العنوان (إنجليزي)"
-  ,"personalDataAddSignature": "إضافة توقيع"
-  ,"personalDataChooseStamp": "اختيار الختم"
-  ,"personalDataSavedMessage": "تم حفظ البيانات بنجاح"
-  ,"personalDataFeatureNote": "سيتم استخدام هذه البيانات في رأس تقارير PDF قريبًا"
+  "saveAndAddAnother": "حفظ وإضافة عملية جديدة",
+  "voiceRecordingTitle": "تسجيل صوتي",
+  "voiceRecordingPlaceholder": "ستتوفر ميزة التسجيل الصوتي هنا قريبًا.",
+  "personalDataLogoLabel": "الشعار",
+  "personalDataChangeLogo": "تغيير الشعار",
+  "personalDataDeleteLogo": "حذف الشعار",
+  "personalDataReportHeaderNote": "البيانات التي تظهر في ترويسة التقارير",
+  "nameArLabel": "الإسم (عربي)",
+  "nameEnLabel": "الإسم (إنجليزي)",
+  "addressArLabel": "العنوان (عربي)",
+  "addressEnLabel": "العنوان (إنجليزي)",
+  "personalDataAddSignature": "إضافة توقيع",
+  "personalDataChooseStamp": "اختيار الختم",
+  "personalDataSavedMessage": "تم حفظ البيانات بنجاح",
+  "personalDataFeatureNote": "سيتم استخدام هذه البيانات في رأس تقارير PDF قريبًا",
+  "signatureScreenTitle": "التوقيع",
+  "signaturePromptLabel": "الرجاء التوقيع هنا",
+  "signatureRetryLabel": "إعادة المحاولة",
+  "signatureEmptyMessage": "الرجاء رسم التوقيع أولًا"
 }

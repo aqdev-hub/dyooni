@@ -973,6 +973,30 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'سيتم استخدام هذه البيانات في رأس تقارير PDF قريبًا'**
   String get personalDataFeatureNote;
+
+  /// No description provided for @signatureScreenTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'التوقيع'**
+  String get signatureScreenTitle;
+
+  /// No description provided for @signaturePromptLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرجاء التوقيع هنا'**
+  String get signaturePromptLabel;
+
+  /// No description provided for @signatureRetryLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة المحاولة'**
+  String get signatureRetryLabel;
+
+  /// No description provided for @signatureEmptyMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرجاء رسم التوقيع أولًا'**
+  String get signatureEmptyMessage;
 }
 
 class _AppLocalizationsDelegate

@@ -15,6 +15,8 @@ class PersonalData {
     required this.email,
     required this.signatureEnabled,
     required this.stampEnabled,
+    this.signaturePath,
+    this.stampPath,
   });
 
   final String nameAr;
@@ -25,6 +27,13 @@ class PersonalData {
   final String email;
   final bool signatureEnabled;
   final bool stampEnabled;
+
+  /// Local file path to the hand-drawn signature PNG saved by SignatureCaptureScreen, or `null`
+  /// if the person never drew one yet.
+  final String? signaturePath;
+
+  /// Local file path to the stamp image picked via image_picker, or `null` if none was chosen.
+  final String? stampPath;
 
   /// Dyooni's own default report-header identity — shown until the person fills in their own.
   /// Phone is deliberately left blank rather than a fabricated-looking number (a fake real-style
@@ -49,6 +58,8 @@ class PersonalData {
         'email': email,
         'signatureEnabled': signatureEnabled,
         'stampEnabled': stampEnabled,
+        'signaturePath': signaturePath,
+        'stampPath': stampPath,
       };
 
   factory PersonalData.fromJson(Map<String, dynamic> json) => PersonalData(
@@ -60,5 +71,7 @@ class PersonalData {
         email: json['email'] as String? ?? dyooniDefault.email,
         signatureEnabled: json['signatureEnabled'] as bool? ?? true,
         stampEnabled: json['stampEnabled'] as bool? ?? true,
+        signaturePath: json['signaturePath'] as String?,
+        stampPath: json['stampPath'] as String?,
       );
 }

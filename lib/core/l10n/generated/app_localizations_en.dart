@@ -460,4 +460,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get personalDataFeatureNote =>
       'This info will be used in PDF report headers soon';
+
+  @override
+  String get signatureScreenTitle => 'Signature';
+
+  @override
+  String get signaturePromptLabel => 'Please sign here';
+
+  @override
+  String get signatureRetryLabel => 'Retry';
+
+  @override
+  String get signatureEmptyMessage => 'Please draw your signature first';
 }
