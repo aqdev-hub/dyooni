@@ -71,6 +71,14 @@ dependencies:
   # resolve; I have a fallback ready (see core/utils/arabic_pdf_text.dart).
   arabic_reshaper: ^0.0.1
 
+  # Real device photo picking for the stamp image (Personal Data screen, "اختيار الختم") —
+  # Google's official Flutter Favorite plugin. On Android 13+ it uses the system Photo Picker,
+  # which needs NO runtime storage permission at all; on older Android it falls back to a
+  # permission request the plugin handles itself. On iOS it needs
+  # `NSPhotoLibraryUsageDescription` added to ios/Runner/Info.plist — please add that key before
+  # testing on iOS (I don't have that file in this sandbox to add it for you).
+  image_picker: ^1.1.2
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
