@@ -472,4 +472,95 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signatureEmptyMessage => 'Please draw your signature first';
+
+  @override
+  String get voiceStartListening => 'Tap to start recording';
+
+  @override
+  String get voiceListening => 'Listening…';
+
+  @override
+  String get voiceProcessing => 'Understanding your words…';
+
+  @override
+  String get voiceConfirmTitle => 'Confirm details';
+
+  @override
+  String get voiceConfirmQuestion => 'Are these details correct?';
+
+  @override
+  String get voiceConfirm => 'Yes, save';
+
+  @override
+  String get voiceEdit => 'Edit';
+
+  @override
+  String get voiceCancel => 'Cancel';
+
+  @override
+  String get voiceRetry => 'Try again';
+
+  @override
+  String get voiceSaved => 'Entry saved successfully';
+
+  @override
+  String get voiceNeedAccount =>
+      'I could not match an account name. Choose an account or try again.';
+
+  @override
+  String get voiceNeedAmount =>
+      'I could not recognize a valid amount. Say the amount and try again.';
+
+  @override
+  String get voiceTranscriptLabel => 'Heard';
+
+  @override
+  String get voiceBluetoothConnecting => 'Connecting to Bluetooth headset…';
+
+  @override
+  String get voiceBluetoothConnected => 'Bluetooth headset connected';
+
+  @override
+  String get voiceBluetoothWaitingWakeWord => 'Waiting for “Dyooni”';
+
+  @override
+  String get voiceBluetoothWakeWordDetected => '“Dyooni” detected';
+
+  @override
+  String get voiceBluetoothListeningCommand => 'Listening for your command…';
+
+  @override
+  String get voiceBluetoothDisconnected =>
+      'Bluetooth connection was interrupted';
+
+  @override
+  String get voiceBluetoothRetry => 'Retry';
+
+  @override
+  String get voiceNoSpeechPermission =>
+      'Microphone or speech recognition is unavailable.';
+
+  @override
+  String get voiceAudioRecording => 'Original recording';
+
+  @override
+  String get voiceAudioUnavailable =>
+      'The recording file is unavailable on this device';
+
+  @override
+  String get voiceDirectionLabel => 'Type';
+
+  @override
+  String get voiceAccountLabel => 'Account';
+
+  @override
+  String voiceRecordingDuration(int seconds) {
+    return 'Recording: ${seconds}s';
+  }
+
+  @override
+  String get voiceBluetoothMode => 'Bluetooth mode';
+
+  @override
+  String get voiceUseAppLanguage => 'Recognition language: English';
 }

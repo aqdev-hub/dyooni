@@ -1,0 +1,209 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/l10n/generated/app_localizations.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shell_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../data/models/account.dart';
+import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/voice/voice_provider.dart';
+
+class VoiceCommandSheet extends ConsumerWidget {
+  const VoiceCommandSheet({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final shell = context.shellColors;
+    final state = ref.watch(voiceProvider);
+    final controller = ref.read(voiceProvider.notifier);
+    final isActive = state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand;
+    final isBusy = state.status == VoiceStatus.preparing || state.status == VoiceStatus.processing || state.status == VoiceStatus.saving;
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                IconButton(onPressed: () { controller.cancel(); Navigator.of(context).pop(); }, icon: Icon(Icons.close_rounded, color: shell.textSecondary)),
+                Expanded(child: Text(l10n.voiceRecordingTitle, textAlign: TextAlign.center, style: AppTextStyles.title(context).copyWith(color: shell.textPrimary))),
+                const SizedBox(width: 48),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _StatusText(state: state),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: isActive ? controller.stopAndAnalyze : (isBusy ? null : controller.startShortPress),
+              onLongPress: isBusy ? null : controller.startBluetoothMode,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 122,
+                height: 122,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: shell.headerBottom,
+                  border: Border.all(color: isActive ? shell.accent : shell.border, width: isActive ? 4 : 2),
+                  boxShadow: [BoxShadow(color: shell.accent.withValues(alpha: isActive ? .28 : .12), blurRadius: 18, spreadRadius: 4)],
+                ),
+                child: Icon(isActive ? Icons.stop_rounded : Icons.mic_rounded, size: 54, color: shell.accent),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(isActive ? l10n.voiceListening : l10n.voiceStartListening, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(l10n.voiceUseAppLanguage, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary), textAlign: TextAlign.center),
+            if (state.transcript.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _TranscriptCard(text: state.transcript),
+            ],
+            if (state.status == VoiceStatus.needsClarification) ...[
+              const SizedBox(height: 14),
+              _Clarification(state: state),
+              if (state.errorCode == 'account') _AccountChoices(onSelected: controller.selectAccount),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(onPressed: controller.retry, icon: const Icon(Icons.refresh_rounded), label: Text(l10n.voiceRetry)),
+            ],
+            if (state.status == VoiceStatus.awaitingConfirmation) ...[
+              const SizedBox(height: 14),
+              _ConfirmationCard(state: state),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                Expanded(child: OutlinedButton(onPressed: controller.retry, child: Text(l10n.voiceEdit))),
+                const SizedBox(width: 10),
+                Expanded(child: FilledButton(onPressed: controller.confirm, child: Text(l10n.voiceConfirm))),
+                ],
+              ),
+            ],
+            if (state.status == VoiceStatus.success) ...[
+              const SizedBox(height: 14),
+              const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 42),
+              const SizedBox(height: 6),
+              Text(l10n.voiceSaved, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary)),
+            ],
+            if (state.status == VoiceStatus.error || state.status == VoiceStatus.bluetoothDisconnected) ...[
+              const SizedBox(height: 14),
+              Text(state.status == VoiceStatus.bluetoothDisconnected ? l10n.voiceBluetoothDisconnected : l10n.voiceNoSpeechPermission, textAlign: TextAlign.center, style: AppTextStyles.bodySecondary(context).copyWith(color: AppColors.error)),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(onPressed: controller.retry, icon: const Icon(Icons.refresh_rounded), label: Text(l10n.voiceBluetoothRetry)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusText extends StatelessWidget {
+  const _StatusText({required this.state});
+  final VoiceState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final shell = context.shellColors;
+    final text = switch (state.status) {
+      VoiceStatus.preparing => l10n.voiceProcessing,
+      VoiceStatus.listening => l10n.voiceListening,
+      VoiceStatus.processing => l10n.voiceProcessing,
+      VoiceStatus.bluetoothConnecting => l10n.voiceBluetoothConnecting,
+      VoiceStatus.bluetoothConnected => l10n.voiceBluetoothConnected,
+      VoiceStatus.bluetoothWaitingWakeWord => l10n.voiceBluetoothWaitingWakeWord,
+      VoiceStatus.bluetoothWakeWordDetected => l10n.voiceBluetoothWakeWordDetected,
+      VoiceStatus.bluetoothListeningCommand => l10n.voiceBluetoothListeningCommand,
+      _ => l10n.voiceRecordingPlaceholder,
+    };
+    return Text(text, textAlign: TextAlign.center, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary));
+  }
+}
+
+class _TranscriptCard extends StatelessWidget {
+  const _TranscriptCard({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final shell = context.shellColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: shell.background, border: Border.all(color: shell.border), borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(l10n.voiceTranscriptLabel, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
+        const SizedBox(height: 4),
+        Text(text, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary)),
+      ],),
+    );
+  }
+}
+
+class _Clarification extends StatelessWidget {
+  const _Clarification({required this.state});
+  final VoiceState state;
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Text(state.errorCode == 'amount' ? l10n.voiceNeedAmount : l10n.voiceNeedAccount, textAlign: TextAlign.center, style: AppTextStyles.bodySecondary(context).copyWith(color: AppColors.error));
+  }
+}
+
+class _AccountChoices extends ConsumerWidget {
+  const _AccountChoices({required this.onSelected});
+  final ValueChanged<Account> onSelected;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
+    if (accounts.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Wrap(spacing: 6, runSpacing: 4, children: [for (final account in accounts) ActionChip(label: Text(account.name), onPressed: () => onSelected(account))]),
+    );
+  }
+}
+
+class _ConfirmationCard extends StatelessWidget {
+  const _ConfirmationCard({required this.state});
+  final VoiceState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final shell = context.shellColors;
+    final draft = state.draft!;
+    final direction = draft.direction == AccountDirection.credit ? l10n.directionCredit : l10n.directionDebit;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: shell.background, border: Border.all(color: shell.border), borderRadius: BorderRadius.circular(12)),
+      child: Column(children: [
+        Text(l10n.voiceConfirmTitle, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        _Line(l10n.voiceAccountLabel, state.account!.name),
+        _Line(l10n.amountLabel, '${draft.amount!.toStringAsFixed(0)} ${draft.currency}'),
+        _Line(l10n.voiceDirectionLabel, direction),
+        _Line(l10n.dateLabel, '${draft.date.year}-${draft.date.month.toString().padLeft(2, '0')}-${draft.date.day.toString().padLeft(2, '0')}'),
+        if (draft.details != null) _Line(l10n.detailsLabel, draft.details!),
+        const SizedBox(height: 6),
+        Text(l10n.voiceConfirmQuestion, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
+      ],),
+    );
+  }
+}
+
+class _Line extends StatelessWidget {
+  const _Line(this.label, this.value);
+  final String label;
+  final String value;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(children: [Text('$label: ', style: AppTextStyles.bodySecondary(context)), Expanded(child: Text(value, textAlign: TextAlign.end, style: AppTextStyles.bodySecondary(context).copyWith(fontWeight: FontWeight.w700)))]),
+      );
+}

@@ -470,4 +470,93 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get signatureEmptyMessage => 'الرجاء رسم التوقيع أولًا';
+
+  @override
+  String get voiceStartListening => 'اضغط لبدء التسجيل';
+
+  @override
+  String get voiceListening => 'جاري الاستماع…';
+
+  @override
+  String get voiceProcessing => 'جاري فهم كلامك…';
+
+  @override
+  String get voiceConfirmTitle => 'تأكيد البيانات';
+
+  @override
+  String get voiceConfirmQuestion => 'هل هذه البيانات صحيحة؟';
+
+  @override
+  String get voiceConfirm => 'نعم، احفظ';
+
+  @override
+  String get voiceEdit => 'تعديل';
+
+  @override
+  String get voiceCancel => 'إلغاء';
+
+  @override
+  String get voiceRetry => 'إعادة المحاولة';
+
+  @override
+  String get voiceSaved => 'تم حفظ العملية بنجاح';
+
+  @override
+  String get voiceNeedAccount =>
+      'لم أتعرف على اسم حساب مطابق. اختر حسابًا أو أعد المحاولة.';
+
+  @override
+  String get voiceNeedAmount =>
+      'لم أتعرف على مبلغ صحيح. قل المبلغ ثم أعد المحاولة.';
+
+  @override
+  String get voiceTranscriptLabel => 'ما تم سماعه';
+
+  @override
+  String get voiceBluetoothConnecting => 'جاري الاتصال بسماعة البلوتوث…';
+
+  @override
+  String get voiceBluetoothConnected => 'تم الاتصال بسماعة البلوتوث';
+
+  @override
+  String get voiceBluetoothWaitingWakeWord => 'في انتظار كلمة «ديوني»';
+
+  @override
+  String get voiceBluetoothWakeWordDetected => 'تم اكتشاف كلمة «ديوني»';
+
+  @override
+  String get voiceBluetoothListeningCommand => 'الاستماع للأمر…';
+
+  @override
+  String get voiceBluetoothDisconnected => 'انقطع اتصال البلوتوث';
+
+  @override
+  String get voiceBluetoothRetry => 'إعادة المحاولة';
+
+  @override
+  String get voiceNoSpeechPermission =>
+      'تعذر الوصول إلى الميكروفون أو التعرف على الكلام.';
+
+  @override
+  String get voiceAudioRecording => 'التسجيل الأصلي';
+
+  @override
+  String get voiceAudioUnavailable => 'ملف التسجيل غير متوفر على هذا الجهاز';
+
+  @override
+  String get voiceDirectionLabel => 'النوع';
+
+  @override
+  String get voiceAccountLabel => 'الحساب';
+
+  @override
+  String voiceRecordingDuration(int seconds) {
+    return 'مدة التسجيل: $seconds ث';
+  }
+
+  @override
+  String get voiceBluetoothMode => 'وضع البلوتوث';
+
+  @override
+  String get voiceUseAppLanguage => 'لغة التعرف: العربية';
 }

@@ -6,6 +6,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/transaction.dart';
+import '../voice/voice_recording_player.dart';
 
 class TransactionTable extends StatelessWidget {
   const TransactionTable({required this.transactions, super.key});
@@ -78,12 +79,32 @@ class _DataRow extends StatelessWidget {
         children: [
           _TextCell(date, color: shell.textSecondary, fontSize: 10),
           _TintedCell(transaction.amount.toStringAsFixed(0), background: amountCell, foreground: amountColor),
-          _TextCell(transaction.details ?? '—', color: shell.textPrimary),
+          _DetailsCell(transaction: transaction, color: shell.textPrimary),
           _TintedCell(runningBalance.abs().toStringAsFixed(0), background: balanceCell, foreground: balanceColor),
         ],
       ),
     );
   }
+}
+
+class _DetailsCell extends StatelessWidget {
+  const _DetailsCell({required this.transaction, required this.color});
+  final Transaction transaction;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+            Flexible(child: Text(transaction.details ?? '—', textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: AppTextStyles.bodySecondary(context).copyWith(color: color))),
+            if (transaction.voiceRecording != null) VoiceRecordingPlayer(recording: transaction.voiceRecording!),
+            ],
+          ),
+        ),
+      );
 }
 
 class _TextCell extends StatelessWidget {

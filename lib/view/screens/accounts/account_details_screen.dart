@@ -1,17 +1,30 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
+import '../../../data/models/personal_data.dart';
+import '../../../data/models/report_options.dart';
+import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/reports/pdf_report_service.dart';
+import '../../../logic/reports/report_export_provider.dart';
+import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/accounts/account_action_icon_row.dart';
 import '../../widgets/accounts/transaction_table.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
+import '../../widgets/reports/report_options_sheet.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../transactions/add_transaction_screen.dart';
 
@@ -45,6 +58,155 @@ class AccountDetailsScreen extends ConsumerWidget {
       if (!context.mounted) return;
       AppSnackBar.showError(context, l10n.unexpectedError);
     }
+  }
+
+  /// Chronological ledger with running balance — same logic as TransactionTable's, on purpose,
+  /// so the PDF/Excel export and the on-screen table never disagree. Optionally filtered by
+  /// [range] and re-ordered by [sort] before returning.
+  List<StatementRow> _buildStatementRows(List<Transaction> transactions, DateTimeRange? range, ReportSortOption? sort) {
+    var filtered = transactions;
+    if (range != null) {
+      filtered = filtered.where((t) => !t.date.isBefore(range.start) && !t.date.isAfter(range.end)).toList();
+    }
+    final chronological = [...filtered]..sort((a, b) => a.date.compareTo(b.date));
+    var runningBalance = 0.0;
+    final rows = <StatementRow>[];
+    for (final t in chronological) {
+      runningBalance += t.direction == AccountDirection.credit ? t.amount : -t.amount;
+      rows.add(StatementRow(transaction: t, runningBalance: runningBalance));
+    }
+    return switch (sort) {
+      ReportSortOption.dateDesc => rows.reversed.toList(),
+      ReportSortOption.balanceAsc => [...rows]..sort((a, b) => a.runningBalance.compareTo(b.runningBalance)),
+      ReportSortOption.balanceDesc => [...rows]..sort((a, b) => b.runningBalance.compareTo(a.runningBalance)),
+      // dateAsc is already the default order; name sort is a no-op for a single account.
+      _ => rows,
+    };
+  }
+
+  Future<Uint8List> _generateStatementPdf(WidgetRef ref, AppLocalizations l10n, List<StatementRow> rows) {
+    final personalData = ref.read(personalDataProvider).value ?? PersonalData.dyooniDefault;
+    return ref.read(pdfReportServiceProvider).buildAccountStatement(
+          personalData: personalData,
+          appName: l10n.appName,
+          reportTitle: '${l10n.reportTypeStatement} - ${account.name}',
+          dateHeader: l10n.dateLabel,
+          detailsHeader: l10n.detailsLabel,
+          debitHeader: l10n.directionDebit,
+          creditHeader: l10n.directionCredit,
+          balanceHeader: l10n.reportBalanceHeader,
+          totalRowLabel: l10n.homeTotalBalance,
+          rows: rows,
+        );
+  }
+
+  Uint8List _generateStatementCsv(WidgetRef ref, AppLocalizations l10n, List<StatementRow> rows) {
+    return ref.read(csvReportServiceProvider).buildAccountStatement(
+          dateHeader: l10n.dateLabel,
+          detailsHeader: l10n.detailsLabel,
+          debitHeader: l10n.directionDebit,
+          creditHeader: l10n.directionCredit,
+          balanceHeader: l10n.reportBalanceHeader,
+          totalRowLabel: l10n.homeTotalBalance,
+          rows: rows,
+        );
+  }
+
+  Future<void> _handleGeneratePdf(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    List<Transaction> transactions,
+    AccountReportType type,
+    ReportSortOption? sort,
+    DateTimeRange? range,
+  ) async {
+    if (type != AccountReportType.statement) {
+      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
+      return;
+    }
+    try {
+      final rows = _buildStatementRows(transactions, range, sort);
+      final bytes = await _generateStatementPdf(ref, l10n, rows);
+      await Printing.layoutPdf(onLayout: (_) async => bytes, name: '${account.name}.pdf');
+    } catch (_) {
+      if (context.mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
+    }
+  }
+
+  Future<void> _handleGenerateExcel(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    List<Transaction> transactions,
+    AccountReportType type,
+    ReportSortOption? sort,
+    DateTimeRange? range,
+  ) async {
+    if (type != AccountReportType.statement) {
+      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
+      return;
+    }
+    try {
+      final rows = _buildStatementRows(transactions, range, sort);
+      final bytes = _generateStatementCsv(ref, l10n, rows);
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/${account.name}.csv');
+      await file.writeAsBytes(bytes);
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+    } catch (_) {
+      if (context.mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
+    }
+  }
+
+  Future<void> _handleShareViaWhatsapp(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    List<Transaction> transactions,
+    AccountReportType type,
+    ReportSortOption? sort,
+    DateTimeRange? range,
+    ReportShareFormat format,
+  ) async {
+    if (type != AccountReportType.statement) {
+      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
+      return;
+    }
+    try {
+      final rows = _buildStatementRows(transactions, range, sort);
+      if (format == ReportShareFormat.pdf) {
+        final bytes = await _generateStatementPdf(ref, l10n, rows);
+        await Printing.sharePdf(bytes: bytes, filename: '${account.name}.pdf');
+      } else {
+        final bytes = _generateStatementCsv(ref, l10n, rows);
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/${account.name}.csv');
+        await file.writeAsBytes(bytes);
+        await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+      }
+    } catch (_) {
+      if (context.mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
+    }
+  }
+
+  Future<void> _openReportsSheet(BuildContext context, WidgetRef ref, AppLocalizations l10n, List<Transaction> transactions) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ReportOptionsSheet<AccountReportType>(
+        initialType: AccountReportType.statement,
+        options: [
+          (AccountReportType.statement, l10n.reportTypeStatement),
+          (AccountReportType.monthlyStatement, l10n.reportTypeMonthlyStatement),
+        ],
+        onGeneratePdf: (type, sort, range) => _handleGeneratePdf(context, ref, l10n, transactions, type, sort, range),
+        onGenerateExcel: (type, sort, range) => _handleGenerateExcel(context, ref, l10n, transactions, type, sort, range),
+        onShareViaWhatsapp: (type, sort, range, format) =>
+            _handleShareViaWhatsapp(context, ref, l10n, transactions, type, sort, range, format),
+      ),
+    );
   }
 
   @override
@@ -95,7 +257,11 @@ class AccountDetailsScreen extends ConsumerWidget {
                       PopupMenuItem(value: 'delete', child: Text(l10n.delete)),
                     ],
                   ),
-                  IconButton(icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27), onPressed: () => AppSnackBar.showError(context, l10n.comingSoonMessage)),
+                  IconButton(
+                    icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27),
+                    tooltip: l10n.reportsSheetTitle,
+                    onPressed: () => _openReportsSheet(context, ref, l10n, transactions),
+                  ),
                   IconButton(icon: const Icon(Icons.search_rounded, color: Colors.white, size: 20), onPressed: () => AppSnackBar.showError(context, l10n.comingSoonMessage)),
                   const Spacer(),
                   Text(account.name, style: AppTextStyles.title(context).copyWith(color: Colors.white), overflow: TextOverflow.ellipsis),

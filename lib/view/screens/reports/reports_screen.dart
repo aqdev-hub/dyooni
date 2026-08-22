@@ -12,11 +12,15 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
+import '../../../data/models/personal_data.dart';
+import '../../../data/models/report_options.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/reports/pdf_report_service.dart';
 import '../../../logic/reports/report_export_provider.dart';
+import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/home/summary_card.dart';
+import '../../widgets/reports/report_options_sheet.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
@@ -32,39 +36,94 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   AccountCategory? _categoryFilter;
   bool _isExporting = false;
 
-  List<ReportRow> _buildRows(List<Account> accounts) {
-    return [
-      for (final account in accounts)
-        ReportRow(
-          account: account,
-          balance: ref.read(accountBalanceProvider(account.id)),
-          transactionCount: ref.read(accountTransactionCountProvider(account.id)),
-        ),
-    ];
+  String _categoryLabel(AppLocalizations l10n) => switch (_categoryFilter) {
+        null => l10n.homeTabGeneral,
+        AccountCategory.client => l10n.homeTabClients,
+        AccountCategory.supplier => l10n.homeTabSuppliers,
+      };
+
+  List<ReportRow> _buildSummaryRows(List<Account> accounts, DateTimeRange? range, ReportSortOption? sort) {
+    final allTx = ref.read(transactionsProvider).value ?? const [];
+    final rows = <ReportRow>[];
+    for (final account in accounts) {
+      var accountTx = allTx.where((t) => t.accountId == account.id).toList();
+      if (range != null) {
+        accountTx = accountTx.where((t) => !t.date.isBefore(range.start) && !t.date.isAfter(range.end)).toList();
+      }
+      var balance = 0.0;
+      DateTime? lastDate;
+      for (final t in accountTx) {
+        balance += t.direction == AccountDirection.credit ? t.amount : -t.amount;
+        if (lastDate == null || t.date.isAfter(lastDate)) lastDate = t.date;
+      }
+      rows.add(ReportRow(account: account, balance: balance, transactionCount: accountTx.length, lastActivityDate: lastDate));
+    }
+    if (sort != null) {
+      switch (sort) {
+        case ReportSortOption.dateAsc:
+          rows.sort((a, b) => (a.lastActivityDate ?? DateTime(1970)).compareTo(b.lastActivityDate ?? DateTime(1970)));
+        case ReportSortOption.dateDesc:
+          rows.sort((a, b) => (b.lastActivityDate ?? DateTime(1970)).compareTo(a.lastActivityDate ?? DateTime(1970)));
+        case ReportSortOption.balanceAsc:
+          rows.sort((a, b) => a.balance.compareTo(b.balance));
+        case ReportSortOption.balanceDesc:
+          rows.sort((a, b) => b.balance.compareTo(a.balance));
+        case ReportSortOption.nameAsc:
+          rows.sort((a, b) => a.account.name.compareTo(b.account.name));
+        case ReportSortOption.nameDesc:
+          rows.sort((a, b) => b.account.name.compareTo(a.account.name));
+      }
+    }
+    return rows;
   }
 
-  Future<Uint8List> _generatePdf(AppLocalizations l10n, List<ReportRow> rows, double credit, double debit) {
-    return ref.read(pdfReportServiceProvider).build(
+  Future<Uint8List> _generateSummaryPdf(AppLocalizations l10n, List<ReportRow> rows) {
+    final personalData = ref.read(personalDataProvider).value ?? PersonalData.dyooniDefault;
+    return ref.read(pdfReportServiceProvider).buildSummaryTotals(
+          personalData: personalData,
           appName: l10n.appName,
-          reportTitle: l10n.reportsTitle,
-          generatedOnLabel: l10n.reportGeneratedOn,
-          generalSummaryLabel: l10n.reportsGeneralSummary,
-          totalCreditLabel: l10n.homeTotalCredit,
-          totalDebitLabel: l10n.homeTotalDebit,
-          netLabel: l10n.homeTotalBalance,
-          accountNameHeader: l10n.accountNameLabel,
+          reportTitle: '${l10n.reportTypeTotalAmounts} - ${_categoryLabel(l10n)}',
+          dateHeader: l10n.dateLabel,
+          directionHeader: l10n.reportStatusHeader,
           balanceHeader: l10n.reportBalanceHeader,
-          entriesHeader: l10n.reportEntriesHeader,
-          totalCredit: credit,
-          totalDebit: debit,
+          accountNameHeader: l10n.accountNameLabel,
+          creditLabel: l10n.directionCredit,
+          debitLabel: l10n.directionDebit,
+          totalRowLabel: l10n.homeTotalBalance,
           rows: rows,
         );
   }
 
-  Future<void> _exportPdf(AppLocalizations l10n, List<ReportRow> rows, double credit, double debit) async {
+  Uint8List _generateSummaryCsv(AppLocalizations l10n, List<ReportRow> rows) {
+    return ref.read(csvReportServiceProvider).build(
+          accountNameHeader: l10n.accountNameLabel,
+          categoryHeader: l10n.categoryLabel,
+          balanceHeader: l10n.reportBalanceHeader,
+          directionHeader: l10n.reportStatusHeader,
+          entriesHeader: l10n.reportEntriesHeader,
+          creditLabel: l10n.directionCredit,
+          debitLabel: l10n.directionDebit,
+          clientLabel: l10n.categoryClient,
+          supplierLabel: l10n.categorySupplier,
+          rows: rows,
+        );
+  }
+
+  List<Account> _filteredAccounts() {
+    final accounts = ref.read(accountsProvider).value ?? const [];
+    return _categoryFilter == null ? accounts : accounts.where((a) => a.category == _categoryFilter).toList();
+  }
+
+  Future<void> _handleGeneratePdf(SummaryReportType type, ReportSortOption? sort, DateTimeRange? range) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (type != SummaryReportType.totalAmounts) {
+      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
+      return;
+    }
     setState(() => _isExporting = true);
     try {
-      final bytes = await _generatePdf(l10n, rows, credit, debit);
+      final rows = _buildSummaryRows(_filteredAccounts(), range, sort);
+      final bytes = await _generateSummaryPdf(l10n, rows);
       await Printing.layoutPdf(onLayout: (_) async => bytes, name: '${l10n.reportsTitle}.pdf');
     } catch (_) {
       if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
@@ -73,35 +132,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     }
   }
 
-  Future<void> _shareViaWhatsapp(AppLocalizations l10n, List<ReportRow> rows, double credit, double debit) async {
-    setState(() => _isExporting = true);
-    try {
-      final bytes = await _generatePdf(l10n, rows, credit, debit);
-      // Opens the OS's general share sheet (WhatsApp is one option there if installed) — there is
-      // no stable cross-platform API to hand a file directly and exclusively to WhatsApp.
-      await Printing.sharePdf(bytes: bytes, filename: '${l10n.reportsTitle}.pdf');
-    } catch (_) {
-      if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
-    } finally {
-      if (mounted) setState(() => _isExporting = false);
+  Future<void> _handleGenerateExcel(SummaryReportType type, ReportSortOption? sort, DateTimeRange? range) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (type != SummaryReportType.totalAmounts) {
+      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
+      return;
     }
-  }
-
-  Future<void> _exportCsv(AppLocalizations l10n, List<ReportRow> rows) async {
     setState(() => _isExporting = true);
     try {
-      final bytes = ref.read(csvReportServiceProvider).build(
-            accountNameHeader: l10n.accountNameLabel,
-            categoryHeader: l10n.categoryLabel,
-            balanceHeader: l10n.reportBalanceHeader,
-            directionHeader: l10n.reportStatusHeader,
-            entriesHeader: l10n.reportEntriesHeader,
-            creditLabel: l10n.directionCredit,
-            debitLabel: l10n.directionDebit,
-            clientLabel: l10n.categoryClient,
-            supplierLabel: l10n.categorySupplier,
-            rows: rows,
-          );
+      final rows = _buildSummaryRows(_filteredAccounts(), range, sort);
+      final bytes = _generateSummaryCsv(l10n, rows);
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/${l10n.reportsTitle}.csv');
       await file.writeAsBytes(bytes);
@@ -113,6 +153,61 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     }
   }
 
+  Future<void> _handleShareViaWhatsapp(
+    SummaryReportType type,
+    ReportSortOption? sort,
+    DateTimeRange? range,
+    ReportShareFormat format,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (type != SummaryReportType.totalAmounts) {
+      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
+      return;
+    }
+    setState(() => _isExporting = true);
+    try {
+      final rows = _buildSummaryRows(_filteredAccounts(), range, sort);
+      if (format == ReportShareFormat.pdf) {
+        final bytes = await _generateSummaryPdf(l10n, rows);
+        // Opens the OS's general share sheet (WhatsApp is one option there if installed) — there
+        // is no stable cross-platform API to hand a file directly and exclusively to WhatsApp.
+        await Printing.sharePdf(bytes: bytes, filename: '${l10n.reportsTitle}.pdf');
+      } else {
+        final bytes = _generateSummaryCsv(l10n, rows);
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/${l10n.reportsTitle}.csv');
+        await file.writeAsBytes(bytes);
+        await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+      }
+    } catch (_) {
+      if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  Future<void> _openReportsSheet() async {
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ReportOptionsSheet<SummaryReportType>(
+        initialType: SummaryReportType.totalAmounts,
+        options: [
+          (SummaryReportType.totalAmounts, l10n.reportTypeTotalAmounts),
+          (SummaryReportType.allAmountsDetails, l10n.reportTypeAllAmountsDetails),
+          (SummaryReportType.monthlyTotals, l10n.reportTypeMonthlyTotals),
+          (SummaryReportType.categoryAndCurrencyTotals, l10n.reportTypeCategoryAndCurrencyTotals),
+          (SummaryReportType.monthlyDetailsForCurrentCategory, l10n.reportTypeMonthlyDetailsCurrentCategory),
+        ],
+        onGeneratePdf: _handleGeneratePdf,
+        onGenerateExcel: _handleGenerateExcel,
+        onShareViaWhatsapp: _handleShareViaWhatsapp,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -122,7 +217,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final filtered = _categoryFilter == null
         ? accounts
         : accounts.where((a) => a.category == _categoryFilter).toList();
-    final rows = _buildRows(filtered);
 
     return Scaffold(
       backgroundColor: shell.background,
@@ -139,34 +233,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               children: [
                 SummaryCard(summary: overallSummary, title: l10n.reportsGeneralSummary),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _isExporting
-                            ? null
-                            : () => _exportPdf(l10n, rows, overallSummary.totalCredit, overallSummary.totalDebit),
-                        icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                        label: Text(l10n.reportsExportPdf),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _isExporting ? null : () => _exportCsv(l10n, rows),
-                        icon: const Icon(Icons.table_chart_outlined, size: 18),
-                        label: Text(l10n.reportsExportExcel),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _isExporting
-                      ? null
-                      : () => _shareViaWhatsapp(l10n, rows, overallSummary.totalCredit, overallSummary.totalDebit),
-                  icon: const Icon(Icons.chat_outlined, size: 18),
-                  label: Text(l10n.reportsShareWhatsapp),
+                ElevatedButton.icon(
+                  onPressed: _isExporting ? null : _openReportsSheet,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: shell.accent,
+                    foregroundColor: shell.headerBottom,
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.description_outlined),
+                  label: Text(l10n.reportsSheetTitle, style: AppTextStyles.button(context).copyWith(fontWeight: FontWeight.w800)),
                 ),
                 const SizedBox(height: 20),
                 Text(l10n.reportsAccountsBreakdown, style: AppTextStyles.title(context).copyWith(fontSize: 15, color: shell.textPrimary)),

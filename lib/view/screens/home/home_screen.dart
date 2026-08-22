@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,10 +8,12 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/voice/voice_provider.dart';
 import '../../widgets/home/account_list_tile.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
 import '../../widgets/shared/app_snackbar.dart';
+import '../../widgets/voice/voice_command_sheet.dart';
 import '../accounts/add_account_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -38,32 +42,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
 
-  Future<void> _openVoiceSheet() async {
+  Future<void> _openVoiceSheet({required bool bluetoothMode}) async {
     setState(() => _voiceSheetOpen = true);
+    final controller = ref.read(voiceProvider.notifier);
+    if (bluetoothMode) {
+      unawaited(controller.startBluetoothMode());
+    } else {
+      unawaited(controller.startShortPress());
+    }
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: context.shellColors.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 22, 24, 34),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.mic_none_rounded, size: 42, color: sheetContext.shellColors.accent),
-            const SizedBox(height: 12),
-            Text(
-              AppLocalizations.of(sheetContext)!.voiceRecordingTitle,
-              style: AppTextStyles.title(sheetContext).copyWith(color: sheetContext.shellColors.textPrimary),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              AppLocalizations.of(sheetContext)!.voiceRecordingPlaceholder,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodySecondary(sheetContext).copyWith(color: sheetContext.shellColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => const VoiceCommandSheet(),
     );
     if (mounted) setState(() => _voiceSheetOpen = false);
   }
@@ -116,9 +107,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(width: 4),
                   Icon(Icons.sort_rounded, size: 18, color: shell.textSecondary),
                   const SizedBox(width: 8),
-                  InkWell(
-                    onTap: _openVoiceSheet,
-                    customBorder: const CircleBorder(),
+                  GestureDetector(
+                    onTap: () => _openVoiceSheet(bluetoothMode: false),
+                    onLongPress: () => _openVoiceSheet(bluetoothMode: true),
                     child: Container(
                       width: 34,
                       height: 34,

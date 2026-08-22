@@ -1,13 +1,15 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'pdf_report_service.dart' show ReportRow;
+import '../../data/models/account.dart';
+import 'pdf_report_service.dart' show ReportRow, StatementRow;
 
 /// Plain CSV, not a true `.xlsx` binary — deliberate choice, see pubspec.yaml comment on why the
-/// `excel` package was avoided this batch. A UTF-8 BOM is prepended because Excel specifically
-/// (not Sheets) silently mis-renders Arabic text in a BOM-less UTF-8 CSV as garbled characters —
-/// this is a well-known, necessary detail, not an oversight.
+/// `excel` package was avoided. A UTF-8 BOM is prepended because Excel specifically (not Sheets)
+/// silently mis-renders Arabic text in a BOM-less UTF-8 CSV as garbled characters — this is a
+/// well-known, necessary detail, not an oversight.
 class CsvReportService {
+  /// "إجمالي المبالغ" export — one row per account.
   Uint8List build({
     required String accountNameHeader,
     required String categoryHeader,
@@ -40,8 +42,64 @@ class CsvReportService {
       );
     }
 
+    return _withBom(buffer.toString());
+  }
+
+  /// "تقرير كشف الحساب" export — the full ledger for ONE account, matching the reference's
+  /// column order exactly: date, details, debit, credit, running balance, then a totals row and
+  /// a final-balance row.
+  Uint8List buildAccountStatement({
+    required String dateHeader,
+    required String detailsHeader,
+    required String debitHeader,
+    required String creditHeader,
+    required String balanceHeader,
+    required String totalRowLabel,
+    required List<StatementRow> rows,
+  }) {
+    final buffer = StringBuffer();
+    buffer.writeln(
+      [dateHeader, detailsHeader, debitHeader, creditHeader, balanceHeader].map(_escapeCsvField).join(','),
+    );
+
+    var totalCredit = 0.0;
+    var totalDebit = 0.0;
+    for (final row in rows) {
+      final isCredit = row.transaction.direction == AccountDirection.credit;
+      if (isCredit) {
+        totalCredit += row.transaction.amount;
+      } else {
+        totalDebit += row.transaction.amount;
+      }
+      final date =
+          '${row.transaction.date.year}-${row.transaction.date.month.toString().padLeft(2, '0')}-${row.transaction.date.day.toString().padLeft(2, '0')}';
+      buffer.writeln(
+        [
+          date,
+          row.transaction.details ?? '—',
+          isCredit ? '0' : row.transaction.amount.toStringAsFixed(2),
+          isCredit ? row.transaction.amount.toStringAsFixed(2) : '0',
+          row.runningBalance.abs().toStringAsFixed(2),
+        ].map(_escapeCsvField).join(','),
+      );
+    }
+
+    final finalBalance = rows.isEmpty ? 0.0 : rows.last.runningBalance;
+    buffer.writeln(
+      ['', '', totalDebit.toStringAsFixed(2), totalCredit.toStringAsFixed(2), '']
+          .map(_escapeCsvField)
+          .join(','),
+    );
+    buffer.writeln(
+      ['', totalRowLabel, '', '', finalBalance.abs().toStringAsFixed(2)].map(_escapeCsvField).join(','),
+    );
+
+    return _withBom(buffer.toString());
+  }
+
+  Uint8List _withBom(String content) {
     const utf8Bom = [0xEF, 0xBB, 0xBF];
-    return Uint8List.fromList([...utf8Bom, ...utf8.encode(buffer.toString())]);
+    return Uint8List.fromList([...utf8Bom, ...utf8.encode(content)]);
   }
 
   String _escapeCsvField(String field) {

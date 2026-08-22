@@ -997,6 +997,174 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الرجاء رسم التوقيع أولًا'**
   String get signatureEmptyMessage;
+
+  /// No description provided for @voiceStartListening.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط لبدء التسجيل'**
+  String get voiceStartListening;
+
+  /// No description provided for @voiceListening.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري الاستماع…'**
+  String get voiceListening;
+
+  /// No description provided for @voiceProcessing.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري فهم كلامك…'**
+  String get voiceProcessing;
+
+  /// No description provided for @voiceConfirmTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد البيانات'**
+  String get voiceConfirmTitle;
+
+  /// No description provided for @voiceConfirmQuestion.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل هذه البيانات صحيحة؟'**
+  String get voiceConfirmQuestion;
+
+  /// No description provided for @voiceConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'نعم، احفظ'**
+  String get voiceConfirm;
+
+  /// No description provided for @voiceEdit.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل'**
+  String get voiceEdit;
+
+  /// No description provided for @voiceCancel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء'**
+  String get voiceCancel;
+
+  /// No description provided for @voiceRetry.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة المحاولة'**
+  String get voiceRetry;
+
+  /// No description provided for @voiceSaved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حفظ العملية بنجاح'**
+  String get voiceSaved;
+
+  /// No description provided for @voiceNeedAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم أتعرف على اسم حساب مطابق. اختر حسابًا أو أعد المحاولة.'**
+  String get voiceNeedAccount;
+
+  /// No description provided for @voiceNeedAmount.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم أتعرف على مبلغ صحيح. قل المبلغ ثم أعد المحاولة.'**
+  String get voiceNeedAmount;
+
+  /// No description provided for @voiceTranscriptLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما تم سماعه'**
+  String get voiceTranscriptLabel;
+
+  /// No description provided for @voiceBluetoothConnecting.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري الاتصال بسماعة البلوتوث…'**
+  String get voiceBluetoothConnecting;
+
+  /// No description provided for @voiceBluetoothConnected.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الاتصال بسماعة البلوتوث'**
+  String get voiceBluetoothConnected;
+
+  /// No description provided for @voiceBluetoothWaitingWakeWord.
+  ///
+  /// In ar, this message translates to:
+  /// **'في انتظار كلمة «ديوني»'**
+  String get voiceBluetoothWaitingWakeWord;
+
+  /// No description provided for @voiceBluetoothWakeWordDetected.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم اكتشاف كلمة «ديوني»'**
+  String get voiceBluetoothWakeWordDetected;
+
+  /// No description provided for @voiceBluetoothListeningCommand.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاستماع للأمر…'**
+  String get voiceBluetoothListeningCommand;
+
+  /// No description provided for @voiceBluetoothDisconnected.
+  ///
+  /// In ar, this message translates to:
+  /// **'انقطع اتصال البلوتوث'**
+  String get voiceBluetoothDisconnected;
+
+  /// No description provided for @voiceBluetoothRetry.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة المحاولة'**
+  String get voiceBluetoothRetry;
+
+  /// No description provided for @voiceNoSpeechPermission.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر الوصول إلى الميكروفون أو التعرف على الكلام.'**
+  String get voiceNoSpeechPermission;
+
+  /// No description provided for @voiceAudioRecording.
+  ///
+  /// In ar, this message translates to:
+  /// **'التسجيل الأصلي'**
+  String get voiceAudioRecording;
+
+  /// No description provided for @voiceAudioUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملف التسجيل غير متوفر على هذا الجهاز'**
+  String get voiceAudioUnavailable;
+
+  /// No description provided for @voiceDirectionLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'النوع'**
+  String get voiceDirectionLabel;
+
+  /// No description provided for @voiceAccountLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحساب'**
+  String get voiceAccountLabel;
+
+  /// No description provided for @voiceRecordingDuration.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدة التسجيل: {seconds} ث'**
+  String voiceRecordingDuration(int seconds);
+
+  /// No description provided for @voiceBluetoothMode.
+  ///
+  /// In ar, this message translates to:
+  /// **'وضع البلوتوث'**
+  String get voiceBluetoothMode;
+
+  /// No description provided for @voiceUseAppLanguage.
+  ///
+  /// In ar, this message translates to:
+  /// **'لغة التعرف: العربية'**
+  String get voiceUseAppLanguage;
 }
 
 class _AppLocalizationsDelegate

@@ -15,6 +15,7 @@ class PersonalData {
     required this.email,
     required this.signatureEnabled,
     required this.stampEnabled,
+    this.logoPath,
     this.signaturePath,
     this.stampPath,
   });
@@ -27,6 +28,10 @@ class PersonalData {
   final String email;
   final bool signatureEnabled;
   final bool stampEnabled;
+
+  /// Local file path to a custom logo image picked via image_picker, or `null` to use Dyooni's
+  /// own bundled app_logo.png (the default, shown until the person picks their own).
+  final String? logoPath;
 
   /// Local file path to the hand-drawn signature PNG saved by SignatureCaptureScreen, or `null`
   /// if the person never drew one yet.
@@ -58,6 +63,7 @@ class PersonalData {
         'email': email,
         'signatureEnabled': signatureEnabled,
         'stampEnabled': stampEnabled,
+        'logoPath': logoPath,
         'signaturePath': signaturePath,
         'stampPath': stampPath,
       };
@@ -71,6 +77,7 @@ class PersonalData {
         email: json['email'] as String? ?? dyooniDefault.email,
         signatureEnabled: json['signatureEnabled'] as bool? ?? true,
         stampEnabled: json['stampEnabled'] as bool? ?? true,
+        logoPath: json['logoPath'] as String?,
         signaturePath: json['signaturePath'] as String?,
         stampPath: json['stampPath'] as String?,
       );

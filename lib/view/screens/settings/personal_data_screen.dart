@@ -30,6 +30,7 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
   final _emailController = TextEditingController();
   bool _signatureEnabled = true;
   bool _stampEnabled = true;
+  String? _logoPath;
   String? _signaturePath;
   String? _stampPath;
   bool _initialized = false;
@@ -55,6 +56,7 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
     _emailController.text = data.email;
     _signatureEnabled = data.signatureEnabled;
     _stampEnabled = data.stampEnabled;
+    _logoPath = data.logoPath;
     _signaturePath = data.signaturePath;
     _stampPath = data.stampPath;
   }
@@ -71,6 +73,7 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
       email: _emailController.text.trim(),
       signatureEnabled: _signatureEnabled,
       stampEnabled: _stampEnabled,
+      logoPath: _logoPath,
       signaturePath: _signaturePath,
       stampPath: _stampPath,
     );
@@ -114,6 +117,23 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
       AppSnackBar.showError(context, l10n.unexpectedError);
     }
   }
+
+  /// Opens the device's real photo picker so the person can choose an existing image as their
+  /// logo. Same mechanism as _pickStampImage — kept separate since it writes to a different
+  /// field and has its own "delete" counterpart.
+  Future<void> _pickLogoImage() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+      if (picked == null || !mounted) return; // person cancelled the picker
+      setState(() => _logoPath = picked.path);
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.showError(context, l10n.unexpectedError);
+    }
+  }
+
+  void _deleteLogo() => setState(() => _logoPath = null);
 
   @override
   Widget build(BuildContext context) {
@@ -187,28 +207,25 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
                           child: Container(
                             width: 160,
                             height: 160,
-                            padding: const EdgeInsets.all(20),
+                            padding: _logoPath == null ? const EdgeInsets.all(20) : EdgeInsets.zero,
+                            clipBehavior: Clip.antiAlias,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: shell.surface,
                               border: Border.all(color: shell.accent, width: 2),
                             ),
-                            child: const AppLogo(size: 120),
+                            child: _logoPath != null
+                                ? Image.file(File(_logoPath!), fit: BoxFit.cover, width: 160, height: 160)
+                                : const AppLogo(size: 120),
                           ),
                         ),
                         const SizedBox(height: 14),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _PillButton(
-                              label: l10n.personalDataChangeLogo,
-                              onTap: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
-                            ),
+                            _PillButton(label: l10n.personalDataChangeLogo, onTap: _pickLogoImage),
                             const SizedBox(width: 10),
-                            _PillButton(
-                              label: l10n.personalDataDeleteLogo,
-                              onTap: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
-                            ),
+                            _PillButton(label: l10n.personalDataDeleteLogo, onTap: _deleteLogo),
                           ],
                         ),
                         const SizedBox(height: 24),
