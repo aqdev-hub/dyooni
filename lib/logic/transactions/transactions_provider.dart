@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../data/local/transactions/transactions_local_datasource.dart';
 import '../../data/models/account.dart';
 import '../../data/models/transaction.dart';
 import '../../data/repositories/transactions/transactions_repository.dart';
-import '../../data/repositories/transactions/transactions_repository_impl.dart';
+import '../../data/repositories/transactions/transactions_firestore_repository_impl.dart';
+import '../../data/remote/firestore/transactions_firestore_datasource.dart';
 import '../onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 
 final transactionsLocalDataSourceProvider = Provider<TransactionsLocalDataSource>(
@@ -12,7 +17,12 @@ final transactionsLocalDataSourceProvider = Provider<TransactionsLocalDataSource
 );
 
 final transactionsRepositoryProvider = Provider<TransactionsRepository>(
-  (ref) => TransactionsRepositoryImpl(ref.watch(transactionsLocalDataSourceProvider)),
+  (ref) => TransactionsFirestoreRepositoryImpl(
+    TransactionsFirestoreDataSource(FirebaseFirestore.instance, FirebaseAuth.instance),
+    ref.watch(transactionsLocalDataSourceProvider),
+    ref.watch(sharedPreferencesProvider),
+    FirebaseAuth.instance.currentUser?.uid,
+  ),
 );
 
 final transactionsProvider = AsyncNotifierProvider<TransactionsController, List<Transaction>>(
@@ -20,8 +30,19 @@ final transactionsProvider = AsyncNotifierProvider<TransactionsController, List<
 );
 
 class TransactionsController extends AsyncNotifier<List<Transaction>> {
+  StreamSubscription<List<Transaction>>? _subscription;
+
   @override
-  Future<List<Transaction>> build() => ref.read(transactionsRepositoryProvider).getTransactions();
+  Future<List<Transaction>> build() async {
+    final repository = ref.read(transactionsRepositoryProvider);
+    final initial = await repository.getTransactions();
+    _subscription = repository.watchTransactions().listen(
+      (transactions) => state = AsyncData(transactions),
+      onError: (Object error, StackTrace stackTrace) => state = AsyncError(error, stackTrace),
+    );
+    ref.onDispose(() => _subscription?.cancel());
+    return initial;
+  }
 
   Future<void> addTransaction(Transaction transaction) async {
     await ref.read(transactionsRepositoryProvider).addTransaction(transaction);

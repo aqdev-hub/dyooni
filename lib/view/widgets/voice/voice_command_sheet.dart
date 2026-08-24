@@ -38,10 +38,12 @@ class VoiceCommandSheet extends ConsumerWidget {
             const SizedBox(height: 10),
             _StatusText(state: state),
             const SizedBox(height: 16),
-            GestureDetector(
-              onTap: isActive ? controller.stopAndAnalyze : (isBusy ? null : controller.startShortPress),
-              onLongPress: isBusy ? null : controller.startBluetoothMode,
-              child: AnimatedContainer(
+            Tooltip(
+              message: l10n.voiceLongPressHint,
+              child: GestureDetector(
+                onTap: isActive ? controller.stopAndAnalyze : (isBusy ? null : controller.startShortPress),
+                onLongPress: isBusy ? null : controller.startBluetoothMode,
+                child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 width: 122,
                 height: 122,
@@ -52,10 +54,11 @@ class VoiceCommandSheet extends ConsumerWidget {
                   boxShadow: [BoxShadow(color: shell.accent.withValues(alpha: isActive ? .28 : .12), blurRadius: 18, spreadRadius: 4)],
                 ),
                 child: Icon(isActive ? Icons.stop_rounded : Icons.mic_rounded, size: 54, color: shell.accent),
+                ),
               ),
             ),
             const SizedBox(height: 10),
-            Text(isActive ? l10n.voiceListening : l10n.voiceStartListening, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700)),
+            Text(isActive ? l10n.voiceListening : l10n.voiceShortPressHint, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
             Text(l10n.voiceUseAppLanguage, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary), textAlign: TextAlign.center),
             if (state.transcript.isNotEmpty) ...[
@@ -69,16 +72,37 @@ class VoiceCommandSheet extends ConsumerWidget {
               const SizedBox(height: 12),
               OutlinedButton.icon(onPressed: controller.retry, icon: const Icon(Icons.refresh_rounded), label: Text(l10n.voiceRetry)),
             ],
-            if (state.status == VoiceStatus.awaitingConfirmation) ...[
+            if (state.status == VoiceStatus.awaitingConfirmation || state.status == VoiceStatus.confirmationListening) ...[
               const SizedBox(height: 14),
               _ConfirmationCard(state: state),
               const SizedBox(height: 12),
+              Text(
+                state.status == VoiceStatus.confirmationListening
+                    ? l10n.voiceConfirmationListening
+                    : state.errorCode == 'confirmation'
+                    ? l10n.voiceConfirmationNotUnderstood
+                    : l10n.voiceConfirmationHint,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
+              ),
+              const SizedBox(height: 8),
               Row(
                 children: [
-                Expanded(child: OutlinedButton(onPressed: controller.retry, child: Text(l10n.voiceEdit))),
-                const SizedBox(width: 10),
-                Expanded(child: FilledButton(onPressed: controller.confirm, child: Text(l10n.voiceConfirm))),
+                  Expanded(child: OutlinedButton(onPressed: controller.retry, child: Text(l10n.voiceEdit))),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: state.status == VoiceStatus.confirmationListening ? null : controller.confirm,
+                      icon: const Icon(Icons.check_rounded),
+                      label: Text(l10n.voiceConfirm),
+                    ),
+                  ),
                 ],
+              ),
+              IconButton(
+                onPressed: state.status == VoiceStatus.confirmationListening ? null : controller.startVoiceConfirmation,
+                icon: Icon(Icons.mic_rounded, color: shell.accent),
+                tooltip: l10n.voiceConfirmationHint,
               ),
             ],
             if (state.status == VoiceStatus.success) ...[
@@ -112,12 +136,13 @@ class _StatusText extends StatelessWidget {
       VoiceStatus.preparing => l10n.voiceProcessing,
       VoiceStatus.listening => l10n.voiceListening,
       VoiceStatus.processing => l10n.voiceProcessing,
+      VoiceStatus.confirmationListening => l10n.voiceConfirmationListening,
       VoiceStatus.bluetoothConnecting => l10n.voiceBluetoothConnecting,
       VoiceStatus.bluetoothConnected => l10n.voiceBluetoothConnected,
       VoiceStatus.bluetoothWaitingWakeWord => l10n.voiceBluetoothWaitingWakeWord,
       VoiceStatus.bluetoothWakeWordDetected => l10n.voiceBluetoothWakeWordDetected,
       VoiceStatus.bluetoothListeningCommand => l10n.voiceBluetoothListeningCommand,
-      _ => l10n.voiceRecordingPlaceholder,
+      _ => l10n.voiceStartListening,
     };
     return Text(text, textAlign: TextAlign.center, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary));
   }

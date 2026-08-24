@@ -10,6 +10,11 @@ class TransactionsRepositoryImpl implements TransactionsRepository {
   Future<List<Transaction>> getTransactions() => _local.getAll();
 
   @override
+  Stream<List<Transaction>> watchTransactions() async* {
+    yield await getTransactions();
+  }
+
+  @override
   Future<void> addTransaction(Transaction transaction) async {
     final current = await _local.getAll();
     await _local.saveAll([...current, transaction]);

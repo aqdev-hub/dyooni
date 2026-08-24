@@ -13,6 +13,7 @@ import '../../view/screens/settings/personal_data_screen.dart';
 import '../../view/screens/settings/signature_capture_screen.dart';
 import '../../view/screens/splash/splash_gate.dart';
 import '../../view/screens/transactions/add_transaction_screen.dart';
+import '../../view/screens/voice/voice_command_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -23,6 +24,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (_, __) => const SignupScreen()),
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+      GoRoute(path: '/voice', builder: (_, state) => VoiceCommandScreen(bluetoothMode: state.extra as bool? ?? false)),
       GoRoute(path: '/add-account', builder: (_, __) => const AddAccountScreen()),
       GoRoute(path: '/reports', builder: (_, __) => const ReportsScreen()),
       GoRoute(path: '/personal-data', builder: (_, __) => const PersonalDataScreen()),

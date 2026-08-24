@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../data/local/accounts/accounts_local_datasource.dart';
 import '../../data/models/account.dart';
 import '../../data/repositories/accounts/accounts_repository.dart';
-import '../../data/repositories/accounts/accounts_repository_impl.dart';
+import '../../data/repositories/accounts/accounts_firestore_repository_impl.dart';
+import '../../data/remote/firestore/accounts_firestore_datasource.dart';
 import '../onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import '../transactions/transactions_provider.dart';
 
@@ -12,7 +17,12 @@ final accountsLocalDataSourceProvider = Provider<AccountsLocalDataSource>(
 );
 
 final accountsRepositoryProvider = Provider<AccountsRepository>(
-  (ref) => AccountsRepositoryImpl(ref.watch(accountsLocalDataSourceProvider)),
+  (ref) => AccountsFirestoreRepositoryImpl(
+    AccountsFirestoreDataSource(FirebaseFirestore.instance, FirebaseAuth.instance),
+    ref.watch(accountsLocalDataSourceProvider),
+    ref.watch(sharedPreferencesProvider),
+    FirebaseAuth.instance.currentUser?.uid,
+  ),
 );
 
 final accountsProvider = AsyncNotifierProvider<AccountsController, List<Account>>(
@@ -20,8 +30,19 @@ final accountsProvider = AsyncNotifierProvider<AccountsController, List<Account>
 );
 
 class AccountsController extends AsyncNotifier<List<Account>> {
+  StreamSubscription<List<Account>>? _subscription;
+
   @override
-  Future<List<Account>> build() => ref.read(accountsRepositoryProvider).getAccounts();
+  Future<List<Account>> build() async {
+    final repository = ref.read(accountsRepositoryProvider);
+    final initial = await repository.getAccounts();
+    _subscription = repository.watchAccounts().listen(
+      (accounts) => state = AsyncData(accounts),
+      onError: (Object error, StackTrace stackTrace) => state = AsyncError(error, stackTrace),
+    );
+    ref.onDispose(() => _subscription?.cancel());
+    return initial;
+  }
 
   Future<void> addAccount(Account account) async {
     await ref.read(accountsRepositoryProvider).addAccount(account);

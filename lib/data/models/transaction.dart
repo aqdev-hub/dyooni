@@ -12,7 +12,9 @@ class Transaction {
     required this.direction,
     required this.date,
     this.details,
+    this.attachmentPath,
     this.voiceRecording,
+    this.updatedAt,
   });
 
   final String id;
@@ -22,7 +24,9 @@ class Transaction {
   final AccountDirection direction;
   final DateTime date;
   final String? details;
+  final String? attachmentPath;
   final VoiceRecording? voiceRecording;
+  final DateTime? updatedAt;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -32,7 +36,9 @@ class Transaction {
         'direction': direction.name,
         'date': date.toIso8601String(),
         'details': details,
+        'attachmentPath': attachmentPath,
         'voiceRecording': voiceRecording?.toJson(),
+        'updatedAt': updatedAt?.toIso8601String(),
       };
 
   factory Transaction.fromJson(Map<String, dynamic> json) => Transaction(
@@ -43,9 +49,11 @@ class Transaction {
         direction: AccountDirection.values.byName(json['direction'] as String),
         date: DateTime.parse(json['date'] as String),
         details: json['details'] as String?,
+        attachmentPath: json['attachmentPath'] as String?,
         voiceRecording: json['voiceRecording'] is Map<String, dynamic>
             ? VoiceRecording.fromJson(json['voiceRecording'] as Map<String, dynamic>)
             : null,
+        updatedAt: json['updatedAt'] is String ? DateTime.tryParse(json['updatedAt'] as String) : null,
       );
 }
 

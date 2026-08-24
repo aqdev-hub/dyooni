@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/voice/local_audio_recording_service.dart';
@@ -40,6 +41,7 @@ enum VoiceStatus {
   processing,
   needsClarification,
   awaitingConfirmation,
+  confirmationListening,
   saving,
   success,
   bluetoothConnecting,
@@ -106,7 +108,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   final Ref _ref;
   SpeechRecognitionService get _speech => _ref.read(speechRecognitionServiceProvider);
   LocalAudioRecordingService get _recorder => _ref.read(localAudioRecordingServiceProvider);
-  late final StreamSubscription<String> _resultsSubscription;
+  late final StreamSubscription<SpeechRecognitionResult> _resultsSubscription;
   late final StreamSubscription<String> _statusSubscription;
   Timer? _bluetoothMonitor;
   final _uuid = const Uuid();
@@ -133,7 +135,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     await Future<void>.delayed(const Duration(milliseconds: 350));
     state = state.copyWith(status: VoiceStatus.bluetoothWaitingWakeWord);
     _startBluetoothMonitor();
-    await _speech.start(localeId: _localeId);
+    await _startRecognizer();
   }
 
   void _startBluetoothMonitor() {
@@ -168,12 +170,17 @@ class VoiceController extends StateNotifier<VoiceState> {
       recordingStartedAt: startedAt,
       clearError: true,
     );
-    await _speech.start(localeId: _localeId);
+    await _startRecognizer();
   }
 
-  String get _localeId => _ref.read(localeProvider).languageCode == 'en' ? 'en_US' : 'ar_SA';
+  Future<void> _startRecognizer() async {
+    final languageCode = _ref.read(localeProvider).languageCode;
+    final localeId = await _speech.resolveLocaleId(languageCode) ?? languageCode;
+    await _speech.start(localeId: localeId);
+  }
 
-  void _onSpeechResult(String text) {
+  void _onSpeechResult(SpeechRecognitionResult result) {
+    final text = result.recognizedWords;
     if (state.status == VoiceStatus.bluetoothWaitingWakeWord) {
       if (text.replaceAll(' ', '').contains(wakeWord)) {
         state = state.copyWith(status: VoiceStatus.bluetoothWakeWordDetected, transcript: text);
@@ -183,14 +190,43 @@ class VoiceController extends StateNotifier<VoiceState> {
     }
     if (state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand) {
       state = state.copyWith(transcript: text);
+      return;
     }
+    if (state.status == VoiceStatus.confirmationListening) {
+      state = state.copyWith(transcript: text);
+      if (result.finalResult) _handleVoiceConfirmation(text);
+    }
+  }
+
+  Future<void> startVoiceConfirmation() async {
+    if (state.status != VoiceStatus.awaitingConfirmation) return;
+    state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true);
+    final ready = await _speech.initialize(onError: _onSpeechError);
+    if (!ready) {
+      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
+      return;
+    }
+    await _startRecognizer();
+  }
+
+  void _handleVoiceConfirmation(String spoken) {
+    final normalized = spoken.toLowerCase().replaceAll('أ', 'ا');
+    if (['نعم', 'ايوه', 'ايوا', 'صحيح', 'احفظ', 'yes', 'correct', 'save'].any(normalized.contains)) {
+      unawaited(confirm());
+      return;
+    }
+    if (['تعديل', 'اعد', 'غير', 'لا', 'edit', 'again', 'no'].any(normalized.contains)) {
+      unawaited(retry());
+      return;
+    }
+    state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'confirmation');
   }
 
   void _onSpeechStatus(String status) {
     if (state.status != VoiceStatus.bluetoothWaitingWakeWord || status != 'done') return;
     _ref.read(bluetoothAudioRouteServiceProvider).isHeadsetConnected().then((connected) {
       if (!connected || state.status != VoiceStatus.bluetoothWaitingWakeWord) return;
-      _speech.start(localeId: _localeId).catchError((_) => _onSpeechError('connection'));
+      _startRecognizer().catchError((_) => _onSpeechError('connection'));
     });
   }
 

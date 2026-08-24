@@ -373,22 +373,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportsFilterAll => 'الكل';
 
   @override
-  String get reportsExportPdf => 'تصدير PDF';
-
-  @override
-  String get reportsExportExcel => 'تصدير Excel';
-
-  @override
-  String get reportsShareWhatsapp => 'مشاركة عبر واتساب';
-
-  @override
   String get reportsEmpty => 'لا توجد بيانات لعرضها في التقرير';
 
   @override
   String get reportsOpenTooltip => 'التقارير';
-
-  @override
-  String get reportGeneratedOn => 'تم الإنشاء بتاريخ:';
 
   @override
   String get reportBalanceHeader => 'الرصيد';
@@ -416,10 +404,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get voiceRecordingTitle => 'تسجيل صوتي';
-
-  @override
-  String get voiceRecordingPlaceholder =>
-      'ستتوفر ميزة التسجيل الصوتي هنا قريبًا.';
 
   @override
   String get personalDataLogoLabel => 'الشعار';
@@ -493,9 +477,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get voiceEdit => 'تعديل';
 
   @override
-  String get voiceCancel => 'إلغاء';
-
-  @override
   String get voiceRetry => 'إعادة المحاولة';
 
   @override
@@ -538,9 +519,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذر الوصول إلى الميكروفون أو التعرف على الكلام.';
 
   @override
-  String get voiceAudioRecording => 'التسجيل الأصلي';
-
-  @override
   String get voiceAudioUnavailable => 'ملف التسجيل غير متوفر على هذا الجهاز';
 
   @override
@@ -555,8 +533,107 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get voiceBluetoothMode => 'وضع البلوتوث';
+  String get voiceUseAppLanguage => 'لغة التعرف: العربية';
 
   @override
-  String get voiceUseAppLanguage => 'لغة التعرف: العربية';
+  String get voiceConfirmationListening => 'جاري الاستماع لتأكيدك…';
+
+  @override
+  String get voiceConfirmationHint => 'قل «نعم» للحفظ أو «تعديل» لإعادة الأمر';
+
+  @override
+  String get voiceConfirmationNotUnderstood =>
+      'لم أفهم التأكيد. قل «نعم» أو «تعديل».';
+
+  @override
+  String get reportsSheetTitle => 'التقارير';
+
+  @override
+  String get reportTypeTotalAmounts => 'إجمالي المبالغ';
+
+  @override
+  String get reportTypeAllAmountsDetails => 'تفاصيل جميع المبالغ';
+
+  @override
+  String get reportTypeMonthlyTotals => 'إجمالي المبالغ شهرياً';
+
+  @override
+  String get reportTypeCategoryAndCurrencyTotals => 'إجمالي التصنيفات والعملات';
+
+  @override
+  String get reportTypeMonthlyDetailsCurrentCategory =>
+      'تفصيلي المبالغ شهرياً للتصنيف الحالي';
+
+  @override
+  String get reportTypeStatement => 'تقرير كشف الحساب';
+
+  @override
+  String get reportTypeMonthlyStatement => 'تقرير كشف حساب شهري';
+
+  @override
+  String get reportShowSortOptions => 'إظهار خيارات ترتيب التقرير';
+
+  @override
+  String get reportSetDateRange => 'تحديد تاريخ الفترة';
+
+  @override
+  String get reportSortSheetTitle => 'طريقة ترتيب التقرير';
+
+  @override
+  String get reportSortDateAsc => 'تصاعدي حسب تاريخ العمليات';
+
+  @override
+  String get reportSortDateDesc => 'تنازلي حسب تاريخ العمليات';
+
+  @override
+  String get reportSortBalanceAsc => 'تصاعدي حسب الرصيد';
+
+  @override
+  String get reportSortBalanceDesc => 'تنازلي حسب الرصيد';
+
+  @override
+  String get reportSortNameAsc => 'تصاعدي حسب إسم الحساب';
+
+  @override
+  String get reportSortNameDesc => 'تنازلي حسب إسم الحساب';
+
+  @override
+  String get reportShareFormatTitle => 'نوع ملف المشاركة';
+
+  @override
+  String get reportShareFormatExcel => 'إكسل';
+
+  @override
+  String get reportShareFormatPdf => 'بي دي إف';
+
+  @override
+  String get reportFeatureNotReadyMessage =>
+      'هذا النوع من التقارير قيد التطوير حاليًا';
+
+  @override
+  String get voiceScreenTitle => 'التسجيل الصوتي';
+
+  @override
+  String get voiceShortPressHint => 'اضغط لبدء الاستماع المباشر';
+
+  @override
+  String get voiceLongPressHint => 'اضغط مطولًا لوضع سماعة البلوتوث';
+
+  @override
+  String get imageOptionsTitle => 'خيارات الصورة';
+
+  @override
+  String get imageSourceCamera => 'الكاميرا';
+
+  @override
+  String get imageSourceGallery => 'المعرض';
+
+  @override
+  String get confirm => 'موافق';
+
+  @override
+  String get calculatorTitle => 'الآلة الحاسبة';
+
+  @override
+  String get calculatorApply => 'استخدام النتيجة';
 }

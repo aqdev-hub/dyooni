@@ -10,6 +10,11 @@ class AccountsRepositoryImpl implements AccountsRepository {
   Future<List<Account>> getAccounts() => _local.getAll();
 
   @override
+  Stream<List<Account>> watchAccounts() async* {
+    yield await getAccounts();
+  }
+
+  @override
   Future<void> addAccount(Account account) async {
     final current = await _local.getAll();
     await _local.saveAll([...current, account]);

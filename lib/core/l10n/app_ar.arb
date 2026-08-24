@@ -128,12 +128,8 @@
   "reportsGeneralSummary": "الملخص العام",
   "reportsAccountsBreakdown": "تفصيل الحسابات",
   "reportsFilterAll": "الكل",
-  "reportsExportPdf": "تصدير PDF",
-  "reportsExportExcel": "تصدير Excel",
-  "reportsShareWhatsapp": "مشاركة عبر واتساب",
   "reportsEmpty": "لا توجد بيانات لعرضها في التقرير",
   "reportsOpenTooltip": "التقارير",
-  "reportGeneratedOn": "تم الإنشاء بتاريخ:",
   "reportBalanceHeader": "الرصيد",
   "reportEntriesHeader": "عدد العمليات",
   "reportStatusHeader": "الحالة",
@@ -143,7 +139,6 @@
   "saveAndExit": "حفظ وخروج",
   "saveAndAddAnother": "حفظ وإضافة عملية جديدة",
   "voiceRecordingTitle": "تسجيل صوتي",
-  "voiceRecordingPlaceholder": "ستتوفر ميزة التسجيل الصوتي هنا قريبًا.",
   "personalDataLogoLabel": "الشعار",
   "personalDataChangeLogo": "تغيير الشعار",
   "personalDataDeleteLogo": "حذف الشعار",
@@ -167,7 +162,6 @@
   "voiceConfirmQuestion": "هل هذه البيانات صحيحة؟",
   "voiceConfirm": "نعم، احفظ",
   "voiceEdit": "تعديل",
-  "voiceCancel": "إلغاء",
   "voiceRetry": "إعادة المحاولة",
   "voiceSaved": "تم حفظ العملية بنجاح",
   "voiceNeedAccount": "لم أتعرف على اسم حساب مطابق. اختر حسابًا أو أعد المحاولة.",
@@ -181,12 +175,43 @@
   "voiceBluetoothDisconnected": "انقطع اتصال البلوتوث",
   "voiceBluetoothRetry": "إعادة المحاولة",
   "voiceNoSpeechPermission": "تعذر الوصول إلى الميكروفون أو التعرف على الكلام.",
-  "voiceAudioRecording": "التسجيل الأصلي",
   "voiceAudioUnavailable": "ملف التسجيل غير متوفر على هذا الجهاز",
   "voiceDirectionLabel": "النوع",
   "voiceAccountLabel": "الحساب",
   "voiceRecordingDuration": "مدة التسجيل: {seconds} ث",
   "@voiceRecordingDuration": { "placeholders": { "seconds": { "type": "int" } } },
-  "voiceBluetoothMode": "وضع البلوتوث",
-  "voiceUseAppLanguage": "لغة التعرف: العربية"
+  "voiceUseAppLanguage": "لغة التعرف: العربية",
+  "voiceConfirmationListening": "جاري الاستماع لتأكيدك…",
+  "voiceConfirmationHint": "قل «نعم» للحفظ أو «تعديل» لإعادة الأمر",
+  "voiceConfirmationNotUnderstood": "لم أفهم التأكيد. قل «نعم» أو «تعديل».",
+  "reportsSheetTitle": "التقارير",
+  "reportTypeTotalAmounts": "إجمالي المبالغ",
+  "reportTypeAllAmountsDetails": "تفاصيل جميع المبالغ",
+  "reportTypeMonthlyTotals": "إجمالي المبالغ شهرياً",
+  "reportTypeCategoryAndCurrencyTotals": "إجمالي التصنيفات والعملات",
+  "reportTypeMonthlyDetailsCurrentCategory": "تفصيلي المبالغ شهرياً للتصنيف الحالي",
+  "reportTypeStatement": "تقرير كشف الحساب",
+  "reportTypeMonthlyStatement": "تقرير كشف حساب شهري",
+  "reportShowSortOptions": "إظهار خيارات ترتيب التقرير",
+  "reportSetDateRange": "تحديد تاريخ الفترة",
+  "reportSortSheetTitle": "طريقة ترتيب التقرير",
+  "reportSortDateAsc": "تصاعدي حسب تاريخ العمليات",
+  "reportSortDateDesc": "تنازلي حسب تاريخ العمليات",
+  "reportSortBalanceAsc": "تصاعدي حسب الرصيد",
+  "reportSortBalanceDesc": "تنازلي حسب الرصيد",
+  "reportSortNameAsc": "تصاعدي حسب إسم الحساب",
+  "reportSortNameDesc": "تنازلي حسب إسم الحساب",
+  "reportShareFormatTitle": "نوع ملف المشاركة",
+  "reportShareFormatExcel": "إكسل",
+  "reportShareFormatPdf": "بي دي إف",
+  "reportFeatureNotReadyMessage": "هذا النوع من التقارير قيد التطوير حاليًا"
+  ,"voiceScreenTitle": "التسجيل الصوتي"
+  ,"voiceShortPressHint": "اضغط لبدء الاستماع المباشر"
+  ,"voiceLongPressHint": "اضغط مطولًا لوضع سماعة البلوتوث"
+  ,"imageOptionsTitle": "خيارات الصورة"
+  ,"imageSourceCamera": "الكاميرا"
+  ,"imageSourceGallery": "المعرض"
+  ,"confirm": "موافق"
+  ,"calculatorTitle": "الآلة الحاسبة"
+  ,"calculatorApply": "استخدام النتيجة"
 }

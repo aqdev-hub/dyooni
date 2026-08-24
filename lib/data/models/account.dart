@@ -18,6 +18,7 @@ class Account {
     required this.createdDate,
     this.details,
     this.phone,
+    this.updatedAt,
   });
 
   final String id;
@@ -26,6 +27,7 @@ class Account {
   final DateTime createdDate;
   final String? details;
   final String? phone;
+  final DateTime? updatedAt;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -34,6 +36,7 @@ class Account {
         'createdDate': createdDate.toIso8601String(),
         'details': details,
         'phone': phone,
+        'updatedAt': updatedAt?.toIso8601String(),
       };
 
   factory Account.fromJson(Map<String, dynamic> json) => Account(
@@ -47,5 +50,6 @@ class Account {
         ),
         details: json['details'] as String?,
         phone: json['phone'] as String?,
+        updatedAt: json['updatedAt'] is String ? DateTime.tryParse(json['updatedAt'] as String) : null,
       );
 }

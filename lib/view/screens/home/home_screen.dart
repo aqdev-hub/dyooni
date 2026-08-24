@@ -8,12 +8,10 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../logic/accounts/accounts_provider.dart';
-import '../../../logic/voice/voice_provider.dart';
 import '../../widgets/home/account_list_tile.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
 import '../../widgets/shared/app_snackbar.dart';
-import '../../widgets/voice/voice_command_sheet.dart';
 import '../accounts/add_account_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -42,20 +40,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
 
-  Future<void> _openVoiceSheet({required bool bluetoothMode}) async {
+  Future<void> _openVoiceScreen({required bool bluetoothMode}) async {
     setState(() => _voiceSheetOpen = true);
-    final controller = ref.read(voiceProvider.notifier);
-    if (bluetoothMode) {
-      unawaited(controller.startBluetoothMode());
-    } else {
-      unawaited(controller.startShortPress());
-    }
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: context.shellColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => const VoiceCommandSheet(),
-    );
+    await context.push('/voice', extra: bluetoothMode);
     if (mounted) setState(() => _voiceSheetOpen = false);
   }
 
@@ -108,8 +95,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Icon(Icons.sort_rounded, size: 18, color: shell.textSecondary),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: () => _openVoiceSheet(bluetoothMode: false),
-                    onLongPress: () => _openVoiceSheet(bluetoothMode: true),
+                    onTap: () => _openVoiceScreen(bluetoothMode: false),
+                    onLongPress: () => _openVoiceScreen(bluetoothMode: true),
                     child: Container(
                       width: 34,
                       height: 34,

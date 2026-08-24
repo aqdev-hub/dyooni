@@ -128,12 +128,8 @@
   "reportsGeneralSummary": "General summary",
   "reportsAccountsBreakdown": "Accounts breakdown",
   "reportsFilterAll": "All",
-  "reportsExportPdf": "Export PDF",
-  "reportsExportExcel": "Export Excel",
-  "reportsShareWhatsapp": "Share via WhatsApp",
   "reportsEmpty": "No data to show in the report",
   "reportsOpenTooltip": "Reports",
-  "reportGeneratedOn": "Generated on:",
   "reportBalanceHeader": "Balance",
   "reportEntriesHeader": "Entries",
   "reportStatusHeader": "Status",
@@ -143,7 +139,6 @@
   "saveAndExit": "Save & exit",
   "saveAndAddAnother": "Save & add another",
   "voiceRecordingTitle": "Voice recording",
-  "voiceRecordingPlaceholder": "Voice recording will be available here soon.",
   "personalDataLogoLabel": "Logo",
   "personalDataChangeLogo": "Change logo",
   "personalDataDeleteLogo": "Delete logo",
@@ -167,7 +162,6 @@
   "voiceConfirmQuestion": "Are these details correct?",
   "voiceConfirm": "Yes, save",
   "voiceEdit": "Edit",
-  "voiceCancel": "Cancel",
   "voiceRetry": "Try again",
   "voiceSaved": "Entry saved successfully",
   "voiceNeedAccount": "I could not match an account name. Choose an account or try again.",
@@ -181,12 +175,43 @@
   "voiceBluetoothDisconnected": "Bluetooth connection was interrupted",
   "voiceBluetoothRetry": "Retry",
   "voiceNoSpeechPermission": "Microphone or speech recognition is unavailable.",
-  "voiceAudioRecording": "Original recording",
   "voiceAudioUnavailable": "The recording file is unavailable on this device",
   "voiceDirectionLabel": "Type",
   "voiceAccountLabel": "Account",
   "voiceRecordingDuration": "Recording: {seconds}s",
   "@voiceRecordingDuration": { "placeholders": { "seconds": { "type": "int" } } },
-  "voiceBluetoothMode": "Bluetooth mode",
-  "voiceUseAppLanguage": "Recognition language: English"
+  "voiceUseAppLanguage": "Recognition language: English",
+  "voiceConfirmationListening": "Listening for your confirmation…",
+  "voiceConfirmationHint": "Say “yes” to save or “edit” to repeat the command",
+  "voiceConfirmationNotUnderstood": "I did not understand the confirmation. Say “yes” or “edit”.",
+  "reportsSheetTitle": "Reports",
+  "reportTypeTotalAmounts": "Total amounts",
+  "reportTypeAllAmountsDetails": "All amounts details",
+  "reportTypeMonthlyTotals": "Monthly totals",
+  "reportTypeCategoryAndCurrencyTotals": "Category and currency totals",
+  "reportTypeMonthlyDetailsCurrentCategory": "Monthly details for current category",
+  "reportTypeStatement": "Account statement",
+  "reportTypeMonthlyStatement": "Monthly account statement",
+  "reportShowSortOptions": "Show sort options",
+  "reportSetDateRange": "Set date range",
+  "reportSortSheetTitle": "Report sort order",
+  "reportSortDateAsc": "Ascending by date",
+  "reportSortDateDesc": "Descending by date",
+  "reportSortBalanceAsc": "Ascending by balance",
+  "reportSortBalanceDesc": "Descending by balance",
+  "reportSortNameAsc": "Ascending by account name",
+  "reportSortNameDesc": "Descending by account name",
+  "reportShareFormatTitle": "Share file type",
+  "reportShareFormatExcel": "Excel",
+  "reportShareFormatPdf": "PDF",
+  "reportFeatureNotReadyMessage": "This report type is still under development"
+  ,"voiceScreenTitle": "Voice recording"
+  ,"voiceShortPressHint": "Tap to start listening directly"
+  ,"voiceLongPressHint": "Long press for Bluetooth headset mode"
+  ,"imageOptionsTitle": "Image options"
+  ,"imageSourceCamera": "Camera"
+  ,"imageSourceGallery": "Gallery"
+  ,"confirm": "Confirm"
+  ,"calculatorTitle": "Calculator"
+  ,"calculatorApply": "Use result"
 }

@@ -5,9 +5,10 @@ import '../../../core/theme/app_shell_colors.dart';
 /// picker trigger...). Shared by Add Account and Add Transaction so their field styling can never
 /// drift apart.
 class LabeledField extends StatefulWidget {
-  const LabeledField({required this.icon, required this.child, super.key});
+  const LabeledField({required this.icon, required this.child, this.onIconTap, super.key});
   final IconData icon;
   final Widget child;
+  final Future<void> Function()? onIconTap;
 
   @override
   State<LabeledField> createState() => _LabeledFieldState();
@@ -33,7 +34,9 @@ class _LabeledFieldState extends State<LabeledField> {
         InkWell(
           onTap: () async {
             setState(() => _active = true);
-            await showDialog<void>(context: context, builder: (context) => Dialog(child: SizedBox(width: 220, height: 110, child: Center(child: Icon(widget.icon, color: context.shellColors.accent, size: 34)))));
+            if (widget.onIconTap != null) {
+              await widget.onIconTap!();
+            }
             if (mounted) setState(() => _active = false);
           },
           borderRadius: BorderRadius.circular(20),

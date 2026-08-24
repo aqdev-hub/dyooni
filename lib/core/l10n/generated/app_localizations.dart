@@ -806,24 +806,6 @@ abstract class AppLocalizations {
   /// **'الكل'**
   String get reportsFilterAll;
 
-  /// No description provided for @reportsExportPdf.
-  ///
-  /// In ar, this message translates to:
-  /// **'تصدير PDF'**
-  String get reportsExportPdf;
-
-  /// No description provided for @reportsExportExcel.
-  ///
-  /// In ar, this message translates to:
-  /// **'تصدير Excel'**
-  String get reportsExportExcel;
-
-  /// No description provided for @reportsShareWhatsapp.
-  ///
-  /// In ar, this message translates to:
-  /// **'مشاركة عبر واتساب'**
-  String get reportsShareWhatsapp;
-
   /// No description provided for @reportsEmpty.
   ///
   /// In ar, this message translates to:
@@ -835,12 +817,6 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'التقارير'**
   String get reportsOpenTooltip;
-
-  /// No description provided for @reportGeneratedOn.
-  ///
-  /// In ar, this message translates to:
-  /// **'تم الإنشاء بتاريخ:'**
-  String get reportGeneratedOn;
 
   /// No description provided for @reportBalanceHeader.
   ///
@@ -895,12 +871,6 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تسجيل صوتي'**
   String get voiceRecordingTitle;
-
-  /// No description provided for @voiceRecordingPlaceholder.
-  ///
-  /// In ar, this message translates to:
-  /// **'ستتوفر ميزة التسجيل الصوتي هنا قريبًا.'**
-  String get voiceRecordingPlaceholder;
 
   /// No description provided for @personalDataLogoLabel.
   ///
@@ -1040,12 +1010,6 @@ abstract class AppLocalizations {
   /// **'تعديل'**
   String get voiceEdit;
 
-  /// No description provided for @voiceCancel.
-  ///
-  /// In ar, this message translates to:
-  /// **'إلغاء'**
-  String get voiceCancel;
-
   /// No description provided for @voiceRetry.
   ///
   /// In ar, this message translates to:
@@ -1124,12 +1088,6 @@ abstract class AppLocalizations {
   /// **'تعذر الوصول إلى الميكروفون أو التعرف على الكلام.'**
   String get voiceNoSpeechPermission;
 
-  /// No description provided for @voiceAudioRecording.
-  ///
-  /// In ar, this message translates to:
-  /// **'التسجيل الأصلي'**
-  String get voiceAudioRecording;
-
   /// No description provided for @voiceAudioUnavailable.
   ///
   /// In ar, this message translates to:
@@ -1154,17 +1112,209 @@ abstract class AppLocalizations {
   /// **'مدة التسجيل: {seconds} ث'**
   String voiceRecordingDuration(int seconds);
 
-  /// No description provided for @voiceBluetoothMode.
-  ///
-  /// In ar, this message translates to:
-  /// **'وضع البلوتوث'**
-  String get voiceBluetoothMode;
-
   /// No description provided for @voiceUseAppLanguage.
   ///
   /// In ar, this message translates to:
   /// **'لغة التعرف: العربية'**
   String get voiceUseAppLanguage;
+
+  /// No description provided for @voiceConfirmationListening.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري الاستماع لتأكيدك…'**
+  String get voiceConfirmationListening;
+
+  /// No description provided for @voiceConfirmationHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'قل «نعم» للحفظ أو «تعديل» لإعادة الأمر'**
+  String get voiceConfirmationHint;
+
+  /// No description provided for @voiceConfirmationNotUnderstood.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم أفهم التأكيد. قل «نعم» أو «تعديل».'**
+  String get voiceConfirmationNotUnderstood;
+
+  /// No description provided for @reportsSheetTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'التقارير'**
+  String get reportsSheetTitle;
+
+  /// No description provided for @reportTypeTotalAmounts.
+  ///
+  /// In ar, this message translates to:
+  /// **'إجمالي المبالغ'**
+  String get reportTypeTotalAmounts;
+
+  /// No description provided for @reportTypeAllAmountsDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل جميع المبالغ'**
+  String get reportTypeAllAmountsDetails;
+
+  /// No description provided for @reportTypeMonthlyTotals.
+  ///
+  /// In ar, this message translates to:
+  /// **'إجمالي المبالغ شهرياً'**
+  String get reportTypeMonthlyTotals;
+
+  /// No description provided for @reportTypeCategoryAndCurrencyTotals.
+  ///
+  /// In ar, this message translates to:
+  /// **'إجمالي التصنيفات والعملات'**
+  String get reportTypeCategoryAndCurrencyTotals;
+
+  /// No description provided for @reportTypeMonthlyDetailsCurrentCategory.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفصيلي المبالغ شهرياً للتصنيف الحالي'**
+  String get reportTypeMonthlyDetailsCurrentCategory;
+
+  /// No description provided for @reportTypeStatement.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقرير كشف الحساب'**
+  String get reportTypeStatement;
+
+  /// No description provided for @reportTypeMonthlyStatement.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقرير كشف حساب شهري'**
+  String get reportTypeMonthlyStatement;
+
+  /// No description provided for @reportShowSortOptions.
+  ///
+  /// In ar, this message translates to:
+  /// **'إظهار خيارات ترتيب التقرير'**
+  String get reportShowSortOptions;
+
+  /// No description provided for @reportSetDateRange.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديد تاريخ الفترة'**
+  String get reportSetDateRange;
+
+  /// No description provided for @reportSortSheetTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'طريقة ترتيب التقرير'**
+  String get reportSortSheetTitle;
+
+  /// No description provided for @reportSortDateAsc.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصاعدي حسب تاريخ العمليات'**
+  String get reportSortDateAsc;
+
+  /// No description provided for @reportSortDateDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنازلي حسب تاريخ العمليات'**
+  String get reportSortDateDesc;
+
+  /// No description provided for @reportSortBalanceAsc.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصاعدي حسب الرصيد'**
+  String get reportSortBalanceAsc;
+
+  /// No description provided for @reportSortBalanceDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنازلي حسب الرصيد'**
+  String get reportSortBalanceDesc;
+
+  /// No description provided for @reportSortNameAsc.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصاعدي حسب إسم الحساب'**
+  String get reportSortNameAsc;
+
+  /// No description provided for @reportSortNameDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنازلي حسب إسم الحساب'**
+  String get reportSortNameDesc;
+
+  /// No description provided for @reportShareFormatTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'نوع ملف المشاركة'**
+  String get reportShareFormatTitle;
+
+  /// No description provided for @reportShareFormatExcel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إكسل'**
+  String get reportShareFormatExcel;
+
+  /// No description provided for @reportShareFormatPdf.
+  ///
+  /// In ar, this message translates to:
+  /// **'بي دي إف'**
+  String get reportShareFormatPdf;
+
+  /// No description provided for @reportFeatureNotReadyMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا النوع من التقارير قيد التطوير حاليًا'**
+  String get reportFeatureNotReadyMessage;
+
+  /// No description provided for @voiceScreenTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'التسجيل الصوتي'**
+  String get voiceScreenTitle;
+
+  /// No description provided for @voiceShortPressHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط لبدء الاستماع المباشر'**
+  String get voiceShortPressHint;
+
+  /// No description provided for @voiceLongPressHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط مطولًا لوضع سماعة البلوتوث'**
+  String get voiceLongPressHint;
+
+  /// No description provided for @imageOptionsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'خيارات الصورة'**
+  String get imageOptionsTitle;
+
+  /// No description provided for @imageSourceCamera.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكاميرا'**
+  String get imageSourceCamera;
+
+  /// No description provided for @imageSourceGallery.
+  ///
+  /// In ar, this message translates to:
+  /// **'المعرض'**
+  String get imageSourceGallery;
+
+  /// No description provided for @confirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'موافق'**
+  String get confirm;
+
+  /// No description provided for @calculatorTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الآلة الحاسبة'**
+  String get calculatorTitle;
+
+  /// No description provided for @calculatorApply.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدام النتيجة'**
+  String get calculatorApply;
 }
 
 class _AppLocalizationsDelegate

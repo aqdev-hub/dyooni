@@ -9,9 +9,9 @@ class SpeechRecognitionService {
   SpeechRecognitionService({SpeechToText? speech}) : _speech = speech ?? SpeechToText();
 
   final SpeechToText _speech;
-  final _results = StreamController<String>.broadcast();
+  final _results = StreamController<SpeechRecognitionResult>.broadcast();
   final _statuses = StreamController<String>.broadcast();
-  Stream<String> get results => _results.stream;
+  Stream<SpeechRecognitionResult> get results => _results.stream;
   Stream<String> get statuses => _statuses.stream;
 
   Future<bool> initialize({required void Function(String) onError}) {
@@ -34,8 +34,19 @@ class SpeechRecognitionService {
     );
   }
 
+  /// Devices expose locale IDs differently (`ar_SA`, `ar-SA`, or simply
+  /// `ar`). Resolve against the installed recognizer locales rather than
+  /// assuming one fixed ID and silently failing on another phone.
+  Future<String?> resolveLocaleId(String languageCode) async {
+    final locales = await _speech.locales();
+    for (final locale in locales) {
+      if (locale.localeId.toLowerCase().startsWith(languageCode.toLowerCase())) return locale.localeId;
+    }
+    return null;
+  }
+
   void _onResult(SpeechRecognitionResult result) {
-    if (result.recognizedWords.trim().isNotEmpty) _results.add(result.recognizedWords.trim());
+    if (result.recognizedWords.trim().isNotEmpty) _results.add(result);
   }
 
   Future<void> stop() => _speech.stop();

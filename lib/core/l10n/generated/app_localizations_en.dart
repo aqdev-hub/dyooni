@@ -375,22 +375,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsFilterAll => 'All';
 
   @override
-  String get reportsExportPdf => 'Export PDF';
-
-  @override
-  String get reportsExportExcel => 'Export Excel';
-
-  @override
-  String get reportsShareWhatsapp => 'Share via WhatsApp';
-
-  @override
   String get reportsEmpty => 'No data to show in the report';
 
   @override
   String get reportsOpenTooltip => 'Reports';
-
-  @override
-  String get reportGeneratedOn => 'Generated on:';
 
   @override
   String get reportBalanceHeader => 'Balance';
@@ -418,10 +406,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceRecordingTitle => 'Voice recording';
-
-  @override
-  String get voiceRecordingPlaceholder =>
-      'Voice recording will be available here soon.';
 
   @override
   String get personalDataLogoLabel => 'Logo';
@@ -495,9 +479,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceEdit => 'Edit';
 
   @override
-  String get voiceCancel => 'Cancel';
-
-  @override
   String get voiceRetry => 'Try again';
 
   @override
@@ -541,9 +522,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Microphone or speech recognition is unavailable.';
 
   @override
-  String get voiceAudioRecording => 'Original recording';
-
-  @override
   String get voiceAudioUnavailable =>
       'The recording file is unavailable on this device';
 
@@ -559,8 +537,109 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get voiceBluetoothMode => 'Bluetooth mode';
+  String get voiceUseAppLanguage => 'Recognition language: English';
 
   @override
-  String get voiceUseAppLanguage => 'Recognition language: English';
+  String get voiceConfirmationListening => 'Listening for your confirmation…';
+
+  @override
+  String get voiceConfirmationHint =>
+      'Say “yes” to save or “edit” to repeat the command';
+
+  @override
+  String get voiceConfirmationNotUnderstood =>
+      'I did not understand the confirmation. Say “yes” or “edit”.';
+
+  @override
+  String get reportsSheetTitle => 'Reports';
+
+  @override
+  String get reportTypeTotalAmounts => 'Total amounts';
+
+  @override
+  String get reportTypeAllAmountsDetails => 'All amounts details';
+
+  @override
+  String get reportTypeMonthlyTotals => 'Monthly totals';
+
+  @override
+  String get reportTypeCategoryAndCurrencyTotals =>
+      'Category and currency totals';
+
+  @override
+  String get reportTypeMonthlyDetailsCurrentCategory =>
+      'Monthly details for current category';
+
+  @override
+  String get reportTypeStatement => 'Account statement';
+
+  @override
+  String get reportTypeMonthlyStatement => 'Monthly account statement';
+
+  @override
+  String get reportShowSortOptions => 'Show sort options';
+
+  @override
+  String get reportSetDateRange => 'Set date range';
+
+  @override
+  String get reportSortSheetTitle => 'Report sort order';
+
+  @override
+  String get reportSortDateAsc => 'Ascending by date';
+
+  @override
+  String get reportSortDateDesc => 'Descending by date';
+
+  @override
+  String get reportSortBalanceAsc => 'Ascending by balance';
+
+  @override
+  String get reportSortBalanceDesc => 'Descending by balance';
+
+  @override
+  String get reportSortNameAsc => 'Ascending by account name';
+
+  @override
+  String get reportSortNameDesc => 'Descending by account name';
+
+  @override
+  String get reportShareFormatTitle => 'Share file type';
+
+  @override
+  String get reportShareFormatExcel => 'Excel';
+
+  @override
+  String get reportShareFormatPdf => 'PDF';
+
+  @override
+  String get reportFeatureNotReadyMessage =>
+      'This report type is still under development';
+
+  @override
+  String get voiceScreenTitle => 'Voice recording';
+
+  @override
+  String get voiceShortPressHint => 'Tap to start listening directly';
+
+  @override
+  String get voiceLongPressHint => 'Long press for Bluetooth headset mode';
+
+  @override
+  String get imageOptionsTitle => 'Image options';
+
+  @override
+  String get imageSourceCamera => 'Camera';
+
+  @override
+  String get imageSourceGallery => 'Gallery';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get calculatorTitle => 'Calculator';
+
+  @override
+  String get calculatorApply => 'Use result';
 }

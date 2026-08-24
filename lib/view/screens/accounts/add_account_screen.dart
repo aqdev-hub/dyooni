@@ -16,6 +16,8 @@ import '../../widgets/shared/amount_in_words.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/direction_choice.dart';
 import '../../widgets/shared/labeled_field.dart';
+import '../../widgets/shared/amount_calculator_dialog.dart';
+import '../../widgets/shared/image_source_dialog.dart';
 import '../../widgets/shared/modal_header_bar.dart';
 
 class AddAccountScreen extends ConsumerStatefulWidget {
@@ -37,6 +39,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   AccountDirection _direction = AccountDirection.debit; // matches the reference's default selection
   AccountCategory _category = AccountCategory.client;
   bool _isSaving = false;
+  String? _attachmentPath;
 
   @override
   void initState() {
@@ -76,6 +79,16 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     if (selected != null && mounted) setState(() => _currencyCode = selected);
   }
 
+  Future<void> _openCalculator() async {
+    final result = await showAmountCalculatorDialog(context, initialValue: _amountController.text);
+    if (result != null && mounted) _amountController.text = result == result.roundToDouble() ? result.toInt().toString() : result.toString();
+  }
+
+  Future<void> _chooseImage() async {
+    final image = await showImageSourceDialog(context);
+    if (image != null && mounted) setState(() => _attachmentPath = image.path);
+  }
+
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
@@ -98,6 +111,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       direction: _direction,
       date: _date,
       details: _detailsController.text.trim().isEmpty ? null : _detailsController.text.trim(),
+      attachmentPath: _attachmentPath,
     );
 
     try {
@@ -143,6 +157,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                 const SizedBox(height: 6),
                 LabeledField(
                   icon: Icons.calculate_outlined,
+                  onIconTap: _openCalculator,
                   child: TextFormField(
                     controller: _amountController,
                     textAlign: TextAlign.center,
@@ -217,6 +232,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                 const SizedBox(height: 12),
                 LabeledField(
                   icon: Icons.camera_alt_outlined,
+                  onIconTap: _chooseImage,
                   child: TextFormField(
                     controller: _detailsController,
                     textAlign: TextAlign.center,
