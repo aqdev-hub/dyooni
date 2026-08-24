@@ -63,6 +63,12 @@ dependencies:
   share_plus: ^11.0.1
   path_provider: ^2.1.4
 
+  # Voice input: native STT for short commands, original local recordings,
+  # and their in-app playback. Versions are constrained to the app's Dart 3.4 SDK.
+  speech_to_text: ^7.4.0
+  record: ^6.0.0
+  just_audio: ^0.9.46
+
   # Arabic letter shaping for the PDF — the `pdf` package has no text-shaping engine of its own,
   # so Arabic names/labels would render as disconnected letters without this. This is the one
   # dependency in this whole project I could NOT verify against a real pub.dev listing from this
