@@ -1,8 +1,37 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Every signed-in user can read/write ONLY the document tree under their own uid.
+    // `{document=**}` matches ANY nested path underneath `users/{userId}/...` — this already
+    // covers `users/{userId}/accounts/{accountId}` and `users/{userId}/transactions/{txId}`
+    // (see accounts_firestore_datasource.dart / transactions_firestore_datasource.dart, both of
+    // which store under exactly that path). So per-user isolation for accounts and transactions
+    // was ALREADY correct before this change — no account can read or write another account's
+    // data — and nothing about that guarantee needed to change here. Documented explicitly so
+    // this isn't re-audited as "missing" later.
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Powers phone-number sign-in/sign-up (see
+    // data/remote/auth/user_directory_remote_datasource.dart). The app's code has depended on
+    // this collection since phone login was added, but NO rule for it existed here — meaning
+    // every read/write against `phone_lookup/{phone}` was being silently denied by Firestore's
+    // default-deny fallback. In practice this meant: signing up with a phone number never
+    // actually saved the phone->email mapping, and logging in with a phone number could never
+    // resolve an email to sign in with — phone-based auth was non-functional end-to-end until
+    // this rule existed.
+    // Read is intentionally public: the whole point of this collection is resolving an email
+    // BEFORE sign-in succeeds, so it cannot be gated behind `request.auth != null`. Write
+    // requires auth because the app only ever writes this immediately after the caller's own
+    // successful sign-up (see AuthRepositoryImpl.signUpWithEmail). Known trade-off, unchanged
+    // from the original design note in user_directory_remote_datasource.dart: this makes
+    // phone->email pairs guessable by anyone who can reach Firestore. Acceptable for now: this
+    // rule fixes a fully broken feature; hardening it further (e.g. a Cloud Function proxy
+    // instead of direct client reads) is a separate, larger change and is listed in the report.
+    match /phone_lookup/{phone} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }
