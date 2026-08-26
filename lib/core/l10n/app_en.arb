@@ -179,7 +179,13 @@
   "voiceDirectionLabel": "Type",
   "voiceAccountLabel": "Account",
   "voiceRecordingDuration": "Recording: {seconds}s",
-  "@voiceRecordingDuration": { "placeholders": { "seconds": { "type": "int" } } },
+  "@voiceRecordingDuration": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "voiceUseAppLanguage": "Recognition language: English",
   "voiceConfirmationListening": "Listening for your confirmation…",
   "voiceConfirmationHint": "Say “yes” to save or “edit” to repeat the command",
@@ -204,14 +210,35 @@
   "reportShareFormatTitle": "Share file type",
   "reportShareFormatExcel": "Excel",
   "reportShareFormatPdf": "PDF",
-  "reportFeatureNotReadyMessage": "This report type is still under development"
-  ,"voiceScreenTitle": "Voice recording"
-  ,"voiceShortPressHint": "Tap to start listening directly"
-  ,"voiceLongPressHint": "Long press for Bluetooth headset mode"
-  ,"imageOptionsTitle": "Image options"
-  ,"imageSourceCamera": "Camera"
-  ,"imageSourceGallery": "Gallery"
-  ,"confirm": "Confirm"
-  ,"calculatorTitle": "Calculator"
-  ,"calculatorApply": "Use result"
+  "reportFeatureNotReadyMessage": "This report type is still under development",
+  "voiceScreenTitle": "Voice recording",
+  "voiceShortPressHint": "Tap to start listening directly",
+  "voiceLongPressHint": "Long press for Bluetooth headset mode",
+  "imageOptionsTitle": "Image options",
+  "imageSourceCamera": "Camera",
+  "imageSourceGallery": "Gallery",
+  "confirm": "Confirm",
+  "calculatorTitle": "Calculator",
+  "calculatorApply": "Use result",
+  "editTransactionTitle": "Edit entry",
+  "transactionUpdatedSuccessMessage": "Entry updated successfully",
+  "transactionDeletedSuccessMessage": "Entry deleted successfully",
+  "deleteTransactionConfirmTitle": "Delete entry",
+  "deleteTransactionConfirmBody": "Are you sure you want to delete this entry? This can't be undone",
+  "shareAction": "Share",
+  "transferAction": "Transfer",
+  "selectOne": "Select",
+  "selectAllAction": "Select all",
+  "selectedCountLabel": "{count} selected",
+  "@selectedCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedAccountsConfirmBody": "Are you sure you want to delete the selected accounts? This can't be undone",
+  "deleteSelectedTransactionsConfirmBody": "Are you sure you want to delete the selected entries? This can't be undone",
+  "editAccountTitle": "Edit account",
+  "accountUpdatedSuccessMessage": "Account updated successfully"
 }

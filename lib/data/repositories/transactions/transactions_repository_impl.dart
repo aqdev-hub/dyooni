@@ -21,6 +21,19 @@ class TransactionsRepositoryImpl implements TransactionsRepository {
   }
 
   @override
+  Future<void> updateTransaction(Transaction transaction) async {
+    final current = await _local.getAll();
+    final updated = [for (final t in current) if (t.id == transaction.id) transaction else t];
+    await _local.saveAll(updated);
+  }
+
+  @override
+  Future<void> deleteTransaction(String id) async {
+    final current = await _local.getAll();
+    await _local.saveAll(current.where((t) => t.id != id).toList());
+  }
+
+  @override
   Future<void> deleteTransactionsForAccount(String accountId) async {
     final current = await _local.getAll();
     await _local.saveAll(current.where((t) => t.accountId != accountId).toList());

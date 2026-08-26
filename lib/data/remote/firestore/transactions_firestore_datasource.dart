@@ -22,6 +22,14 @@ class TransactionsFirestoreDataSource {
     await _collection.doc(transaction.id).set(json);
   }
 
+  /// `save()` already writes via `.doc(id).set(...)`, which is an upsert — so "update" is
+  /// literally the same call as "create" here. Kept as its own named method (rather than having
+  /// callers call `save` for both) so the repository layer above reads as edit-vs-create at the
+  /// call site, matching the [TransactionsRepository] interface.
+  Future<void> update(Transaction transaction) => save(transaction);
+
+  Future<void> delete(String id) => _collection.doc(id).delete();
+
   Future<void> deleteForAccount(String accountId) async {
     final snapshot = await _collection.where('accountId', isEqualTo: accountId).get();
     for (final chunk in _chunks(snapshot.docs, 450)) {

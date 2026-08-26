@@ -26,6 +26,8 @@ import '../../widgets/accounts/transaction_table.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
 import '../../widgets/reports/report_options_sheet.dart';
 import '../../widgets/shared/app_snackbar.dart';
+import '../../widgets/shared/selection_toolbar.dart';
+import '../accounts/add_account_screen.dart';
 import '../transactions/add_transaction_screen.dart';
 
 class AccountDetailsScreen extends ConsumerWidget {
@@ -35,17 +37,22 @@ class AccountDetailsScreen extends ConsumerWidget {
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.deleteAccountConfirmTitle),
-        content: Text(l10n.deleteAccountConfirmBody),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel)),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.delete, style: const TextStyle(color: AppColors.debit)),
-          ),
-        ],
-      ),
+      builder: (dialogContext) {
+        final dShell = dialogContext.shellColors;
+        return AlertDialog(
+          backgroundColor: dShell.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Text(l10n.deleteAccountConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
+          content: Text(l10n.deleteAccountConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.delete, style: const TextStyle(color: AppColors.debit, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed != true) return;
@@ -58,6 +65,117 @@ class AccountDetailsScreen extends ConsumerWidget {
       if (!context.mounted) return;
       AppSnackBar.showError(context, l10n.unexpectedError);
     }
+  }
+
+  Future<void> _confirmDeleteTransaction(BuildContext context, WidgetRef ref, AppLocalizations l10n, Transaction transaction) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final dShell = dialogContext.shellColors;
+        return AlertDialog(
+          backgroundColor: dShell.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Text(l10n.deleteTransactionConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
+          content: Text(l10n.deleteTransactionConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.delete, style: const TextStyle(color: AppColors.debit, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      await ref.read(transactionsProvider.notifier).deleteTransaction(transaction.id);
+      if (!context.mounted) return;
+      AppSnackBar.showSuccess(context, l10n.transactionDeletedSuccessMessage);
+    } catch (_) {
+      if (!context.mounted) return;
+      AppSnackBar.showError(context, l10n.unexpectedError);
+    }
+  }
+
+  Future<void> _confirmDeleteSelectedTransactions(BuildContext context, WidgetRef ref, AppLocalizations l10n, Set<String> ids) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final dShell = dialogContext.shellColors;
+        return AlertDialog(
+          backgroundColor: dShell.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Text(l10n.deleteTransactionConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
+          content: Text(l10n.deleteSelectedTransactionsConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.delete, style: const TextStyle(color: AppColors.debit, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      for (final id in ids) {
+        await ref.read(transactionsProvider.notifier).deleteTransaction(id);
+      }
+      ref.read(transactionSelectionModeProvider.notifier).state = false;
+      ref.read(selectedTransactionIdsProvider.notifier).state = {};
+      if (!context.mounted) return;
+      AppSnackBar.showSuccess(context, l10n.transactionDeletedSuccessMessage);
+    } catch (_) {
+      if (!context.mounted) return;
+      AppSnackBar.showError(context, l10n.unexpectedError);
+    }
+  }
+
+  /// Opens the ACCOUNT edit screen (name/date/details/phone/category) — reached from the 3-dot
+  /// menu's "تعديل" on this screen's own header. Deliberately separate from
+  /// [_openEditTransaction] below: this is the account itself, not one of its transactions.
+  void _openEditAccount(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 54),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: SizedBox(
+          width: 340,
+          height: 540,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+            child: AddAccountScreen(existingAccount: account),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openEditTransaction(BuildContext context, Transaction transaction) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 54),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: SizedBox(
+          width: 340,
+          height: 540,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+            child: AddTransactionScreen(
+              accountId: account.id,
+              accountName: account.name,
+              existingTransaction: transaction,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   /// Chronological ledger with running balance — same logic as TransactionTable's, on purpose,
@@ -214,6 +332,8 @@ class AccountDetailsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
     final transactions = ref.watch(transactionsForAccountProvider(account.id));
+    final selectionMode = ref.watch(transactionSelectionModeProvider);
+    final selectedIds = ref.watch(selectedTransactionIdsProvider);
 
     // The header's credit/debit split for THIS account's own bottom bar — not the app-wide
     // totals shown on Home.
@@ -232,43 +352,63 @@ class AccountDetailsScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [shell.headerTop, shell.headerBottom],
+            if (selectionMode)
+              SelectionToolbar(
+                selectedCount: selectedIds.length,
+                onCancel: () {
+                  ref.read(transactionSelectionModeProvider.notifier).state = false;
+                  ref.read(selectedTransactionIdsProvider.notifier).state = {};
+                },
+                onSelectAll: () => ref.read(selectedTransactionIdsProvider.notifier).state = transactions.map((t) => t.id).toSet(),
+                onEdit: selectedIds.length == 1
+                    ? () {
+                        final match = transactions.where((t) => t.id == selectedIds.first);
+                        if (match.isEmpty) return;
+                        _openEditTransaction(context, match.first);
+                      }
+                    : null,
+                onDelete: () => _confirmDeleteSelectedTransactions(context, ref, l10n, selectedIds),
+              )
+            else
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [shell.headerTop, shell.headerBottom],
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Row(
+                  children: [
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+                      color: shell.surface,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: shell.border)),
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _openEditAccount(context);
+                        } else if (value == 'delete') {
+                          _confirmDelete(context, ref, l10n);
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(value: 'edit', child: Text(l10n.edit, style: TextStyle(color: shell.textPrimary))),
+                        PopupMenuItem(value: 'delete', child: Text(l10n.delete, style: const TextStyle(color: AppColors.debit))),
+                      ],
+                    ),
+                    IconButton(
+                      icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27),
+                      tooltip: l10n.reportsSheetTitle,
+                      onPressed: () => _openReportsSheet(context, ref, l10n, transactions),
+                    ),
+                    IconButton(icon: const Icon(Icons.search_rounded, color: Colors.white, size: 20), onPressed: () => AppSnackBar.showError(context, l10n.comingSoonMessage)),
+                    const Spacer(),
+                    Text(account.name, style: AppTextStyles.title(context).copyWith(color: Colors.white), overflow: TextOverflow.ellipsis),
+                    IconButton(icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20), onPressed: () => context.pop()),
+                  ],
                 ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Row(
-                children: [
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
-                    onSelected: (value) {
-                      if (value == 'edit') {
-                        AppSnackBar.showError(context, l10n.comingSoonMessage);
-                      } else if (value == 'delete') {
-                        _confirmDelete(context, ref, l10n);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(value: 'edit', child: Text(l10n.edit)),
-                      PopupMenuItem(value: 'delete', child: Text(l10n.delete)),
-                    ],
-                  ),
-                  IconButton(
-                    icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27),
-                    tooltip: l10n.reportsSheetTitle,
-                    onPressed: () => _openReportsSheet(context, ref, l10n, transactions),
-                  ),
-                  IconButton(icon: const Icon(Icons.search_rounded, color: Colors.white, size: 20), onPressed: () => AppSnackBar.showError(context, l10n.comingSoonMessage)),
-                  const Spacer(),
-                  Text(account.name, style: AppTextStyles.title(context).copyWith(color: Colors.white), overflow: TextOverflow.ellipsis),
-                  IconButton(icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20), onPressed: () => context.pop()),
-                ],
-              ),
-            ),
             AccountActionIconRow(
               onAddAction: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
               onShare: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
@@ -282,7 +422,11 @@ class AccountDetailsScreen extends ConsumerWidget {
                     )
                   : SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: TransactionTable(transactions: transactions),
+                      child: TransactionTable(
+                        transactions: transactions,
+                        onEditTransaction: (t) => _openEditTransaction(context, t),
+                        onDeleteTransaction: (t) => _confirmDeleteTransaction(context, ref, l10n, t),
+                      ),
                     ),
             ),
             BottomSummaryBar(

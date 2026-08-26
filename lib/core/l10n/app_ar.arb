@@ -179,7 +179,13 @@
   "voiceDirectionLabel": "النوع",
   "voiceAccountLabel": "الحساب",
   "voiceRecordingDuration": "مدة التسجيل: {seconds} ث",
-  "@voiceRecordingDuration": { "placeholders": { "seconds": { "type": "int" } } },
+  "@voiceRecordingDuration": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "voiceUseAppLanguage": "لغة التعرف: العربية",
   "voiceConfirmationListening": "جاري الاستماع لتأكيدك…",
   "voiceConfirmationHint": "قل «نعم» للحفظ أو «تعديل» لإعادة الأمر",
@@ -204,14 +210,35 @@
   "reportShareFormatTitle": "نوع ملف المشاركة",
   "reportShareFormatExcel": "إكسل",
   "reportShareFormatPdf": "بي دي إف",
-  "reportFeatureNotReadyMessage": "هذا النوع من التقارير قيد التطوير حاليًا"
-  ,"voiceScreenTitle": "التسجيل الصوتي"
-  ,"voiceShortPressHint": "اضغط لبدء الاستماع المباشر"
-  ,"voiceLongPressHint": "اضغط مطولًا لوضع سماعة البلوتوث"
-  ,"imageOptionsTitle": "خيارات الصورة"
-  ,"imageSourceCamera": "الكاميرا"
-  ,"imageSourceGallery": "المعرض"
-  ,"confirm": "موافق"
-  ,"calculatorTitle": "الآلة الحاسبة"
-  ,"calculatorApply": "استخدام النتيجة"
+  "reportFeatureNotReadyMessage": "هذا النوع من التقارير قيد التطوير حاليًا",
+  "voiceScreenTitle": "التسجيل الصوتي",
+  "voiceShortPressHint": "اضغط لبدء الاستماع المباشر",
+  "voiceLongPressHint": "اضغط مطولًا لوضع سماعة البلوتوث",
+  "imageOptionsTitle": "خيارات الصورة",
+  "imageSourceCamera": "الكاميرا",
+  "imageSourceGallery": "المعرض",
+  "confirm": "موافق",
+  "calculatorTitle": "الآلة الحاسبة",
+  "calculatorApply": "استخدام النتيجة",
+  "editTransactionTitle": "تعديل عملية",
+  "transactionUpdatedSuccessMessage": "تم تعديل العملية بنجاح",
+  "transactionDeletedSuccessMessage": "تم حذف العملية بنجاح",
+  "deleteTransactionConfirmTitle": "حذف العملية",
+  "deleteTransactionConfirmBody": "هل أنت متأكد أنك تريد حذف هذه العملية؟ لا يمكن التراجع عن هذا الإجراء",
+  "shareAction": "مشاركة",
+  "transferAction": "تحويل",
+  "selectOne": "تحديد",
+  "selectAllAction": "تحديد الكل",
+  "selectedCountLabel": "تم تحديد {count}",
+  "@selectedCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedAccountsConfirmBody": "هل أنت متأكد أنك تريد حذف الحسابات المحددة؟ لا يمكن التراجع عن هذا الإجراء",
+  "deleteSelectedTransactionsConfirmBody": "هل أنت متأكد أنك تريد حذف العمليات المحددة؟ لا يمكن التراجع عن هذا الإجراء",
+  "editAccountTitle": "تعديل الحساب",
+  "accountUpdatedSuccessMessage": "تم تعديل الحساب بنجاح"
 }

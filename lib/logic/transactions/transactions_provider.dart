@@ -46,19 +46,36 @@ class TransactionsController extends AsyncNotifier<List<Transaction>> {
 
   Future<void> addTransaction(Transaction transaction) async {
     await ref.read(transactionsRepositoryProvider).addTransaction(transaction);
-    state = AsyncData([...state.value ?? const [], transaction]);
+    state = AsyncData([...state.value ?? const <Transaction>[], transaction]);
+  }
+
+  /// Persists an edit to an existing transaction (same id) — used by the new "tap a transaction
+  /// row to edit it" flow on Account Details.
+  Future<void> updateTransaction(Transaction transaction) async {
+    await ref.read(transactionsRepositoryProvider).updateTransaction(transaction);
+    state = AsyncData([
+      for (final t in state.value ?? const <Transaction>[])
+        if (t.id == transaction.id) transaction else t,
+    ]);
+  }
+
+  /// Deletes exactly one transaction — used by the edit screen's "حذف" button and by the
+  /// long-press action sheet's "حذف"/multi-select delete.
+  Future<void> deleteTransaction(String id) async {
+    await ref.read(transactionsRepositoryProvider).deleteTransaction(id);
+    state = AsyncData((state.value ?? const <Transaction>[]).where((t) => t.id != id).toList());
   }
 
   Future<void> deleteForAccount(String accountId) async {
     await ref.read(transactionsRepositoryProvider).deleteTransactionsForAccount(accountId);
-    state = AsyncData((state.value ?? const []).where((t) => t.accountId != accountId).toList());
+    state = AsyncData((state.value ?? const <Transaction>[]).where((t) => t.accountId != accountId).toList());
   }
 }
 
 /// This account's transactions, oldest first — used by Account Details' history list.
 final transactionsForAccountProvider = Provider.family.autoDispose<List<Transaction>, String>(
   (ref, accountId) {
-    final all = ref.watch(transactionsProvider).value ?? const [];
+    final all = ref.watch(transactionsProvider).value ?? const <Transaction>[];
     return all.where((t) => t.accountId == accountId).toList();
   },
 );
@@ -84,3 +101,11 @@ final accountDirectionProvider = Provider.family.autoDispose<AccountDirection, S
 final accountTransactionCountProvider = Provider.family.autoDispose<int, String>((ref, accountId) {
   return ref.watch(transactionsForAccountProvider(accountId)).length;
 });
+
+/// Multi-select state for the Account Details transaction table's long-press "تحديد"/"تحديد الكل"
+/// flow (see EntityAction in view/widgets/shared/entity_actions_sheet.dart). `.autoDispose` since
+/// a selection only makes sense for the lifetime of that screen being on top.
+final transactionSelectionModeProvider = StateProvider.autoDispose<bool>((ref) => false);
+
+/// The set of currently-selected transaction ids while [transactionSelectionModeProvider] is true.
+final selectedTransactionIdsProvider = StateProvider.autoDispose<Set<String>>((ref) => <String>{});

@@ -18,17 +18,29 @@ class AppDrawer extends ConsumerWidget {
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.logoutConfirmTitle),
-        content: Text(l10n.logoutConfirmBody),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel)),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.drawerLogout, style: const TextStyle(color: AppColors.debit)),
-          ),
-        ],
-      ),
+      builder: (dialogContext) {
+        // Styled explicitly with the shell's own colors — previously this AlertDialog had NO
+        // color styling at all, which is exactly what made the title/body text unreadable: it
+        // silently inherited whatever the ambient Material default happened to be for the
+        // current brightness instead of Dyooni's own navy/gold identity.
+        final dShell = dialogContext.shellColors;
+        return AlertDialog(
+          backgroundColor: dShell.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Text(l10n.logoutConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
+          content: Text(l10n.logoutConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.drawerLogout, style: const TextStyle(color: AppColors.debit, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed != true) return;

@@ -126,21 +126,30 @@ class _ReportOptionsSheetState<T> extends State<ReportOptionsSheet<T>> {
                 ],
               ),
               const SizedBox(height: 8),
-              for (final (value, label) in widget.options)
-                RadioListTile<T>(
-                  value: value,
-                  groupValue: _selectedType,
-                  onChanged: (v) {
-                    if (v != null) setState(() => _selectedType = v);
-                  },
-                  title: Text(
-                    label,
-                    textAlign: TextAlign.end,
-                    style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
-                  ),
-                  activeColor: shell.accent,
-                  contentPadding: EdgeInsets.zero,
+              // `RadioListTile.groupValue`/`.onChanged` are deprecated on newer Flutter — the
+              // group's shared state now comes from this ancestor `RadioGroup<T>` instead, with
+              // each tile below only specifying its own `value`.
+              RadioGroup<T>(
+                groupValue: _selectedType,
+                onChanged: (v) {
+                  if (v != null) setState(() => _selectedType = v);
+                },
+                child: Column(
+                  children: [
+                    for (final (value, label) in widget.options)
+                      RadioListTile<T>(
+                        value: value,
+                        title: Text(
+                          label,
+                          textAlign: TextAlign.end,
+                          style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
+                        ),
+                        activeColor: shell.accent,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                  ],
                 ),
+              ),
               const SizedBox(height: 4),
               CheckboxListTile(
                 value: _showSortOptions,

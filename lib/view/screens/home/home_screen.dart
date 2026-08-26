@@ -1,17 +1,19 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/generated/app_localizations.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../data/models/account.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../widgets/home/account_list_tile.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
 import '../../widgets/shared/app_snackbar.dart';
+import '../../widgets/shared/entity_actions_sheet.dart';
+import '../../widgets/shared/selection_toolbar.dart';
 import '../accounts/add_account_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -46,6 +48,87 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (mounted) setState(() => _voiceSheetOpen = false);
   }
 
+  void _cancelSelection() {
+    ref.read(accountSelectionModeProvider.notifier).state = false;
+    ref.read(selectedAccountIdsProvider.notifier).state = {};
+  }
+
+  Future<void> _confirmDeleteAccounts(Set<String> ids, {required bool multiple}) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final dShell = dialogContext.shellColors;
+        return AlertDialog(
+          backgroundColor: dShell.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Text(l10n.deleteAccountConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
+          content: Text(
+            multiple ? l10n.deleteSelectedAccountsConfirmBody : l10n.deleteAccountConfirmBody,
+            style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.delete, style: const TextStyle(color: AppColors.debit, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      for (final id in ids) {
+        await ref.read(accountsProvider.notifier).deleteAccount(id);
+      }
+      _cancelSelection();
+      if (!mounted) return;
+      AppSnackBar.showSuccess(context, l10n.accountDeletedSuccessMessage);
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.showError(context, l10n.unexpectedError);
+    }
+  }
+
+  void _openEditAccount(Account account) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 54),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: SizedBox(
+          width: 340,
+          height: 540,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+            child: AddAccountScreen(existingAccount: account),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleAccountAction(Account account, EntityAction action, List<Account> visibleAccounts) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (action) {
+      case EntityAction.edit:
+        _openEditAccount(account);
+      case EntityAction.share:
+      case EntityAction.transfer:
+        AppSnackBar.showError(context, l10n.comingSoonMessage);
+      case EntityAction.delete:
+        _confirmDeleteAccounts({account.id}, multiple: false);
+      case EntityAction.selectAll:
+        ref.read(accountSelectionModeProvider.notifier).state = true;
+        ref.read(selectedAccountIdsProvider.notifier).state = visibleAccounts.map((a) => a.id).toSet();
+      case EntityAction.select:
+        // Handled inside AccountListTile itself — never reaches here.
+        break;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +148,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final accountsAsync = ref.watch(accountsProvider);
     final categoryFiltered = ref.watch(filteredAccountsProvider);
     final summary = ref.watch(accountsSummaryProvider);
+    final selectionMode = ref.watch(accountSelectionModeProvider);
+    final selectedIds = ref.watch(selectedAccountIdsProvider);
 
     return Scaffold(
       backgroundColor: shell.background,
@@ -72,10 +157,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(
-              searchController: _searchController,
-              onQueryChanged: (v) => setState(() => _query = v),
-            ),
+            if (selectionMode)
+              SelectionToolbar(
+                selectedCount: selectedIds.length,
+                onCancel: _cancelSelection,
+                onSelectAll: () => ref.read(selectedAccountIdsProvider.notifier).state = categoryFiltered.map((a) => a.id).toSet(),
+                onEdit: selectedIds.length == 1
+                    ? () {
+                        final match = categoryFiltered.where((a) => a.id == selectedIds.first);
+                        if (match.isEmpty) return;
+                        _openEditAccount(match.first);
+                      }
+                    : null,
+                onDelete: () => _confirmDeleteAccounts(selectedIds, multiple: selectedIds.length > 1),
+              )
+            else
+              _Header(
+                searchController: _searchController,
+                onQueryChanged: (v) => setState(() => _query = v),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
               child: Row(
@@ -139,6 +239,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 AccountListTile(
                                   account: account,
                                   onTap: () => context.push('/account-details', extra: account),
+                                  onLongPressAction: (action) => _handleAccountAction(account, action, filtered),
                                 ),
                             ],
                           ),
@@ -221,8 +322,12 @@ class _Header extends StatelessWidget {
               const SizedBox(width: 8),
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert_rounded, color: shell.accent),
+                color: shell.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: shell.border)),
                 onSelected: (_) => AppSnackBar.showError(context, l10n.comingSoonMessage),
-                itemBuilder: (context) => [PopupMenuItem(value: 'sort', child: Text(l10n.homeSortNewest))],
+                itemBuilder: (context) => [
+                  PopupMenuItem(value: 'sort', child: Text(l10n.homeSortNewest, style: TextStyle(color: shell.textPrimary))),
+                ],
               ),
               IconButton(
                 icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27),

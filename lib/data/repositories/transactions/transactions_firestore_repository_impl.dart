@@ -42,6 +42,18 @@ class TransactionsFirestoreRepositoryImpl implements TransactionsRepository {
   }
 
   @override
+  Future<void> updateTransaction(Transaction transaction) async {
+    await _migrateOnce();
+    await _cloud.update(transaction);
+  }
+
+  @override
+  Future<void> deleteTransaction(String id) async {
+    await _migrateOnce();
+    await _cloud.delete(id);
+  }
+
+  @override
   Future<void> deleteTransactionsForAccount(String accountId) async {
     await _migrateOnce();
     await _cloud.deleteForAccount(accountId);

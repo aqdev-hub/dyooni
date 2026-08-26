@@ -80,17 +80,57 @@ class _AmountCalculatorDialogState extends State<_AmountCalculatorDialog> {
       title: Text(l10n.calculatorTitle, textAlign: TextAlign.center, style: AppTextStyles.title(context).copyWith(color: shell.textPrimary)),
       content: SizedBox(
         width: 310,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: double.infinity, padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: shell.background, borderRadius: BorderRadius.circular(10), border: Border.all(color: shell.border)), child: Text(_display.isEmpty ? '0' : _display, textAlign: TextAlign.end, style: AppTextStyles.title(context).copyWith(color: shell.textPrimary))),
-          const SizedBox(height: 10),
-          GridView.count(crossAxisCount: 4, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 7, crossAxisSpacing: 7, children: [
-            for (final key in keys) OutlinedButton(onPressed: () => _tap(key), style: OutlinedButton.styleFrom(padding: EdgeInsets.zero, foregroundColor: ['+', '-', '×', '÷', '='].contains(key) ? shell.accent : shell.textPrimary), child: Text(key, style: AppTextStyles.body(context).copyWith(fontWeight: FontWeight.w700))),
-          ]),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: shell.background,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: shell.border),
+              ),
+              child: Text(
+                _display.isEmpty ? '0' : _display,
+                textAlign: TextAlign.end,
+                style: AppTextStyles.title(context).copyWith(color: shell.textPrimary),
+              ),
+            ),
+            const SizedBox(height: 10),
+            GridView.count(
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 7,
+              crossAxisSpacing: 7,
+              children: [
+                for (final key in keys)
+                  OutlinedButton(
+                    onPressed: () => _tap(key),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      foregroundColor: ['+', '-', '×', '÷', '='].contains(key) ? shell.accent : shell.textPrimary,
+                    ),
+                    child: Text(key, style: AppTextStyles.body(context).copyWith(fontWeight: FontWeight.w700)),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
-        FilledButton(onPressed: () { final value = _evaluate(_expression) ?? double.tryParse(_expression); Navigator.of(context).pop(value); }, child: Text(l10n.calculatorApply)),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () {
+            final value = _evaluate(_expression) ?? double.tryParse(_expression);
+            Navigator.of(context).pop(value);
+          },
+          child: Text(l10n.calculatorApply),
+        ),
       ],
     );
   }

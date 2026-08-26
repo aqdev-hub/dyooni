@@ -40,29 +40,74 @@ class _ImageSourceDialogState extends State<_ImageSourceDialog> {
       backgroundColor: shell.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       titlePadding: const EdgeInsets.fromLTRB(20, 18, 12, 8),
-      title: Row(children: [
-        Expanded(child: Text(l10n.imageOptionsTitle, textAlign: TextAlign.center, style: AppTextStyles.title(context).copyWith(color: shell.textPrimary))),
-        IconButton(onPressed: _picking ? null : () => Navigator.of(context).pop(), icon: Icon(Icons.close_rounded, color: shell.textSecondary)),
-      ]),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        RadioListTile<ImageSource>(
-          value: ImageSource.camera,
-          groupValue: _source,
-          onChanged: _picking ? null : (value) => setState(() => _source = value!),
-          activeColor: shell.accent,
-          title: Text(l10n.imageSourceCamera, textAlign: TextAlign.end, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary)),
-        ),
-        RadioListTile<ImageSource>(
-          value: ImageSource.gallery,
-          groupValue: _source,
-          onChanged: _picking ? null : (value) => setState(() => _source = value!),
-          activeColor: shell.accent,
-          title: Text(l10n.imageSourceGallery, textAlign: TextAlign.end, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary)),
-        ),
-      ]),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              l10n.imageOptionsTitle,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.title(context).copyWith(color: shell.textPrimary),
+            ),
+          ),
+          IconButton(
+            onPressed: _picking ? null : () => Navigator.of(context).pop(),
+            icon: Icon(Icons.close_rounded, color: shell.textSecondary),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        // `RadioListTile.groupValue`/`.onChanged` are deprecated on newer Flutter — the group's
+        // shared state now comes from this ancestor `RadioGroup<ImageSource>` instead, with each
+        // tile below only specifying its own `value`.
+        children: [
+          RadioGroup<ImageSource>(
+            groupValue: _source,
+            // `RadioGroup.onChanged` takes a non-nullable `ValueChanged<ImageSource?>` — it can't
+            // be turned off by passing `null` the way a plain `Radio`/`RadioListTile.onChanged`
+            // could. The "disabled while picking" behavior is now handled inside the callback
+            // instead: while `_picking` is true, a tap simply does nothing.
+            onChanged: (value) {
+              if (_picking || value == null) return;
+              setState(() => _source = value);
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RadioListTile<ImageSource>(
+                  value: ImageSource.camera,
+                  activeColor: shell.accent,
+                  title: Text(
+                    l10n.imageSourceCamera,
+                    textAlign: TextAlign.end,
+                    style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
+                  ),
+                ),
+                RadioListTile<ImageSource>(
+                  value: ImageSource.gallery,
+                  activeColor: shell.accent,
+                  title: Text(
+                    l10n.imageSourceGallery,
+                    textAlign: TextAlign.end,
+                    style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
       actions: [
-        TextButton(onPressed: _picking ? null : () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
-        FilledButton(onPressed: _picking ? null : _confirm, child: _picking ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : Text(l10n.confirm)),
+        TextButton(
+          onPressed: _picking ? null : () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _picking ? null : _confirm,
+          child: _picking
+              ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(l10n.confirm),
+        ),
       ],
     );
   }

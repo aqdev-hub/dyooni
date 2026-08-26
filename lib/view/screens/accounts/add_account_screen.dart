@@ -8,12 +8,14 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/dyooni_picker_theme.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/shared/amount_in_words.dart';
 import '../../widgets/shared/app_snackbar.dart';
+import '../../widgets/shared/currency_picker_sheet.dart';
 import '../../widgets/shared/direction_choice.dart';
 import '../../widgets/shared/labeled_field.dart';
 import '../../widgets/shared/amount_calculator_dialog.dart';
@@ -21,7 +23,18 @@ import '../../widgets/shared/image_source_dialog.dart';
 import '../../widgets/shared/modal_header_bar.dart';
 
 class AddAccountScreen extends ConsumerStatefulWidget {
-  const AddAccountScreen({super.key});
+  const AddAccountScreen({this.existingAccount, super.key});
+
+  /// When non-null, this screen behaves as an EDIT of that account instead of creating a new
+  /// one: the name/date/details/phone/category fields are pre-filled from it, the title and save
+  /// button switch to "تعديل الحساب"/"تعديل", the amount/currency/direction fields (which only
+  /// ever apply to the account's FIRST transaction) are hidden, and saving calls `updateAccount`
+  /// (same id) instead of creating a new account + a new first transaction. Reached from the
+  /// 3-dot menu's "تعديل" on Account Details, and from the account long-press action sheet /
+  /// selection toolbar's "تعديل" on Home — see EntityAction.
+  final Account? existingAccount;
+
+  bool get isEditing => existingAccount != null;
 
   @override
   ConsumerState<AddAccountScreen> createState() => _AddAccountScreenState();
@@ -45,6 +58,14 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   void initState() {
     super.initState();
     _amountController.addListener(() => setState(() {}));
+    final existing = widget.existingAccount;
+    if (existing != null) {
+      _nameController.text = existing.name;
+      _category = existing.category;
+      _date = existing.createdDate;
+      _detailsController.text = existing.details ?? '';
+      _phoneController.text = existing.phone ?? '';
+    }
   }
 
   @override
@@ -62,20 +83,15 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       initialDate: _date,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
+      builder: dyooniPickerTheme,
     );
     if (picked != null) setState(() => _date = picked);
   }
 
+  /// Reached identically from the currency field itself and from its pencil icon — see
+  /// currency_picker_sheet.dart's doc comment for why these used to be two different pickers.
   Future<void> _chooseCurrency() async {
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [for (final currency in currencies) ListTile(title: Text(currency.label(AppLocalizations.of(context)!)), onTap: () => Navigator.of(context).pop(currency.code))],
-        ),
-      ),
-    );
+    final selected = await showCurrencyPickerSheet(context, selectedCode: _currencyCode);
     if (selected != null && mounted) setState(() => _currencyCode = selected);
   }
 
@@ -94,6 +110,30 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
+
+    if (widget.isEditing) {
+      final updated = Account(
+        id: widget.existingAccount!.id,
+        name: _nameController.text.trim(),
+        category: _category,
+        createdDate: _date,
+        details: _detailsController.text.trim().isEmpty ? null : _detailsController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+      );
+      try {
+        await ref.read(accountsProvider.notifier).updateAccount(updated);
+        if (!mounted) return;
+        AppSnackBar.showSuccess(context, l10n.accountUpdatedSuccessMessage);
+        context.pop();
+      } catch (_) {
+        if (!mounted) return;
+        AppSnackBar.showError(context, l10n.unexpectedError);
+      } finally {
+        if (mounted) setState(() => _isSaving = false);
+      }
+      return;
+    }
+
     final accountId = const Uuid().v4();
     final account = Account(
       id: accountId,
@@ -143,7 +183,10 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ModalHeaderBar(title: l10n.addAccountTitle, onClose: () => context.pop()),
+                ModalHeaderBar(
+                  title: widget.isEditing ? l10n.editAccountTitle : l10n.addAccountTitle,
+                  onClose: () => context.pop(),
+                ),
                 const SizedBox(height: 8),
                 LabeledField(
                   icon: Icons.person_outline_rounded,
@@ -155,72 +198,75 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                LabeledField(
-                  icon: Icons.calculate_outlined,
-                  onIconTap: _openCalculator,
-                  child: TextFormField(
-                    controller: _amountController,
-                    textAlign: TextAlign.center,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(hintText: l10n.amountLabel, border: InputBorder.none),
-                    validator: (v) {
-                      final parsed = double.tryParse((v ?? '').trim());
-                      if (parsed == null || parsed <= 0) return l10n.invalidAmount;
-                      return null;
-                    },
-                  ),
-                ),
-                AmountInWords(amountText: _amountController.text),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Text(
-                      l10n.currencyLabel,
-                      style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textPrimary),
+                // The amount/currency/direction trio only ever applies to the account's FIRST
+                // transaction — meaningless when editing an account that already exists, so it's
+                // hidden entirely in that mode rather than shown-but-ignored.
+                if (!widget.isEditing) ...[
+                  LabeledField(
+                    icon: Icons.calculate_outlined,
+                    onIconTap: _openCalculator,
+                    child: TextFormField(
+                      controller: _amountController,
+                      textAlign: TextAlign.center,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(hintText: l10n.amountLabel, border: InputBorder.none),
+                      validator: (v) {
+                        final parsed = double.tryParse((v ?? '').trim());
+                        if (parsed == null || parsed <= 0) return l10n.invalidAmount;
+                        return null;
+                      },
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        height: 40,
-                        decoration: BoxDecoration(color: shell.headerBottom, borderRadius: BorderRadius.circular(5)),
-                        child: Directionality(
-                          textDirection: TextDirection.ltr,
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.edit_rounded, size: 25, color: shell.accent),
-                                onPressed: _chooseCurrency,
-                              ),
-                              Expanded(
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: _currencyCode,
-                                    isExpanded: true,
-                                    alignment: Alignment.center,
-                                    style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
-                                    items: [
-                                      for (final c in currencies)
-                                        DropdownMenuItem(
-                                          value: c.code,
-                                          alignment: Alignment.center,
-                                          child: Text(c.label(l10n), textAlign: TextAlign.center),
-                                        ),
-                                    ],
-                                    onChanged: (v) => setState(() => _currencyCode = v ?? _currencyCode),
+                  ),
+                  AmountInWords(amountText: _amountController.text),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text(
+                        l10n.currencyLabel,
+                        style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textPrimary),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(color: shell.headerBottom, borderRadius: BorderRadius.circular(5)),
+                          child: Directionality(
+                            textDirection: TextDirection.ltr,
+                            child: Row(
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.edit_rounded, size: 25, color: shell.accent),
+                                  onPressed: _chooseCurrency,
+                                ),
+                                Expanded(
+                                  // Tapping the field itself now opens the SAME picker as the pencil
+                                  // icon (see currency_picker_sheet.dart) — previously this was a
+                                  // native DropdownButton, a second, differently-styled picker.
+                                  child: InkWell(
+                                    onTap: _chooseCurrency,
+                                    child: Align(
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        currencies.firstWhere((c) => c.code == _currencyCode).label(l10n),
+                                        textAlign: TextAlign.center,
+                                        style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 42),
-                            ],
+                                const SizedBox(width: 42),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 LabeledField(
                   icon: Icons.calendar_today_outlined,
+                  onIconTap: _pickDate,
                   child: InkWell(
                     onTap: _pickDate,
                     child: Text(
@@ -272,24 +318,25 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    DirectionChoice(
-                      label: l10n.directionCredit,
-                      color: AppColors.credit,
-                      selected: _direction == AccountDirection.credit,
-                      onTap: () => setState(() => _direction = AccountDirection.credit),
-                    ),
-                    const SizedBox(width: 24),
-                    DirectionChoice(
-                      label: l10n.directionDebit,
-                      color: AppColors.debit,
-                      selected: _direction == AccountDirection.debit,
-                      onTap: () => setState(() => _direction = AccountDirection.debit),
-                    ),
-                  ],
-                ),
+                if (!widget.isEditing)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      DirectionChoice(
+                        label: l10n.directionCredit,
+                        color: AppColors.credit,
+                        selected: _direction == AccountDirection.credit,
+                        onTap: () => setState(() => _direction = AccountDirection.credit),
+                      ),
+                      const SizedBox(width: 24),
+                      DirectionChoice(
+                        label: l10n.directionDebit,
+                        color: AppColors.debit,
+                        selected: _direction == AccountDirection.debit,
+                        onTap: () => setState(() => _direction = AccountDirection.debit),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: _isSaving ? null : _save,
@@ -305,7 +352,10 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                           height: 22,
                           child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
                         )
-                      : Text(l10n.saveButton, style: AppTextStyles.button(context).copyWith(color: Colors.white)),
+                      : Text(
+                          widget.isEditing ? l10n.edit : l10n.saveButton,
+                          style: AppTextStyles.button(context).copyWith(color: Colors.white),
+                        ),
                 ),
               ],
             ),

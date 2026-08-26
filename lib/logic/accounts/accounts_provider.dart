@@ -46,7 +46,21 @@ class AccountsController extends AsyncNotifier<List<Account>> {
 
   Future<void> addAccount(Account account) async {
     await ref.read(accountsRepositoryProvider).addAccount(account);
-    state = AsyncData([...state.value ?? const [], account]);
+    state = AsyncData([...state.value ?? const <Account>[], account]);
+  }
+
+  /// Persists an edit to an EXISTING account (same id) — used by the new "تعديل" flow (3-dot
+  /// menu on Account Details, and the long-press action sheet / selection toolbar on Home).
+  /// [AccountsRepository.addAccount] already writes via `.doc(id).set(...)` under the hood, which
+  /// is an upsert, so the same repository call works for both create and update — the only real
+  /// difference is how the LOCAL state list is reconciled afterwards: [addAccount] above always
+  /// appends, which would wrongly duplicate an existing entry if it were reused here.
+  Future<void> updateAccount(Account account) async {
+    await ref.read(accountsRepositoryProvider).addAccount(account);
+    state = AsyncData([
+      for (final a in state.value ?? const <Account>[])
+        if (a.id == account.id) account else a,
+    ]);
   }
 
   /// Deletes the account AND every transaction that belongs to it — an orphaned transaction
@@ -54,7 +68,7 @@ class AccountsController extends AsyncNotifier<List<Account>> {
   Future<void> deleteAccount(String id) async {
     await ref.read(accountsRepositoryProvider).deleteAccount(id);
     await ref.read(transactionsProvider.notifier).deleteForAccount(id);
-    state = AsyncData((state.value ?? const []).where((a) => a.id != id).toList());
+    state = AsyncData((state.value ?? const <Account>[]).where((a) => a.id != id).toList());
   }
 }
 
@@ -104,3 +118,11 @@ AccountsSummary _summarize(Ref ref, List<Account> accounts) {
   }
   return AccountsSummary(totalCredit: credit, totalDebit: debit, count: accounts.length);
 }
+
+/// Multi-select state for the Home account list's long-press "تحديد"/"تحديد الكل" flow (see
+/// EntityAction in view/widgets/shared/entity_actions_sheet.dart). Deliberately NOT persisted and
+/// `.autoDispose` — a selection only ever makes sense for the lifetime of Home being on screen.
+final accountSelectionModeProvider = StateProvider.autoDispose<bool>((ref) => false);
+
+/// The set of currently-selected account ids while [accountSelectionModeProvider] is true.
+final selectedAccountIdsProvider = StateProvider.autoDispose<Set<String>>((ref) => <String>{});
