@@ -48,6 +48,11 @@ class CsvReportService {
   /// "تقرير كشف الحساب" export — the full ledger for ONE account, matching the reference's
   /// column order exactly: date, details, debit, credit, running balance, then a totals row and
   /// a final-balance row.
+  ///
+  /// [attachmentPresentLabel] is appended to a row's details text whenever that transaction has a
+  /// photo attached — plain CSV has no way to embed the image itself (the PDF export does, see
+  /// pdf_report_service.dart), so this is the honest text-only equivalent: a visible marker
+  /// rather than silently losing the fact that a photo exists once exported to CSV/Excel.
   Uint8List buildAccountStatement({
     required String dateHeader,
     required String detailsHeader,
@@ -55,6 +60,7 @@ class CsvReportService {
     required String creditHeader,
     required String balanceHeader,
     required String totalRowLabel,
+    required String attachmentPresentLabel,
     required List<StatementRow> rows,
   }) {
     final buffer = StringBuffer();
@@ -73,10 +79,13 @@ class CsvReportService {
       }
       final date =
           '${row.transaction.date.year}-${row.transaction.date.month.toString().padLeft(2, '0')}-${row.transaction.date.day.toString().padLeft(2, '0')}';
+      final baseDetails = row.transaction.details ?? '—';
+      final detailsWithAttachment =
+          row.transaction.attachmentPath != null ? '$baseDetails $attachmentPresentLabel' : baseDetails;
       buffer.writeln(
         [
           date,
-          row.transaction.details ?? '—',
+          detailsWithAttachment,
           isCredit ? '0' : row.transaction.amount.toStringAsFixed(2),
           isCredit ? row.transaction.amount.toStringAsFixed(2) : '0',
           row.runningBalance.abs().toStringAsFixed(2),

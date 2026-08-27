@@ -23,12 +23,28 @@ class TransactionTable extends ConsumerWidget {
     required this.transactions,
     required this.onEditTransaction,
     required this.onDeleteTransaction,
+    this.searchQuery = '',
     super.key,
   });
 
   final List<Transaction> transactions;
   final ValueChanged<Transaction> onEditTransaction;
   final ValueChanged<Transaction> onDeleteTransaction;
+
+  /// Filters visible rows by amount, date (yyyy-MM-dd), or details — see [_matchesSearch].
+  /// Deliberately applied AFTER the running-balance is computed from the FULL transaction list
+  /// below, never before: filtering the input list first would silently corrupt every balance
+  /// figure, since running balance is inherently cumulative over the whole chronological history.
+  final String searchQuery;
+
+  bool _matchesSearch(Transaction t) {
+    final query = searchQuery.trim().toLowerCase();
+    if (query.isEmpty) return true;
+    final amountStr = t.amount.toStringAsFixed(0);
+    final dateStr = '${t.date.year}-${t.date.month.toString().padLeft(2, '0')}-${t.date.day.toString().padLeft(2, '0')}';
+    final details = (t.details ?? '').toLowerCase();
+    return amountStr.contains(query) || dateStr.contains(query) || details.contains(query);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,8 +108,18 @@ class TransactionTable extends ConsumerWidget {
                 ],
               ),
             ),
+            if (searchQuery.trim().isNotEmpty && !rows.any((row) => _matchesSearch(row.$1)))
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  l10n.searchNoResults,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
+                ),
+              ),
             for (final row in rows.reversed)
-              _DataRow(
+              if (_matchesSearch(row.$1))
+                _DataRow(
                 transaction: row.$1,
                 runningBalance: row.$2,
                 selectionMode: selectionMode,

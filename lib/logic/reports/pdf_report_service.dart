@@ -65,6 +65,26 @@ class PdfReportService {
     return pw.MemoryImage(data.buffer.asUint8List());
   }
 
+  /// Preloads each row's transaction attachment (if any) as a [pw.MemoryImage], keyed by
+  /// transaction id. Done as a separate async pass BEFORE the (synchronous) table-building code
+  /// below, since `pw.Document.addPage`'s `build:` callback itself can't be async. A missing or
+  /// unreadable attachment file is skipped — same "never break the whole report over one bad
+  /// file" principle as [_loadLogo].
+  Future<Map<String, pw.MemoryImage>> _loadAttachments(List<StatementRow> rows) async {
+    final images = <String, pw.MemoryImage>{};
+    for (final row in rows) {
+      final path = row.transaction.attachmentPath;
+      if (path == null) continue;
+      try {
+        final bytes = await File(path).readAsBytes();
+        images[row.transaction.id] = pw.MemoryImage(bytes);
+      } catch (_) {
+        // Attachment file missing/unreadable — the row still renders, just without the thumbnail.
+      }
+    }
+    return images;
+  }
+
   /// The bilingual identity block used at the top of every report: English details on the left,
   /// the app/business logo in the middle, Arabic details on the right — all sourced from
   /// [PersonalData], never hardcoded. [reportTitle] renders underlined below it.
@@ -237,7 +257,8 @@ class PdfReportService {
   }
 
   /// "تقرير كشف الحساب" — the full transaction ledger for ONE account: date, details, debit,
-  /// credit, running balance — plus a highlighted final-balance row.
+  /// credit, running balance — plus a highlighted final-balance row. Rows whose transaction has a
+  /// photo attached also show a small thumbnail next to the details text (see [_loadAttachments]).
   Future<Uint8List> buildAccountStatement({
     required PersonalData personalData,
     required String appName,
@@ -252,6 +273,7 @@ class PdfReportService {
   }) async {
     final (regularFont, boldFont) = await _loadFonts();
     final logo = await _loadLogo(personalData);
+    final attachmentImages = await _loadAttachments(rows);
     final doc = pw.Document();
 
     var totalCredit = 0.0;
@@ -310,7 +332,11 @@ class PdfReportService {
                       row.transaction.direction == AccountDirection.debit ? row.transaction.amount.toStringAsFixed(0) : '0',
                       regularFont,
                     ),
-                    _bodyCell(shapeArabicForPdf(row.transaction.details ?? '—'), regularFont),
+                    _detailsCellWithAttachment(
+                      shapeArabicForPdf(row.transaction.details ?? '—'),
+                      regularFont,
+                      attachmentImages[row.transaction.id],
+                    ),
                     _bodyCell(_formatDate(row.transaction.date), regularFont),
                   ],
                 ),
@@ -360,6 +386,27 @@ class PdfReportService {
   pw.Widget _bodyCell(String text, pw.Font font) => pw.Padding(
         padding: const pw.EdgeInsets.all(6),
         child: pw.Text(text, style: pw.TextStyle(font: font, fontSize: 9)),
+      );
+
+  /// Same as [_bodyCell] but also places a small thumbnail next to the text when [image] is
+  /// non-null — this is the only cell that ever carries an attachment thumbnail.
+  pw.Widget _detailsCellWithAttachment(String text, pw.Font font, pw.MemoryImage? image) => pw.Padding(
+        padding: const pw.EdgeInsets.all(6),
+        child: pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.center,
+          children: [
+            pw.Flexible(child: pw.Text(text, style: pw.TextStyle(font: font, fontSize: 9), textAlign: pw.TextAlign.center)),
+            if (image != null) ...[
+              pw.SizedBox(width: 4),
+              pw.Container(
+                width: 22,
+                height: 22,
+                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400, width: 0.5)),
+                child: pw.Image(image, fit: pw.BoxFit.cover),
+              ),
+            ],
+          ],
+        ),
       );
 
   pw.Widget _bodyCellBold(String text, pw.Font font) => pw.Padding(

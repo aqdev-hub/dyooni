@@ -240,5 +240,15 @@
   "deleteSelectedAccountsConfirmBody": "Are you sure you want to delete the selected accounts? This can't be undone",
   "deleteSelectedTransactionsConfirmBody": "Are you sure you want to delete the selected entries? This can't be undone",
   "editAccountTitle": "Edit account",
-  "accountUpdatedSuccessMessage": "Account updated successfully"
+  "accountUpdatedSuccessMessage": "Account updated successfully",
+  "transactionSearchHint": "Search by amount, date, or details",
+  "callAction": "Call",
+  "callFailedMessage": "Couldn't open the phone app",
+  "contactPickFailedMessage": "Couldn't open contacts",
+  "accountNameMustBeTwoWords": "Enter at least a first and last name",
+  "attachmentRotateAction": "Rotate",
+  "attachmentPresentLabel": "(has attachment)",
+  "navHome": "Home",
+  "navVoice": "Voice",
+  "searchNoResults": "No entries match your search"
 }

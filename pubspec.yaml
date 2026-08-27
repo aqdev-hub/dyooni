@@ -85,6 +85,22 @@ dependencies:
   # testing on iOS (I don't have that file in this sandbox to add it for you).
   image_picker: ^1.1.2
 
+  # NEW this batch — opens the device's OWN native contact-picker UI (`openExternalPick`) so a
+  # person can fill an account's name/phone from an existing contact. Deliberately the EXTERNAL
+  # picker, not an in-app contact list built on `FlutterContacts.getContacts()`: the external
+  # picker hands back exactly the one contact the person chose via the OS's own one-time grant,
+  # so it needs NO `READ_CONTACTS` runtime permission and NO manifest/Info.plist entry at all —
+  # the OS contact-picker app is what actually reads the contacts database, not this app.
+  flutter_contacts: ^1.1.9+2
+
+  # NEW this batch — opens the device's phone dialer (`tel:` URI) from the account's call icon.
+  url_launcher: ^6.3.1
+
+  # NEW this batch, promoted from a transitive dependency (was already resolved at 4.9.1 via
+  # image_picker/pdf) to a DIRECT one — now imported directly to rotate a transaction's attached
+  # photo in place.
+  image: ^4.2.0
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

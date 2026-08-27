@@ -240,5 +240,15 @@
   "deleteSelectedAccountsConfirmBody": "هل أنت متأكد أنك تريد حذف الحسابات المحددة؟ لا يمكن التراجع عن هذا الإجراء",
   "deleteSelectedTransactionsConfirmBody": "هل أنت متأكد أنك تريد حذف العمليات المحددة؟ لا يمكن التراجع عن هذا الإجراء",
   "editAccountTitle": "تعديل الحساب",
-  "accountUpdatedSuccessMessage": "تم تعديل الحساب بنجاح"
+  "accountUpdatedSuccessMessage": "تم تعديل الحساب بنجاح",
+  "transactionSearchHint": "بحث بالمبلغ أو التاريخ أو التفاصيل",
+  "callAction": "اتصال",
+  "callFailedMessage": "تعذر فتح تطبيق الهاتف",
+  "contactPickFailedMessage": "تعذر فتح جهات الاتصال",
+  "accountNameMustBeTwoWords": "أدخل الاسم الأول واسم العائلة على الأقل",
+  "attachmentRotateAction": "تدوير",
+  "attachmentPresentLabel": "(يوجد مرفق)",
+  "navHome": "الرئيسية",
+  "navVoice": "صوتي",
+  "searchNoResults": "لا توجد نتائج مطابقة للبحث"
 }

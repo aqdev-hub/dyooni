@@ -115,6 +115,7 @@ void main() {
         creditHeader: 'Credit',
         balanceHeader: 'Balance',
         totalRowLabel: 'Total',
+        attachmentPresentLabel: '(attachment)',
         rows: [
           StatementRow(transaction: credit, runningBalance: 500),
           StatementRow(transaction: debit, runningBalance: 300),
@@ -133,6 +134,34 @@ void main() {
       expect(lines[4], ',Total,,,300.00');
     });
 
+    test('appends attachmentPresentLabel to the details column when a transaction has a photo attached', () {
+      final withAttachment = Transaction(
+        id: 't3',
+        accountId: 'a1',
+        amount: 150,
+        currency: 'SAR',
+        direction: AccountDirection.credit,
+        date: DateTime(2026, 1, 10),
+        details: 'فاتورة',
+        attachmentPath: '/tmp/receipt.jpg',
+      );
+
+      final bytes = service.buildAccountStatement(
+        dateHeader: 'Date',
+        detailsHeader: 'Details',
+        debitHeader: 'Debit',
+        creditHeader: 'Credit',
+        balanceHeader: 'Balance',
+        totalRowLabel: 'Total',
+        attachmentPresentLabel: '(attachment)',
+        rows: [StatementRow(transaction: withAttachment, runningBalance: 150)],
+      );
+
+      final text = utf8.decode(bytes.skip(3).toList());
+      final lines = text.trim().split('\n');
+      expect(lines[1], '2026-01-10,فاتورة (attachment),0,150.00,150.00');
+    });
+
     test('returns just the header row when there are no transactions', () {
       final bytes = service.buildAccountStatement(
         dateHeader: 'Date',
@@ -141,6 +170,7 @@ void main() {
         creditHeader: 'Credit',
         balanceHeader: 'Balance',
         totalRowLabel: 'Total',
+        attachmentPresentLabel: '(attachment)',
         rows: [],
       );
 

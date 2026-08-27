@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/dyooni_picker_theme.dart';
+import '../../../core/utils/image_rotate.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/transactions/transactions_provider.dart';
@@ -17,6 +18,7 @@ import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/direction_choice.dart';
 import '../../widgets/shared/labeled_field.dart';
 import '../../widgets/shared/amount_calculator_dialog.dart';
+import '../../widgets/shared/attachment_preview.dart';
 import '../../widgets/shared/currency_picker_sheet.dart';
 import '../../widgets/shared/image_source_dialog.dart';
 import '../../widgets/shared/modal_header_bar.dart';
@@ -99,6 +101,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   Future<void> _chooseImage() async {
     final image = await showImageSourceDialog(context);
     if (image != null && mounted) setState(() => _attachmentPath = image.path);
+  }
+
+  /// Rotates the currently-attached photo 90° in place. The file path never changes — see
+  /// AttachmentPreview's doc comment for how the thumbnail still picks up the new bytes.
+  Future<void> _rotateAttachment() async {
+    final path = _attachmentPath;
+    if (path == null) return;
+    try {
+      await rotateImageFile90(path);
+      if (mounted) setState(() {});
+    } catch (_) {
+      if (mounted) AppSnackBar.showError(context, AppLocalizations.of(context)!.unexpectedError);
+    }
   }
 
   void _resetForm() {
@@ -317,6 +332,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     decoration: InputDecoration(hintText: l10n.detailsLabel, border: InputBorder.none),
                   ),
                 ),
+                if (_attachmentPath != null)
+                  AttachmentPreview(
+                    path: _attachmentPath!,
+                    onEdit: _chooseImage,
+                    onRotate: _rotateAttachment,
+                    onDelete: () => setState(() => _attachmentPath = null),
+                  ),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

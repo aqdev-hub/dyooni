@@ -9,6 +9,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/dyooni_picker_theme.dart';
+import '../../../core/utils/contact_picker.dart';
+import '../../../core/utils/image_rotate.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
@@ -19,6 +21,7 @@ import '../../widgets/shared/currency_picker_sheet.dart';
 import '../../widgets/shared/direction_choice.dart';
 import '../../widgets/shared/labeled_field.dart';
 import '../../widgets/shared/amount_calculator_dialog.dart';
+import '../../widgets/shared/attachment_preview.dart';
 import '../../widgets/shared/image_source_dialog.dart';
 import '../../widgets/shared/modal_header_bar.dart';
 
@@ -103,6 +106,52 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   Future<void> _chooseImage() async {
     final image = await showImageSourceDialog(context);
     if (image != null && mounted) setState(() => _attachmentPath = image.path);
+  }
+
+  /// Rotates the currently-attached photo 90° in place — see AttachmentPreview's doc comment.
+  Future<void> _rotateAttachment() async {
+    final path = _attachmentPath;
+    if (path == null) return;
+    try {
+      await rotateImageFile90(path);
+      if (mounted) setState(() {});
+    } catch (_) {
+      if (mounted) AppSnackBar.showError(context, AppLocalizations.of(context)!.unexpectedError);
+    }
+  }
+
+  /// Person icon next to the NAME field: picks a device contact and fills BOTH the name and the
+  /// phone field from it (per explicit request — picking a contact from either icon should never
+  /// leave the phone half-filled).
+  Future<void> _pickContactForName() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final contact = await pickDeviceContact();
+      if (contact == null || !mounted) return; // person backed out of the picker
+      final name = displayName(contact);
+      final phone = firstPhoneNumber(contact);
+      setState(() {
+        if (name != null) _nameController.text = name;
+        if (phone != null) _phoneController.text = phone;
+      });
+    } catch (_) {
+      if (mounted) AppSnackBar.showError(context, l10n.contactPickFailedMessage);
+    }
+  }
+
+  /// Phone icon next to the PHONE field: picks a device contact and fills ONLY the phone field —
+  /// deliberately leaves the name field untouched, since the person may already be editing a
+  /// different/existing name here.
+  Future<void> _pickContactForPhone() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final contact = await pickDeviceContact();
+      if (contact == null || !mounted) return;
+      final phone = firstPhoneNumber(contact);
+      if (phone != null) setState(() => _phoneController.text = phone);
+    } catch (_) {
+      if (mounted) AppSnackBar.showError(context, l10n.contactPickFailedMessage);
+    }
   }
 
   Future<void> _save() async {
@@ -190,11 +239,21 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                 const SizedBox(height: 8),
                 LabeledField(
                   icon: Icons.person_outline_rounded,
+                  onIconTap: _pickContactForName,
                   child: TextFormField(
                     controller: _nameController,
                     textAlign: TextAlign.center,
                     decoration: InputDecoration(hintText: l10n.accountNameLabel, border: InputBorder.none),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? l10n.fieldRequired : null,
+                    validator: (v) {
+                      final trimmed = (v ?? '').trim();
+                      if (trimmed.isEmpty) return l10n.fieldRequired;
+                      // The account name must be composite (first + last, at minimum) — a single
+                      // word is rejected. `split` on any run of whitespace then dropping empty
+                      // pieces handles multiple spaces between words correctly.
+                      final words = trimmed.split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+                      if (words.length < 2) return l10n.accountNameMustBeTwoWords;
+                      return null;
+                    },
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -285,9 +344,20 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                     decoration: InputDecoration(hintText: l10n.detailsLabel, border: InputBorder.none),
                   ),
                 ),
+                // Only meaningful while CREATING — this attachment belongs to the account's
+                // first transaction, and editing an account never touches a transaction at all
+                // (see the class doc comment on `existingAccount`).
+                if (!widget.isEditing && _attachmentPath != null)
+                  AttachmentPreview(
+                    path: _attachmentPath!,
+                    onEdit: _chooseImage,
+                    onRotate: _rotateAttachment,
+                    onDelete: () => setState(() => _attachmentPath = null),
+                  ),
                 const SizedBox(height: 12),
                 LabeledField(
-                  icon: Icons.person_outline_rounded,
+                  icon: Icons.phone_outlined,
+                  onIconTap: _pickContactForPhone,
                   child: TextFormField(
                     controller: _phoneController,
                     textAlign: TextAlign.center,

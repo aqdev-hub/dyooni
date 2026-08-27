@@ -22,6 +22,7 @@ import '../../../logic/reports/report_export_provider.dart';
 import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/accounts/account_action_icon_row.dart';
+import '../../widgets/accounts/account_phone_row.dart';
 import '../../widgets/accounts/transaction_table.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
 import '../../widgets/reports/report_options_sheet.dart';
@@ -30,9 +31,34 @@ import '../../widgets/shared/selection_toolbar.dart';
 import '../accounts/add_account_screen.dart';
 import '../transactions/add_transaction_screen.dart';
 
-class AccountDetailsScreen extends ConsumerWidget {
+class AccountDetailsScreen extends ConsumerStatefulWidget {
   const AccountDetailsScreen({required this.account, super.key});
   final Account account;
+
+  @override
+  ConsumerState<AccountDetailsScreen> createState() => _AccountDetailsScreenState();
+}
+
+class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
+  final _searchController = TextEditingController();
+  bool _searchOpen = false;
+  String _searchQuery = '';
+
+  Account get account => widget.account;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _openSearch() => setState(() => _searchOpen = true);
+
+  void _closeSearch() => setState(() {
+        _searchOpen = false;
+        _searchQuery = '';
+        _searchController.clear();
+      });
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
     final confirmed = await showDialog<bool>(
@@ -226,6 +252,7 @@ class AccountDetailsScreen extends ConsumerWidget {
           creditHeader: l10n.directionCredit,
           balanceHeader: l10n.reportBalanceHeader,
           totalRowLabel: l10n.homeTotalBalance,
+          attachmentPresentLabel: l10n.attachmentPresentLabel,
           rows: rows,
         );
   }
@@ -328,15 +355,17 @@ class AccountDetailsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
     final transactions = ref.watch(transactionsForAccountProvider(account.id));
     final selectionMode = ref.watch(transactionSelectionModeProvider);
     final selectedIds = ref.watch(selectedTransactionIdsProvider);
+    final hasPhone = account.phone != null && account.phone!.trim().isNotEmpty;
 
-    // The header's credit/debit split for THIS account's own bottom bar — not the app-wide
-    // totals shown on Home.
+    // The header's credit/debit split for THIS account's own bottom bar — always the REAL,
+    // unfiltered totals, regardless of whatever the search box above is currently narrowing the
+    // list down to (a search is a view filter, not a different account).
     var credit = 0.0;
     var debit = 0.0;
     for (final t in transactions) {
@@ -369,6 +398,50 @@ class AccountDetailsScreen extends ConsumerWidget {
                     : null,
                 onDelete: () => _confirmDeleteSelectedTransactions(context, ref, l10n, selectedIds),
               )
+            else if (_searchOpen)
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [shell.headerTop, shell.headerBottom],
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  children: [
+                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.white), onPressed: _closeSearch),
+                    Expanded(
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(19)),
+                        child: Row(
+                          children: [
+                            Icon(Icons.search_rounded, size: 18, color: shell.textSecondary),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                autofocus: true,
+                                onChanged: (v) => setState(() => _searchQuery = v),
+                                textAlignVertical: TextAlignVertical.center,
+                                style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textPrimary),
+                                decoration: InputDecoration(
+                                  isCollapsed: true,
+                                  border: InputBorder.none,
+                                  hintText: l10n.transactionSearchHint,
+                                  hintStyle: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
             else
               Container(
                 decoration: BoxDecoration(
@@ -379,8 +452,17 @@ class AccountDetailsScreen extends ConsumerWidget {
                   ),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                // Order matters: whichever visual side is "first" in this RTL row, the 3-dot menu
+                // must always be the LAST of the three icon buttons (closest to the Spacer/name),
+                // with the reports icon immediately before it — both explicitly requested.
                 child: Row(
                   children: [
+                    IconButton(icon: const Icon(Icons.search_rounded, color: Colors.white, size: 20), onPressed: _openSearch),
+                    IconButton(
+                      icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27),
+                      tooltip: l10n.reportsSheetTitle,
+                      onPressed: () => _openReportsSheet(context, ref, l10n, transactions),
+                    ),
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
                       color: shell.surface,
@@ -397,23 +479,26 @@ class AccountDetailsScreen extends ConsumerWidget {
                         PopupMenuItem(value: 'delete', child: Text(l10n.delete, style: const TextStyle(color: AppColors.debit))),
                       ],
                     ),
-                    IconButton(
-                      icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27),
-                      tooltip: l10n.reportsSheetTitle,
-                      onPressed: () => _openReportsSheet(context, ref, l10n, transactions),
-                    ),
-                    IconButton(icon: const Icon(Icons.search_rounded, color: Colors.white, size: 20), onPressed: () => AppSnackBar.showError(context, l10n.comingSoonMessage)),
                     const Spacer(),
                     Text(account.name, style: AppTextStyles.title(context).copyWith(color: Colors.white), overflow: TextOverflow.ellipsis),
                     IconButton(icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20), onPressed: () => context.pop()),
                   ],
                 ),
               ),
-            AccountActionIconRow(
-              onAddAction: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
-              onShare: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
-              onMessage: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
-              onCurrency: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
+            Row(
+              children: [
+                Expanded(
+                  child: AccountActionIconRow(
+                    onAddAction: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
+                    onShare: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
+                    onMessage: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
+                    onCurrency: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
+                  ),
+                ),
+                // Only rendered when the account actually has a phone number — sits on the
+                // OPPOSITE side of the row from the 4 action icons above.
+                if (hasPhone) AccountPhoneRow(phone: account.phone!),
+              ],
             ),
             Expanded(
               child: transactions.isEmpty
@@ -424,6 +509,7 @@ class AccountDetailsScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: TransactionTable(
                         transactions: transactions,
+                        searchQuery: _searchQuery,
                         onEditTransaction: (t) => _openEditTransaction(context, t),
                         onDeleteTransaction: (t) => _confirmDeleteTransaction(context, ref, l10n, t),
                       ),
