@@ -636,4 +636,82 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get calculatorApply => 'استخدام النتيجة';
+
+  @override
+  String get editTransactionTitle => 'تعديل عملية';
+
+  @override
+  String get transactionUpdatedSuccessMessage => 'تم تعديل العملية بنجاح';
+
+  @override
+  String get transactionDeletedSuccessMessage => 'تم حذف العملية بنجاح';
+
+  @override
+  String get deleteTransactionConfirmTitle => 'حذف العملية';
+
+  @override
+  String get deleteTransactionConfirmBody =>
+      'هل أنت متأكد أنك تريد حذف هذه العملية؟ لا يمكن التراجع عن هذا الإجراء';
+
+  @override
+  String get shareAction => 'مشاركة';
+
+  @override
+  String get transferAction => 'تحويل';
+
+  @override
+  String get selectOne => 'تحديد';
+
+  @override
+  String get selectAllAction => 'تحديد الكل';
+
+  @override
+  String selectedCountLabel(int count) {
+    return 'تم تحديد $count';
+  }
+
+  @override
+  String get deleteSelectedAccountsConfirmBody =>
+      'هل أنت متأكد أنك تريد حذف الحسابات المحددة؟ لا يمكن التراجع عن هذا الإجراء';
+
+  @override
+  String get deleteSelectedTransactionsConfirmBody =>
+      'هل أنت متأكد أنك تريد حذف العمليات المحددة؟ لا يمكن التراجع عن هذا الإجراء';
+
+  @override
+  String get editAccountTitle => 'تعديل الحساب';
+
+  @override
+  String get accountUpdatedSuccessMessage => 'تم تعديل الحساب بنجاح';
+
+  @override
+  String get transactionSearchHint => 'بحث بالمبلغ أو التاريخ أو التفاصيل';
+
+  @override
+  String get callAction => 'اتصال';
+
+  @override
+  String get callFailedMessage => 'تعذر فتح تطبيق الهاتف';
+
+  @override
+  String get contactPickFailedMessage => 'تعذر فتح جهات الاتصال';
+
+  @override
+  String get accountNameMustBeTwoWords =>
+      'أدخل الاسم الأول واسم العائلة على الأقل';
+
+  @override
+  String get attachmentRotateAction => 'تدوير';
+
+  @override
+  String get attachmentPresentLabel => '(يوجد مرفق)';
+
+  @override
+  String get navHome => 'الرئيسية';
+
+  @override
+  String get navVoice => 'صوتي';
+
+  @override
+  String get searchNoResults => 'لا توجد نتائج مطابقة للبحث';
 }

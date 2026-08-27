@@ -642,4 +642,82 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calculatorApply => 'Use result';
+
+  @override
+  String get editTransactionTitle => 'Edit entry';
+
+  @override
+  String get transactionUpdatedSuccessMessage => 'Entry updated successfully';
+
+  @override
+  String get transactionDeletedSuccessMessage => 'Entry deleted successfully';
+
+  @override
+  String get deleteTransactionConfirmTitle => 'Delete entry';
+
+  @override
+  String get deleteTransactionConfirmBody =>
+      'Are you sure you want to delete this entry? This can\'t be undone';
+
+  @override
+  String get shareAction => 'Share';
+
+  @override
+  String get transferAction => 'Transfer';
+
+  @override
+  String get selectOne => 'Select';
+
+  @override
+  String get selectAllAction => 'Select all';
+
+  @override
+  String selectedCountLabel(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get deleteSelectedAccountsConfirmBody =>
+      'Are you sure you want to delete the selected accounts? This can\'t be undone';
+
+  @override
+  String get deleteSelectedTransactionsConfirmBody =>
+      'Are you sure you want to delete the selected entries? This can\'t be undone';
+
+  @override
+  String get editAccountTitle => 'Edit account';
+
+  @override
+  String get accountUpdatedSuccessMessage => 'Account updated successfully';
+
+  @override
+  String get transactionSearchHint => 'Search by amount, date, or details';
+
+  @override
+  String get callAction => 'Call';
+
+  @override
+  String get callFailedMessage => 'Couldn\'t open the phone app';
+
+  @override
+  String get contactPickFailedMessage => 'Couldn\'t open contacts';
+
+  @override
+  String get accountNameMustBeTwoWords =>
+      'Enter at least a first and last name';
+
+  @override
+  String get attachmentRotateAction => 'Rotate';
+
+  @override
+  String get attachmentPresentLabel => '(has attachment)';
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navVoice => 'Voice';
+
+  @override
+  String get searchNoResults => 'No entries match your search';
 }

@@ -1315,6 +1315,150 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'استخدام النتيجة'**
   String get calculatorApply;
+
+  /// No description provided for @editTransactionTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل عملية'**
+  String get editTransactionTitle;
+
+  /// No description provided for @transactionUpdatedSuccessMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تعديل العملية بنجاح'**
+  String get transactionUpdatedSuccessMessage;
+
+  /// No description provided for @transactionDeletedSuccessMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حذف العملية بنجاح'**
+  String get transactionDeletedSuccessMessage;
+
+  /// No description provided for @deleteTransactionConfirmTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف العملية'**
+  String get deleteTransactionConfirmTitle;
+
+  /// No description provided for @deleteTransactionConfirmBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل أنت متأكد أنك تريد حذف هذه العملية؟ لا يمكن التراجع عن هذا الإجراء'**
+  String get deleteTransactionConfirmBody;
+
+  /// No description provided for @shareAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشاركة'**
+  String get shareAction;
+
+  /// No description provided for @transferAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل'**
+  String get transferAction;
+
+  /// No description provided for @selectOne.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديد'**
+  String get selectOne;
+
+  /// No description provided for @selectAllAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديد الكل'**
+  String get selectAllAction;
+
+  /// No description provided for @selectedCountLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تحديد {count}'**
+  String selectedCountLabel(int count);
+
+  /// No description provided for @deleteSelectedAccountsConfirmBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل أنت متأكد أنك تريد حذف الحسابات المحددة؟ لا يمكن التراجع عن هذا الإجراء'**
+  String get deleteSelectedAccountsConfirmBody;
+
+  /// No description provided for @deleteSelectedTransactionsConfirmBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل أنت متأكد أنك تريد حذف العمليات المحددة؟ لا يمكن التراجع عن هذا الإجراء'**
+  String get deleteSelectedTransactionsConfirmBody;
+
+  /// No description provided for @editAccountTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل الحساب'**
+  String get editAccountTitle;
+
+  /// No description provided for @accountUpdatedSuccessMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تعديل الحساب بنجاح'**
+  String get accountUpdatedSuccessMessage;
+
+  /// No description provided for @transactionSearchHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'بحث بالمبلغ أو التاريخ أو التفاصيل'**
+  String get transactionSearchHint;
+
+  /// No description provided for @callAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتصال'**
+  String get callAction;
+
+  /// No description provided for @callFailedMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر فتح تطبيق الهاتف'**
+  String get callFailedMessage;
+
+  /// No description provided for @contactPickFailedMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر فتح جهات الاتصال'**
+  String get contactPickFailedMessage;
+
+  /// No description provided for @accountNameMustBeTwoWords.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل الاسم الأول واسم العائلة على الأقل'**
+  String get accountNameMustBeTwoWords;
+
+  /// No description provided for @attachmentRotateAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'تدوير'**
+  String get attachmentRotateAction;
+
+  /// No description provided for @attachmentPresentLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'(يوجد مرفق)'**
+  String get attachmentPresentLabel;
+
+  /// No description provided for @navHome.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرئيسية'**
+  String get navHome;
+
+  /// No description provided for @navVoice.
+  ///
+  /// In ar, this message translates to:
+  /// **'صوتي'**
+  String get navVoice;
+
+  /// No description provided for @searchNoResults.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد نتائج مطابقة للبحث'**
+  String get searchNoResults;
 }
 
 class _AppLocalizationsDelegate
