@@ -8,6 +8,31 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/voice/voice_provider.dart';
+import '../shared/direction_choice.dart';
+
+/// Resolves what tapping the mic circle should do for the CURRENT status — exhaustive over every
+/// [VoiceStatus] so an in-between state (e.g. mid Bluetooth handshake) can never fall through to
+/// the wrong action. Idle dispatches by entry mode (see VoiceController.setEntryMode); listening
+/// states stop-and-analyze; every other status (preparing/processing/saving/the Bluetooth
+/// handshake steps/etc.) ignores taps entirely rather than accidentally restarting a different
+/// flow underneath an in-progress one.
+VoidCallback? _resolveMicTap(VoiceState state, VoiceController controller) {
+  return switch (state.status) {
+    VoiceStatus.idle => state.bluetoothMode ? controller.startBluetoothMode : controller.startShortPress,
+    VoiceStatus.listening || VoiceStatus.bluetoothListeningCommand => controller.stopAndAnalyze,
+    _ => null,
+  };
+}
+
+/// Maps an error status + code to the right localized message. `errorCode` is checked first (not
+/// just the status) because both VoiceStatus.error and VoiceStatus.bluetoothDisconnected can now
+/// carry any of these codes — see VoiceController._onSpeechError.
+String _voiceErrorMessage(AppLocalizations l10n, String? code) => switch (code) {
+      'connection' => l10n.voiceBluetoothDisconnected,
+      'permission' => l10n.voiceNoSpeechPermission,
+      'network' => l10n.voiceNetworkError,
+      _ => l10n.voiceRecognitionError,
+    };
 
 class VoiceCommandSheet extends ConsumerWidget {
   const VoiceCommandSheet({super.key});
@@ -41,8 +66,7 @@ class VoiceCommandSheet extends ConsumerWidget {
             Tooltip(
               message: l10n.voiceLongPressHint,
               child: GestureDetector(
-                onTap: isActive ? controller.stopAndAnalyze : (isBusy ? null : controller.startShortPress),
-                onLongPress: isBusy ? null : controller.startBluetoothMode,
+                onTap: _resolveMicTap(state, controller),
                 child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 width: 122,
@@ -69,6 +93,7 @@ class VoiceCommandSheet extends ConsumerWidget {
               const SizedBox(height: 14),
               _Clarification(state: state),
               if (state.errorCode == 'account') _AccountChoices(onSelected: controller.selectAccount),
+              if (state.errorCode == 'direction') _DirectionChoices(onSelected: controller.selectDirection),
               const SizedBox(height: 12),
               OutlinedButton.icon(onPressed: controller.retry, icon: const Icon(Icons.refresh_rounded), label: Text(l10n.voiceRetry)),
             ],
@@ -113,7 +138,7 @@ class VoiceCommandSheet extends ConsumerWidget {
             ],
             if (state.status == VoiceStatus.error || state.status == VoiceStatus.bluetoothDisconnected) ...[
               const SizedBox(height: 14),
-              Text(state.status == VoiceStatus.bluetoothDisconnected ? l10n.voiceBluetoothDisconnected : l10n.voiceNoSpeechPermission, textAlign: TextAlign.center, style: AppTextStyles.bodySecondary(context).copyWith(color: AppColors.error)),
+              Text(_voiceErrorMessage(l10n, state.errorCode), textAlign: TextAlign.center, style: AppTextStyles.bodySecondary(context).copyWith(color: AppColors.error)),
               const SizedBox(height: 8),
               OutlinedButton.icon(onPressed: controller.retry, icon: const Icon(Icons.refresh_rounded), label: Text(l10n.voiceBluetoothRetry)),
             ],
@@ -175,7 +200,12 @@ class _Clarification extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Text(state.errorCode == 'amount' ? l10n.voiceNeedAmount : l10n.voiceNeedAccount, textAlign: TextAlign.center, style: AppTextStyles.bodySecondary(context).copyWith(color: AppColors.error));
+    final message = switch (state.errorCode) {
+      'amount' => l10n.voiceNeedAmount,
+      'direction' => l10n.voiceNeedDirection,
+      _ => l10n.voiceNeedAccount,
+    };
+    return Text(message, textAlign: TextAlign.center, style: AppTextStyles.bodySecondary(context).copyWith(color: AppColors.error));
   }
 }
 
@@ -193,6 +223,40 @@ class _AccountChoices extends ConsumerWidget {
   }
 }
 
+/// Shown when the parser understood everything except له/عليه (see VoiceCommandParser.direction's
+/// doc comment) — reuses the same [DirectionChoice] ring-toggle already used on Add Transaction
+/// and Add Account so this new state never introduces a third visual style for the same choice.
+class _DirectionChoices extends StatelessWidget {
+  const _DirectionChoices({required this.onSelected});
+  final ValueChanged<AccountDirection> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          DirectionChoice(
+            label: l10n.directionCredit,
+            color: AppColors.credit,
+            selected: false,
+            onTap: () => onSelected(AccountDirection.credit),
+          ),
+          const SizedBox(width: 24),
+          DirectionChoice(
+            label: l10n.directionDebit,
+            color: AppColors.debit,
+            selected: false,
+            onTap: () => onSelected(AccountDirection.debit),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ConfirmationCard extends StatelessWidget {
   const _ConfirmationCard({required this.state});
   final VoiceState state;
@@ -202,7 +266,10 @@ class _ConfirmationCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
     final draft = state.draft!;
-    final direction = draft.direction == AccountDirection.credit ? l10n.directionCredit : l10n.directionDebit;
+    // Safe by construction: this card only renders in awaitingConfirmation/confirmationListening,
+    // and the controller never reaches either status while draft.direction is still null (see
+    // VoiceController._advanceAfterParsing / selectDirection).
+    final direction = draft.direction! == AccountDirection.credit ? l10n.directionCredit : l10n.directionDebit;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),

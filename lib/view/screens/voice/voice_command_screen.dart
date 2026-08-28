@@ -23,9 +23,12 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
   @override
   void initState() {
     super.initState();
+    // Deliberately does NOT start listening or Bluetooth discovery here — see
+    // VoiceController.setEntryMode's doc comment for why the idle state must be what's shown
+    // first in both entry modes, and VoiceCommandSheet for where the actual start happens (a tap
+    // on the mic circle).
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final controller = ref.read(voiceProvider.notifier);
-      unawaited(widget.bluetoothMode ? controller.startBluetoothMode() : controller.startShortPress());
+      ref.read(voiceProvider.notifier).setEntryMode(bluetoothMode: widget.bluetoothMode);
     });
   }
 

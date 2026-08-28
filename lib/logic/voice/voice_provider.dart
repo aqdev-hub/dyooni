@@ -113,6 +113,18 @@ class VoiceController extends StateNotifier<VoiceState> {
   Timer? _bluetoothMonitor;
   final _uuid = const Uuid();
 
+  /// Called once when the voice screen opens, for BOTH entry modes. Deliberately does nothing
+  /// beyond recording which mode was requested — the reference design's idle state ("اضغط لبدء
+  /// التسجيل") is the first thing the user sees whether they short-pressed or long-pressed the
+  /// mic on Home; actually starting to listen (short-press) or searching for a headset
+  /// (Bluetooth) only happens once they tap the mic circle on THIS screen (see
+  /// VoiceCommandSheet's tap dispatch). Starting either flow automatically on open was the
+  /// previous behavior and is why speech captured in the first instant after navigation — before
+  /// the recognizer had actually finished initializing — was silently lost.
+  void setEntryMode({required bool bluetoothMode}) {
+    state = VoiceState(bluetoothMode: bluetoothMode);
+  }
+
   Future<void> startShortPress() async {
     await _beginListening(bluetoothMode: false);
   }
@@ -242,10 +254,19 @@ class VoiceController extends StateNotifier<VoiceState> {
     final draft = _ref.read(voiceCommandParserProvider).parse(current.transcript);
     final account = _matchAccount(draft.accountName, current.transcript);
     state = state.copyWith(draft: draft, account: account, recordingPath: path ?? current.recordingPath);
+    _advanceAfterParsing(draft: draft, account: account);
+  }
+
+  /// Amount → account → direction, in that order: an account can't be matched without at least
+  /// trying, and asking "له أم عليه؟" before we even know WHO the money is for/from would be a
+  /// confusing question to lead with.
+  void _advanceAfterParsing({required VoiceCommandDraft draft, required Account? account}) {
     if (draft.amount == null) {
       state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'amount');
     } else if (account == null) {
       state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'account');
+    } else if (draft.direction == null) {
+      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'direction');
     } else {
       state = state.copyWith(status: VoiceStatus.awaitingConfirmation);
     }
@@ -260,14 +281,27 @@ class VoiceController extends StateNotifier<VoiceState> {
     return null;
   }
 
+  /// After picking an account manually, the direction may STILL be unresolved (e.g. "أضف 3200
+  /// ريال دجاجة" has neither an account nor a له/عليه marker) — re-run the same advancement check
+  /// instead of assuming confirmation is next.
   void selectAccount(Account account) {
-    state = state.copyWith(account: account, status: VoiceStatus.awaitingConfirmation, clearError: true);
+    final draft = state.draft;
+    if (draft == null) return;
+    state = state.copyWith(account: account, clearError: true);
+    _advanceAfterParsing(draft: draft, account: account);
+  }
+
+  void selectDirection(AccountDirection direction) {
+    final draft = state.draft;
+    if (draft == null) return;
+    final updated = draft.copyWith(direction: direction);
+    state = state.copyWith(draft: updated, status: VoiceStatus.awaitingConfirmation, clearError: true);
   }
 
   Future<void> confirm() async {
     final draft = state.draft;
     final account = state.account;
-    if (draft == null || account == null || draft.amount == null) return;
+    if (draft == null || account == null || draft.amount == null || draft.direction == null) return;
     state = state.copyWith(status: VoiceStatus.saving);
     final id = _uuid.v4();
     final duration = state.recordingStartedAt == null ? 0 : DateTime.now().difference(state.recordingStartedAt!).inMilliseconds;
@@ -279,7 +313,7 @@ class VoiceController extends StateNotifier<VoiceState> {
           accountId: account.id,
           amount: draft.amount!,
           currency: draft.currency,
-          direction: draft.direction,
+          direction: draft.direction!,
           date: draft.date,
           details: draft.details,
           voiceRecording: recording,
@@ -307,11 +341,43 @@ class VoiceController extends StateNotifier<VoiceState> {
     state = const VoiceState();
   }
 
-  void _onSpeechError(String _) {
-    if (state.bluetoothMode) {
+  /// Classifies the recognizer's error string and decides whether it's even worth surfacing.
+  ///
+  /// `speech_to_text` reports errors using a small, documented set of codes (error_no_match,
+  /// error_speech_timeout, error_busy, error_network[_timeout], error_insufficient_permissions,
+  /// error_audio, error_server, error_client...). Previously EVERY one of these — including the
+  /// completely normal "I heard a brief silence" (`error_no_match`) that happens constantly
+  /// during natural speech — was mapped straight to a generic "microphone/permission" message and
+  /// tore down the whole listening session (see SpeechRecognitionService's `cancelOnError`,
+  /// now `false`). That combination is the main reason real speech was never actually understood:
+  /// the very first pause in a sentence ended the session before the sentence finished.
+  void _onSpeechError(String errorMsg) {
+    // Internal sentinel from `_onSpeechStatus`'s wake-word restart path — not a real
+    // speech_to_text error code, so it skips the message-based classification entirely.
+    if (errorMsg == 'connection') {
       state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'connection');
+      return;
+    }
+    final code = errorMsg.toLowerCase();
+    final isTransient = code.contains('no_match') || code.contains('speech_timeout') || code.contains('busy');
+    final activelyListening = state.status == VoiceStatus.listening ||
+        state.status == VoiceStatus.bluetoothListeningCommand ||
+        state.status == VoiceStatus.bluetoothWaitingWakeWord ||
+        state.status == VoiceStatus.confirmationListening;
+    // A transient hiccup while a session is healthy and ongoing must not kill it — with
+    // cancelOnError now false, the native recognizer itself keeps listening through these; the
+    // app must not override that by jumping to an error screen on every single one.
+    if (isTransient && activelyListening) return;
+
+    final errorCode = code.contains('permission')
+        ? 'permission'
+        : code.contains('network')
+            ? 'network'
+            : 'recognition';
+    if (state.bluetoothMode) {
+      state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: errorCode);
     } else {
-      state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+      state = state.copyWith(status: VoiceStatus.error, errorCode: errorCode);
     }
   }
 

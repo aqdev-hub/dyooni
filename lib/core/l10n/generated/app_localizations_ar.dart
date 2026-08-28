@@ -491,6 +491,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'لم أتعرف على مبلغ صحيح. قل المبلغ ثم أعد المحاولة.';
 
   @override
+  String get voiceNeedDirection =>
+      'لم أتعرف على نوع العملية. اختر "له" أو "عليه".';
+
+  @override
   String get voiceTranscriptLabel => 'ما تم سماعه';
 
   @override
@@ -517,6 +521,13 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get voiceNoSpeechPermission =>
       'تعذر الوصول إلى الميكروفون أو التعرف على الكلام.';
+
+  @override
+  String get voiceNetworkError => 'تعذّر الاتصال بالشبكة أثناء التعرف على الصوت.';
+
+  @override
+  String get voiceRecognitionError =>
+      'تعذّر فهم الصوت، حاول التحدث بوضوح مرة أخرى.';
 
   @override
   String get voiceAudioUnavailable => 'ملف التسجيل غير متوفر على هذا الجهاز';

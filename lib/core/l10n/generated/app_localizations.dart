@@ -1034,6 +1034,12 @@ abstract class AppLocalizations {
   /// **'لم أتعرف على مبلغ صحيح. قل المبلغ ثم أعد المحاولة.'**
   String get voiceNeedAmount;
 
+  /// No description provided for @voiceNeedDirection.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم أتعرف على نوع العملية. اختر "له" أو "عليه".'**
+  String get voiceNeedDirection;
+
   /// No description provided for @voiceTranscriptLabel.
   ///
   /// In ar, this message translates to:
@@ -1087,6 +1093,18 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تعذر الوصول إلى الميكروفون أو التعرف على الكلام.'**
   String get voiceNoSpeechPermission;
+
+  /// No description provided for @voiceNetworkError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر الاتصال بالشبكة أثناء التعرف على الصوت.'**
+  String get voiceNetworkError;
+
+  /// No description provided for @voiceRecognitionError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر فهم الصوت، حاول التحدث بوضوح مرة أخرى.'**
+  String get voiceRecognitionError;
 
   /// No description provided for @voiceAudioUnavailable.
   ///

@@ -29,7 +29,12 @@ class SpeechRecognitionService {
         listenFor: const Duration(seconds: 25),
         pauseFor: const Duration(seconds: 4),
         partialResults: true,
-        cancelOnError: true,
+        // Was `true`. A single transient recognizer error (most commonly `error_no_match` during
+        // an ordinary short pause between words — not a real failure) used to end the ENTIRE
+        // listening session immediately. With this `false`, the native recognizer keeps listening
+        // through those and only genuinely stops on `listenFor`/`pauseFor` timeout or an explicit
+        // stop() — VoiceController._onSpeechError filters which errors are worth acting on.
+        cancelOnError: false,
       ),
     );
   }

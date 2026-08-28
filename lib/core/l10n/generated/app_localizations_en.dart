@@ -493,6 +493,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'I could not recognize a valid amount. Say the amount and try again.';
 
   @override
+  String get voiceNeedDirection =>
+      'I couldn\'t tell if this is credit or debit. Choose one.';
+
+  @override
   String get voiceTranscriptLabel => 'Heard';
 
   @override
@@ -520,6 +524,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get voiceNoSpeechPermission =>
       'Microphone or speech recognition is unavailable.';
+
+  @override
+  String get voiceNetworkError => 'A network error interrupted speech recognition.';
+
+  @override
+  String get voiceRecognitionError =>
+      'Couldn\'t process the audio, please try speaking again.';
 
   @override
   String get voiceAudioUnavailable =>
