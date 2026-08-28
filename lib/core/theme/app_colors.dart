@@ -45,8 +45,12 @@ abstract class AppColors {
   static const indicatorActive = gold;
   static const indicatorInactive = Color(0xFF33455F);
 
-  // Voice assistant state ring (Phase 3+) — reserved now so it doesn't collide later
-  static const voiceIdle = Color(0xFF8A94A6);
-  static const voiceListening = gold;
-  static const voiceProcessing = gold;
+  // Voice assistant recording-state ring — fixed literals rather than shell-derived, same
+  // treatment as credit/debit/success/error above: the MEANING of "recording/paused/working" has
+  // to read the same in both light and dark shells, not shift with the theme. Matches the
+  // approved voice-screen reference exactly (see voice_command_sheet.dart):
+  static const voiceIdle = surface; // idle mic circle fill (dark navy)
+  static const voiceListening = Color(0xFFE84C3D); // actively recording — red
+  static const voicePaused = Color(0xFFF5A623); // paused mid-recording — orange
+  static const voiceProcessing = gold; // transcribing/understanding/saving — gold ring + icon
 }

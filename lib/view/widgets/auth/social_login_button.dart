@@ -6,34 +6,27 @@ enum SocialProvider { google, facebook }
 /// Solid pill button with provider brand color + label, used side-by-side on the login screen
 /// per the reference (Google: white bg; Facebook: Facebook-blue bg).
 ///
-/// NOTE: brand marks (Google "G", Facebook "f") are trademarked assets — using a plain colored
-/// letter / generic Material icon as placeholders, not the official SVG marks. Swap for those
-/// before release, per each provider's brand guidelines. This batch only fixes the Google mark
-/// looking visibly broken (it was `Icons.g_mobiledata_rounded` — a signal-strength icon, not a
-/// "G", rendered in an unset/ambient color that came out dark instead of Google's blue) and adds
-/// the subtle gray border real "Sign in with Google" buttons use on a white background so the
-/// pill doesn't look like a flat, borderless card.
+/// Uses the REAL brand marks now, bundled at assets/icons/google_icon.png and
+/// assets/icons/facebook_icon.png (declared via the whole-folder `assets/icons/` entry in
+/// pubspec.yaml — no separate pubspec change needed when those two files are added). If either
+/// file is ever missing/renamed, `errorBuilder` falls back to a generic Material icon rather than
+/// crashing the login screen outright — same defensive pattern used across this project for every
+/// other bundled image (see app_logo.dart, onboarding_illustration.dart).
 class SocialLoginButton extends StatelessWidget {
   const SocialLoginButton({required this.provider, required this.onPressed, super.key});
 
   final SocialProvider provider;
   final VoidCallback? onPressed;
 
-  static const _googleBlue = Color(0xFF4285F4);
   static const _googleBorder = Color(0xFFDADCE0);
+  static const _googleBlue = Color(0xFF4285F4);
 
   @override
   Widget build(BuildContext context) {
     final isGoogle = provider == SocialProvider.google;
     final background = isGoogle ? Colors.white : const Color(0xFF1877F2);
     final foreground = isGoogle ? Colors.black87 : Colors.white;
-
-    final Widget mark = isGoogle
-        ? const Text(
-            'G',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _googleBlue, height: 1),
-          )
-        : const Icon(Icons.facebook_rounded, size: 22, color: Colors.white);
+    final assetName = isGoogle ? 'assets/icons/google_icon.png' : 'assets/icons/facebook_icon.png';
 
     return ElevatedButton(
       onPressed: onPressed,
@@ -49,7 +42,16 @@ class SocialLoginButton extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          mark,
+          Image.asset(
+            assetName,
+            width: 20,
+            height: 20,
+            errorBuilder: (context, error, stackTrace) => Icon(
+              isGoogle ? Icons.g_mobiledata_rounded : Icons.facebook_rounded,
+              size: 22,
+              color: isGoogle ? _googleBlue : Colors.white,
+            ),
+          ),
           const SizedBox(width: 8),
           Text(
             isGoogle ? 'Google' : 'Facebook',

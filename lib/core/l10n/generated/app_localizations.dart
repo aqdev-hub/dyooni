@@ -479,7 +479,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeEmptyAccounts.
   ///
   /// In ar, this message translates to:
-  /// **'لا توجد حسابات بعد — اضغط \"إضافة حساب\" للبدء'**
+  /// **'لا توجد حسابات بعد — اضغط "إضافة حساب" للبدء'**
   String get homeEmptyAccounts;
 
   /// No description provided for @homeTransactionsCount.
@@ -869,7 +869,7 @@ abstract class AppLocalizations {
   /// No description provided for @voiceRecordingTitle.
   ///
   /// In ar, this message translates to:
-  /// **'تسجيل صوتي'**
+  /// **'جار التسجيل'**
   String get voiceRecordingTitle;
 
   /// No description provided for @personalDataLogoLabel.
@@ -1154,6 +1154,96 @@ abstract class AppLocalizations {
   /// **'لم أفهم التأكيد. قل «نعم» أو «تعديل».'**
   String get voiceConfirmationNotUnderstood;
 
+  /// No description provided for @voiceContinueSpeakingHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'استمر في التحدث'**
+  String get voiceContinueSpeakingHint;
+
+  /// No description provided for @voiceIdleSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحدث وستقوم بتحويل كلامك إلى نص'**
+  String get voiceIdleSubtitle;
+
+  /// No description provided for @voiceInfoTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'عن التسجيل الصوتي'**
+  String get voiceInfoTitle;
+
+  /// No description provided for @voiceInfoBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط ضغطة قصيرة على الميكروفون لتسجيل عملية مباشرة بصوتك. اضغط مطولًا لتفعيل وضع سماعة البلوتوث، حيث يستمع التطبيق لكلمة التنبيه "ديوني" قبل تسجيل أي أمر.'**
+  String get voiceInfoBody;
+
+  /// No description provided for @voiceLanguageArabic.
+  ///
+  /// In ar, this message translates to:
+  /// **'العربية'**
+  String get voiceLanguageArabic;
+
+  /// No description provided for @voiceLanguageEnglish.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإنجليزية'**
+  String get voiceLanguageEnglish;
+
+  /// No description provided for @voicePauseAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف مؤقت'**
+  String get voicePauseAction;
+
+  /// No description provided for @voicePausedHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك متابعة التسجيل'**
+  String get voicePausedHint;
+
+  /// No description provided for @voicePausedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'متوقف مؤقتًا'**
+  String get voicePausedTitle;
+
+  /// No description provided for @voicePreparing.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري التحضير…'**
+  String get voicePreparing;
+
+  /// No description provided for @voiceRecordAnother.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل عملية جديدة'**
+  String get voiceRecordAnother;
+
+  /// No description provided for @voiceRecordingResumedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'جار التسجيل مجددًا'**
+  String get voiceRecordingResumedTitle;
+
+  /// No description provided for @voiceRecordingTimerIdleLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مؤقت التسجيل'**
+  String get voiceRecordingTimerIdleLabel;
+
+  /// No description provided for @voiceResumeAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'متابعة'**
+  String get voiceResumeAction;
+
+  /// No description provided for @voiceSavingHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يتم حفظ البيانات الآن'**
+  String get voiceSavingHint;
+
   /// No description provided for @reportsSheetTitle.
   ///
   /// In ar, this message translates to:
@@ -1289,7 +1379,7 @@ abstract class AppLocalizations {
   /// No description provided for @voiceShortPressHint.
   ///
   /// In ar, this message translates to:
-  /// **'اضغط لبدء الاستماع المباشر'**
+  /// **'تحدث الآن بوضوح'**
   String get voiceShortPressHint;
 
   /// No description provided for @voiceLongPressHint.

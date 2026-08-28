@@ -131,11 +131,17 @@ flutter:
         - asset: assets/fonts/Inter-SemiBold.ttf
           weight: 600
 
-# App launcher icon — generates all platform icon sizes from the real brand logo (confirmed
-# present at assets/icons/app_logo.png). Run: dart run flutter_launcher_icons
+# App launcher icon — generates all platform icon sizes from a DEDICATED icon file
+# (assets/icons/app_icon.png), deliberately separate from assets/icons/app_logo.png (the mark
+# shown INSIDE the app's own screens — AppLogo widget, onboarding, drawer header, PDF report
+# header). The two have different design constraints (a launcher icon is square with safe-zone
+# padding for adaptive-icon masking; the in-app logo can be any shape/aspect on a matching
+# background), so sharing one file was always the wrong long-term choice even though it worked
+# visually before. Add BOTH files under assets/icons/ — `app_icon.png` for this config,
+# `app_logo.png` for everywhere else — then run: dart run flutter_launcher_icons
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icons/app_logo.png"
+  image_path: "assets/icons/app_icon.png"
   min_sdk_android: 21
   background_color_ios: "#0C1A2B"

@@ -19,6 +19,13 @@ class LocalAudioRecordingService {
     return path;
   }
 
+  /// Pauses the underlying recorder in place — the SAME file keeps being written to on
+  /// [resume], so a paused-then-resumed recording stays ONE continuous audio file rather than
+  /// producing two separate clips that would need stitching together.
+  Future<void> pause() => _recorder.pause();
+
+  Future<void> resume() => _recorder.resume();
+
   Future<String?> stop() => _recorder.stop();
   Future<void> cancel() => _recorder.cancel();
   Future<void> dispose() => _recorder.dispose();

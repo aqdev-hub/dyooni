@@ -2,15 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../logic/voice/voice_provider.dart';
+import '../../widgets/home/app_drawer.dart';
+import '../../widgets/shared/main_bottom_nav.dart';
 import '../../widgets/voice/voice_command_sheet.dart';
 
-/// A real full-page recording experience. It owns the recording lifecycle so
-/// the recognizer never starts behind an unopened modal sheet.
+/// A real full-page recording experience, sharing the same header/drawer/bottom-nav chrome as
+/// Home (see the reference design) rather than a modal pushed on top of it. It owns the
+/// recording lifecycle so the recognizer never starts behind an unopened sheet.
 class VoiceCommandScreen extends ConsumerStatefulWidget {
   const VoiceCommandScreen({required this.bluetoothMode, super.key});
   final bool bluetoothMode;
@@ -38,20 +42,86 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
     super.dispose();
   }
 
+  void _goHome(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/home');
+    }
+  }
+
+  Future<void> _showInfo(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final shell = context.shellColors;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: shell.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text(l10n.voiceInfoTitle, style: AppTextStyles.title(dialogContext).copyWith(color: shell.textPrimary)),
+        content: Text(l10n.voiceInfoBody, style: AppTextStyles.body(dialogContext).copyWith(color: shell.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.confirm, style: TextStyle(color: shell.accent)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
+
     return Scaffold(
       backgroundColor: shell.background,
-      appBar: AppBar(
-        backgroundColor: shell.headerBottom,
-        foregroundColor: Colors.white,
-        centerTitle: true,
-        title: Text(l10n.voiceScreenTitle, style: AppTextStyles.title(context).copyWith(color: Colors.white)),
-        leading: IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.arrow_back_rounded)),
+      drawer: const AppDrawer(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [shell.headerTop, shell.headerBottom],
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: Row(
+                children: [
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: Icon(Icons.menu_rounded, color: shell.accent, size: 21),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      l10n.voiceScreenTitle,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.title(context).copyWith(color: shell.accent, fontSize: 17),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.info_outline_rounded, color: shell.accent, size: 20),
+                    onPressed: () => _showInfo(context),
+                  ),
+                ],
+              ),
+            ),
+            const Expanded(child: SingleChildScrollView(child: VoiceCommandSheet())),
+            MainBottomNav(
+              activeTab: MainNavTab.voice,
+              onHome: () => _goHome(context),
+              onVoice: () {},
+              onReports: () => context.push('/reports'),
+            ),
+          ],
+        ),
       ),
-      body: const Center(child: SingleChildScrollView(child: VoiceCommandSheet())),
     );
   }
 }

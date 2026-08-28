@@ -10,7 +10,6 @@ import '../../core/voice/speech_recognition_service.dart';
 import '../../data/models/account.dart';
 import '../../data/models/transaction.dart';
 import '../accounts/accounts_provider.dart';
-import '../settings/locale_provider.dart';
 import '../transactions/transactions_provider.dart';
 import 'voice_command_parser.dart';
 
@@ -30,6 +29,13 @@ final bluetoothAudioRouteServiceProvider = Provider<BluetoothAudioRouteService>(
 
 final voiceCommandParserProvider = Provider<VoiceCommandParser>((ref) => const VoiceCommandParser());
 
+/// Which language the SPEECH RECOGNIZER listens for — deliberately independent of the app's
+/// DISPLAY language (`localeProvider`, toggled elsewhere in Settings/the drawer). This is what
+/// the "العربية" button on the voice screen controls (see VoiceCommandSheet). Session-only by
+/// design: recognition language is a per-recording choice, not a persisted app setting, so
+/// `.autoDispose` resets it once the voice screen is left.
+final voiceRecognitionLanguageProvider = StateProvider.autoDispose<String>((ref) => 'ar');
+
 final voiceProvider = StateNotifierProvider.autoDispose<VoiceController, VoiceState>((ref) {
   return VoiceController(ref);
 });
@@ -38,6 +44,7 @@ enum VoiceStatus {
   idle,
   preparing,
   listening,
+  paused,
   processing,
   needsClarification,
   awaitingConfirmation,
@@ -57,30 +64,50 @@ class VoiceState {
   const VoiceState({
     this.status = VoiceStatus.idle,
     this.transcript = '',
+    this.committedTranscript = '',
     this.draft,
     this.account,
     this.recordingPath,
     this.recordingStartedAt,
+    this.elapsedBeforePause = Duration.zero,
     this.errorCode,
     this.bluetoothMode = false,
   });
 
   final VoiceStatus status;
+
+  /// The full recognized text so far, INCLUDING anything said before a pause (see
+  /// [committedTranscript]) — this is what gets parsed and what the transcript card shows.
   final String transcript;
+
+  /// Snapshot of [transcript] taken at the moment recording was paused. A fresh `listen()`
+  /// session started on resume only reports what's said AFTER resuming — without this, resuming
+  /// would silently discard everything captured before the pause (see
+  /// VoiceController._onSpeechResult).
+  final String committedTranscript;
+
   final VoiceCommandDraft? draft;
   final Account? account;
   final String? recordingPath;
   final DateTime? recordingStartedAt;
+
+  /// Total recording time accumulated across any PREVIOUS listen/pause cycles this session.
+  /// Combined with `now - recordingStartedAt` while actively listening to display a continuous
+  /// running timer that correctly freezes while paused (see the recording-timer widget).
+  final Duration elapsedBeforePause;
+
   final String? errorCode;
   final bool bluetoothMode;
 
   VoiceState copyWith({
     VoiceStatus? status,
     String? transcript,
+    String? committedTranscript,
     VoiceCommandDraft? draft,
     Account? account,
     String? recordingPath,
     DateTime? recordingStartedAt,
+    Duration? elapsedBeforePause,
     String? errorCode,
     bool? bluetoothMode,
     bool clearDraft = false,
@@ -89,10 +116,12 @@ class VoiceState {
   }) => VoiceState(
         status: status ?? this.status,
         transcript: transcript ?? this.transcript,
+        committedTranscript: committedTranscript ?? this.committedTranscript,
         draft: clearDraft ? null : draft ?? this.draft,
         account: clearAccount ? null : account ?? this.account,
         recordingPath: recordingPath ?? this.recordingPath,
         recordingStartedAt: recordingStartedAt ?? this.recordingStartedAt,
+        elapsedBeforePause: elapsedBeforePause ?? this.elapsedBeforePause,
         errorCode: clearError ? null : errorCode ?? this.errorCode,
         bluetoothMode: bluetoothMode ?? this.bluetoothMode,
       );
@@ -118,9 +147,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// التسجيل") is the first thing the user sees whether they short-pressed or long-pressed the
   /// mic on Home; actually starting to listen (short-press) or searching for a headset
   /// (Bluetooth) only happens once they tap the mic circle on THIS screen (see
-  /// VoiceCommandSheet's tap dispatch). Starting either flow automatically on open was the
-  /// previous behavior and is why speech captured in the first instant after navigation — before
-  /// the recognizer had actually finished initializing — was silently lost.
+  /// VoiceCommandSheet's tap dispatch).
   void setEntryMode({required bool bluetoothMode}) {
     state = VoiceState(bluetoothMode: bluetoothMode);
   }
@@ -186,9 +213,40 @@ class VoiceController extends StateNotifier<VoiceState> {
   }
 
   Future<void> _startRecognizer() async {
-    final languageCode = _ref.read(localeProvider).languageCode;
+    final languageCode = _ref.read(voiceRecognitionLanguageProvider);
     final localeId = await _speech.resolveLocaleId(languageCode) ?? languageCode;
     await _speech.start(localeId: localeId);
+  }
+
+  /// Pauses BOTH the recognizer and the raw audio recording in place, without finishing or
+  /// analyzing anything — resuming continues the SAME recording (see
+  /// LocalAudioRecordingService.pause's doc comment) and the same sentence.
+  Future<void> pauseRecording() async {
+    if (state.status != VoiceStatus.listening && state.status != VoiceStatus.bluetoothListeningCommand) return;
+    final startedAt = state.recordingStartedAt;
+    final elapsedThisRun = startedAt == null ? Duration.zero : DateTime.now().difference(startedAt);
+    await _speech.stop();
+    try {
+      await _recorder.pause();
+    } catch (_) {}
+    state = state.copyWith(
+      status: VoiceStatus.paused,
+      committedTranscript: state.transcript,
+      elapsedBeforePause: state.elapsedBeforePause + elapsedThisRun,
+    );
+  }
+
+  Future<void> resumeRecording() async {
+    if (state.status != VoiceStatus.paused) return;
+    try {
+      await _recorder.resume();
+    } catch (_) {}
+    state = state.copyWith(
+      status: state.bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
+      recordingStartedAt: DateTime.now(),
+      clearError: true,
+    );
+    await _startRecognizer();
   }
 
   void _onSpeechResult(SpeechRecognitionResult result) {
@@ -201,7 +259,8 @@ class VoiceController extends StateNotifier<VoiceState> {
       return;
     }
     if (state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand) {
-      state = state.copyWith(transcript: text);
+      final combined = state.committedTranscript.isEmpty ? text : '${state.committedTranscript} $text'.trim();
+      state = state.copyWith(transcript: combined);
       return;
     }
     if (state.status == VoiceStatus.confirmationListening) {
@@ -304,7 +363,9 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (draft == null || account == null || draft.amount == null || draft.direction == null) return;
     state = state.copyWith(status: VoiceStatus.saving);
     final id = _uuid.v4();
-    final duration = state.recordingStartedAt == null ? 0 : DateTime.now().difference(state.recordingStartedAt!).inMilliseconds;
+    final duration = state.recordingStartedAt == null
+        ? state.elapsedBeforePause.inMilliseconds
+        : (state.elapsedBeforePause + DateTime.now().difference(state.recordingStartedAt!)).inMilliseconds;
     final recording = state.recordingPath == null
         ? null
         : VoiceRecording(path: state.recordingPath!, durationMs: duration, transcript: draft.transcript, transactionId: id);
@@ -320,6 +381,16 @@ class VoiceController extends StateNotifier<VoiceState> {
         ),
     );
     state = state.copyWith(status: VoiceStatus.success);
+  }
+
+  /// Short-press only: leaves the "saved" screen to start a brand new recording, WITHOUT the
+  /// Bluetooth flow's "waiting for the wake word" framing that would be wrong here — see
+  /// VoiceCommandSheet's success-state branch. Bluetooth mode's own success screen instead keeps
+  /// listening for the wake word again (genuinely correct for hands-free use), unaffected by
+  /// this method.
+  void startAnother() {
+    if (state.status != VoiceStatus.success || state.bluetoothMode) return;
+    state = const VoiceState(bluetoothMode: false);
   }
 
   Future<void> retry() async {
@@ -348,9 +419,9 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// error_audio, error_server, error_client...). Previously EVERY one of these — including the
   /// completely normal "I heard a brief silence" (`error_no_match`) that happens constantly
   /// during natural speech — was mapped straight to a generic "microphone/permission" message and
-  /// tore down the whole listening session (see SpeechRecognitionService's `cancelOnError`,
-  /// now `false`). That combination is the main reason real speech was never actually understood:
-  /// the very first pause in a sentence ended the session before the sentence finished.
+  /// tore down the whole listening session. That combination was the main reason real speech was
+  /// never actually understood: the very first pause in a sentence ended the session before the
+  /// sentence finished.
   void _onSpeechError(String errorMsg) {
     // Internal sentinel from `_onSpeechStatus`'s wake-word restart path — not a real
     // speech_to_text error code, so it skips the message-based classification entirely.
@@ -365,8 +436,9 @@ class VoiceController extends StateNotifier<VoiceState> {
         state.status == VoiceStatus.bluetoothWaitingWakeWord ||
         state.status == VoiceStatus.confirmationListening;
     // A transient hiccup while a session is healthy and ongoing must not kill it — with
-    // cancelOnError now false, the native recognizer itself keeps listening through these; the
-    // app must not override that by jumping to an error screen on every single one.
+    // cancelOnError now false (see SpeechRecognitionService), the native recognizer itself keeps
+    // listening through these; the app must not override that by jumping to an error screen on
+    // every single one.
     if (isTransient && activelyListening) return;
 
     final errorCode = code.contains('permission')
