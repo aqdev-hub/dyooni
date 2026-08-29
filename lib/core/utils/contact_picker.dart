@@ -1,13 +1,19 @@
 import 'package:flutter_contacts/flutter_contacts.dart';
 
 /// Opens the device's OWN native contact-picker UI and returns whichever contact the person
-/// chose, or `null` if they backed out without choosing anyone.
+/// chose, or `null` if they backed out without choosing anyone or permission was refused.
 ///
-/// Deliberately `openExternalPick()`, not an in-app list built on `FlutterContacts.getContacts()`
-/// — the external picker hands back exactly the one contact the person picked via the OS's own
-/// one-time grant for that contact, so this never needs the app to hold the broad `READ_CONTACTS`
-/// runtime permission, and needs no manifest/Info.plist entry at all.
-Future<Contact?> pickDeviceContact() => FlutterContacts.openExternalPick();
+/// `openExternalPick()` is documented as not requiring `READ_CONTACTS` — but on some devices/
+/// plugin versions it still needs the permission actually granted to read back the phone/name
+/// properties of the picked contact, and skipping the request was reproducing a hard native
+/// crash right after tapping a contact (not a catchable Dart exception). Requesting explicitly
+/// first, and returning `null` if it's refused, is the safe fix: the picker is only ever opened
+/// once permission is actually granted.
+Future<Contact?> pickDeviceContact() async {
+  final granted = await FlutterContacts.requestPermission(readonly: true);
+  if (!granted) return null;
+  return FlutterContacts.openExternalPick();
+}
 
 /// The contact's first phone number as typed in the device's address book, or `null` if the
 /// contact has none. No normalization here — see core/utils/phone_utils.dart for that, applied

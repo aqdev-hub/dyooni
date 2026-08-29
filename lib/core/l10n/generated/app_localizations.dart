@@ -479,7 +479,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeEmptyAccounts.
   ///
   /// In ar, this message translates to:
-  /// **'لا توجد حسابات بعد — اضغط "إضافة حساب" للبدء'**
+  /// **'لا توجد حسابات بعد — اضغط \"إضافة حساب\" للبدء'**
   String get homeEmptyAccounts;
 
   /// No description provided for @homeTransactionsCount.
@@ -1037,8 +1037,14 @@ abstract class AppLocalizations {
   /// No description provided for @voiceNeedDirection.
   ///
   /// In ar, this message translates to:
-  /// **'لم أتعرف على نوع العملية. اختر "له" أو "عليه".'**
+  /// **'لم أتعرف على نوع العملية. اختر \"له\" أو \"عليه\".'**
   String get voiceNeedDirection;
+
+  /// No description provided for @voiceNoSpeechCaptured.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم ألتقط أي صوت. تحدث بوضوح بالقرب من الميكروفون ثم أعد المحاولة.'**
+  String get voiceNoSpeechCaptured;
 
   /// No description provided for @voiceTranscriptLabel.
   ///
@@ -1175,7 +1181,7 @@ abstract class AppLocalizations {
   /// No description provided for @voiceInfoBody.
   ///
   /// In ar, this message translates to:
-  /// **'اضغط ضغطة قصيرة على الميكروفون لتسجيل عملية مباشرة بصوتك. اضغط مطولًا لتفعيل وضع سماعة البلوتوث، حيث يستمع التطبيق لكلمة التنبيه "ديوني" قبل تسجيل أي أمر.'**
+  /// **'اضغط ضغطة قصيرة على الميكروفون لتسجيل عملية مباشرة بصوتك. اضغط مطولًا لتفعيل وضع سماعة البلوتوث، حيث يستمع التطبيق لكلمة التنبيه \"ديوني\" قبل تسجيل أي أمر.'**
   String get voiceInfoBody;
 
   /// No description provided for @voiceLanguageArabic.
@@ -1567,6 +1573,96 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'لا توجد نتائج مطابقة للبحث'**
   String get searchNoResults;
+
+  /// No description provided for @accountNameAlreadyExists.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الاسم مستخدم بالفعل لحساب آخر'**
+  String get accountNameAlreadyExists;
+
+  /// No description provided for @accountNameFullHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم الحساب الكامل (الاسم الأول واسم العائلة)'**
+  String get accountNameFullHint;
+
+  /// No description provided for @contactPermissionDeniedMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر الوصول إلى جهات الاتصال — تحقق من صلاحيات التطبيق'**
+  String get contactPermissionDeniedMessage;
+
+  /// No description provided for @localBackupScreenTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'النسخ الاحتياطي المحلي'**
+  String get localBackupScreenTitle;
+
+  /// No description provided for @localBackupExplanation.
+  ///
+  /// In ar, this message translates to:
+  /// **'تُنشئ نسخة احتياطية تشمل كل الحسابات والعمليات والبيانات الشخصية في ملف واحد يمكنك حفظه أو مشاركته من جهازك. ملاحظة: ملفات التسجيلات الصوتية نفسها لا تُضمَّن في هذا الملف، فقط نص العملية المرتبط بها.'**
+  String get localBackupExplanation;
+
+  /// No description provided for @localBackupNeverLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد نسخة احتياطية بعد'**
+  String get localBackupNeverLabel;
+
+  /// No description provided for @localBackupLastLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر نسخة احتياطية: {date}'**
+  String localBackupLastLabel(String date);
+
+  /// No description provided for @localBackupCreateButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء نسخة احتياطية الآن'**
+  String get localBackupCreateButton;
+
+  /// No description provided for @localBackupCreatedSuccessMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إنشاء النسخة الاحتياطية بنجاح'**
+  String get localBackupCreatedSuccessMessage;
+
+  /// No description provided for @localBackupRestoreButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'استعادة من ملف'**
+  String get localBackupRestoreButton;
+
+  /// No description provided for @localBackupRestoreConfirmTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'استعادة نسخة احتياطية'**
+  String get localBackupRestoreConfirmTitle;
+
+  /// No description provided for @localBackupRestoreConfirmBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتم دمج بيانات هذا الملف مع بياناتك الحالية (لن يُحذف أي شيء موجود حاليًا). هل تريد المتابعة؟'**
+  String get localBackupRestoreConfirmBody;
+
+  /// No description provided for @localBackupRestoredSuccessMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت استعادة البيانات بنجاح'**
+  String get localBackupRestoredSuccessMessage;
+
+  /// No description provided for @localBackupInvalidFileMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الملف ليس نسخة احتياطية صالحة من ديوني'**
+  String get localBackupInvalidFileMessage;
+
+  /// No description provided for @localBackupIncompatibleMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه النسخة الاحتياطية من إصدار أحدث من التطبيق ولا يمكن استعادتها هنا'**
+  String get localBackupIncompatibleMessage;
 }
 
 class _AppLocalizationsDelegate

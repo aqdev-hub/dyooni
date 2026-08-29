@@ -15,25 +15,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeTitle => 'Welcome to';
 
   @override
-  String get onboardingWelcomeSubtitlePrefix => 'A smart app that helps you manage and track your debts easily and securely';
+  String get onboardingWelcomeSubtitlePrefix =>
+      'A smart app that helps you manage and track your debts easily and securely';
 
   @override
   String get onboardingTitle2 => 'Record your debts easily';
 
   @override
-  String get onboardingBody2 => 'Add your debts and their details in seconds, right from the app';
+  String get onboardingBody2 =>
+      'Add your debts and their details in seconds, right from the app';
 
   @override
   String get onboardingTitle3 => 'A smart assistant that understands you';
 
   @override
-  String get onboardingBody3 => 'AI that helps you and double-checks the details before saving';
+  String get onboardingBody3 =>
+      'AI that helps you and double-checks the details before saving';
 
   @override
   String get onboardingTitle4 => 'Always safe and trusted';
 
   @override
-  String get onboardingBody4 => 'Your data is protected and synced automatically across all your devices';
+  String get onboardingBody4 =>
+      'Your data is protected and synced automatically across all your devices';
 
   @override
   String get onboardingNext => 'Next';
@@ -75,7 +79,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signupTitle => 'Create your account';
 
   @override
-  String get signupSubtitle => 'Start your journey managing debts easily and securely';
+  String get signupSubtitle =>
+      'Start your journey managing debts easily and securely';
 
   @override
   String get lastNameLabel => 'Last name';
@@ -117,13 +122,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signupSuccessMessage => 'Account created successfully';
 
   @override
-  String get forgotPasswordEmailSentMessage => 'A reset link has been sent to your email';
+  String get forgotPasswordEmailSentMessage =>
+      'A reset link has been sent to your email';
 
   @override
   String get forgotPasswordDialogTitle => 'Reset Password';
 
   @override
-  String get forgotPasswordDialogBody => 'Enter your email and we\'ll send you a password reset link';
+  String get forgotPasswordDialogBody =>
+      'Enter your email and we\'ll send you a password reset link';
 
   @override
   String get sendResetLink => 'Send Link';
@@ -135,7 +142,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fieldRequired => 'This field is required';
 
   @override
-  String get networkUnreachable => 'Couldn\'t connect to the internet, please try again';
+  String get networkUnreachable =>
+      'Couldn\'t connect to the internet, please try again';
 
   @override
   String get unexpectedError => 'An unexpected error occurred';
@@ -198,7 +206,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeAddAccount => 'Add account';
 
   @override
-  String get homeEmptyAccounts => 'No accounts yet — tap "Add account" to start';
+  String get homeEmptyAccounts =>
+      'No accounts yet — tap \"Add account\" to start';
 
   @override
   String homeTransactionsCount(int count) {
@@ -332,7 +341,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteAccountConfirmTitle => 'Delete account';
 
   @override
-  String get deleteAccountConfirmBody => 'Are you sure you want to delete this account? This can\'t be undone';
+  String get deleteAccountConfirmBody =>
+      'Are you sure you want to delete this account? This can\'t be undone';
 
   @override
   String get delete => 'Delete';
@@ -407,7 +417,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personalDataDeleteLogo => 'Delete logo';
 
   @override
-  String get personalDataReportHeaderNote => 'Details shown in the report header';
+  String get personalDataReportHeaderNote =>
+      'Details shown in the report header';
 
   @override
   String get nameArLabel => 'Name (Arabic)';
@@ -431,7 +442,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personalDataSavedMessage => 'Data saved successfully';
 
   @override
-  String get personalDataFeatureNote => 'This info will be used in PDF report headers soon';
+  String get personalDataFeatureNote =>
+      'This info will be used in PDF report headers soon';
 
   @override
   String get signatureScreenTitle => 'Signature';
@@ -473,13 +485,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceSaved => 'Entry saved successfully';
 
   @override
-  String get voiceNeedAccount => 'I could not match an account name. Choose an account or try again.';
+  String get voiceNeedAccount =>
+      'I could not match an account name. Choose an account or try again.';
 
   @override
-  String get voiceNeedAmount => 'I could not recognize a valid amount. Say the amount and try again.';
+  String get voiceNeedAmount =>
+      'I could not recognize a valid amount. Say the amount and try again.';
 
   @override
-  String get voiceNeedDirection => 'I couldn\'t tell if this is credit or debit. Choose one.';
+  String get voiceNeedDirection =>
+      'I couldn\'t tell if this is credit or debit. Choose one.';
+
+  @override
+  String get voiceNoSpeechCaptured =>
+      'I didn\'t capture any speech. Speak clearly near the microphone and try again.';
 
   @override
   String get voiceTranscriptLabel => 'Heard';
@@ -500,22 +519,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceBluetoothListeningCommand => 'Listening for your command…';
 
   @override
-  String get voiceBluetoothDisconnected => 'Bluetooth connection was interrupted';
+  String get voiceBluetoothDisconnected =>
+      'Bluetooth connection was interrupted';
 
   @override
   String get voiceBluetoothRetry => 'Retry';
 
   @override
-  String get voiceNoSpeechPermission => 'Microphone or speech recognition is unavailable.';
+  String get voiceNoSpeechPermission =>
+      'Microphone or speech recognition is unavailable.';
 
   @override
-  String get voiceNetworkError => 'A network error interrupted speech recognition.';
+  String get voiceNetworkError =>
+      'A network error interrupted speech recognition.';
 
   @override
-  String get voiceRecognitionError => 'Couldn\'t process the audio, please try speaking again.';
+  String get voiceRecognitionError =>
+      'Couldn\'t process the audio, please try speaking again.';
 
   @override
-  String get voiceAudioUnavailable => 'The recording file is unavailable on this device';
+  String get voiceAudioUnavailable =>
+      'The recording file is unavailable on this device';
 
   @override
   String get voiceDirectionLabel => 'Type';
@@ -525,7 +549,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String voiceRecordingDuration(int seconds) {
-    return 'Recording: $secondss';
+    return 'Recording: ${seconds}s';
   }
 
   @override
@@ -535,10 +559,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceConfirmationListening => 'Listening for your confirmation…';
 
   @override
-  String get voiceConfirmationHint => 'Say “yes” to save or “edit” to repeat the command';
+  String get voiceConfirmationHint =>
+      'Say “yes” to save or “edit” to repeat the command';
 
   @override
-  String get voiceConfirmationNotUnderstood => 'I did not understand the confirmation. Say “yes” or “edit”.';
+  String get voiceConfirmationNotUnderstood =>
+      'I did not understand the confirmation. Say “yes” or “edit”.';
 
   @override
   String get voiceContinueSpeakingHint => 'Keep talking';
@@ -550,7 +576,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceInfoTitle => 'About voice recording';
 
   @override
-  String get voiceInfoBody => 'Tap the mic for a quick voice-recorded entry. Long-press to enable Bluetooth headset mode, where the app listens for the wake word "Dyooni" before recording a command.';
+  String get voiceInfoBody =>
+      'Tap the mic for a quick voice-recorded entry. Long-press to enable Bluetooth headset mode, where the app listens for the wake word \"Dyooni\" before recording a command.';
 
   @override
   String get voiceLanguageArabic => 'Arabic';
@@ -598,10 +625,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportTypeMonthlyTotals => 'Monthly totals';
 
   @override
-  String get reportTypeCategoryAndCurrencyTotals => 'Category and currency totals';
+  String get reportTypeCategoryAndCurrencyTotals =>
+      'Category and currency totals';
 
   @override
-  String get reportTypeMonthlyDetailsCurrentCategory => 'Monthly details for current category';
+  String get reportTypeMonthlyDetailsCurrentCategory =>
+      'Monthly details for current category';
 
   @override
   String get reportTypeStatement => 'Account statement';
@@ -646,7 +675,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportShareFormatPdf => 'PDF';
 
   @override
-  String get reportFeatureNotReadyMessage => 'This report type is still under development';
+  String get reportFeatureNotReadyMessage =>
+      'This report type is still under development';
 
   @override
   String get voiceScreenTitle => 'Voice recording';
@@ -688,7 +718,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteTransactionConfirmTitle => 'Delete entry';
 
   @override
-  String get deleteTransactionConfirmBody => 'Are you sure you want to delete this entry? This can\'t be undone';
+  String get deleteTransactionConfirmBody =>
+      'Are you sure you want to delete this entry? This can\'t be undone';
 
   @override
   String get shareAction => 'Share';
@@ -708,10 +739,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get deleteSelectedAccountsConfirmBody => 'Are you sure you want to delete the selected accounts? This can\'t be undone';
+  String get deleteSelectedAccountsConfirmBody =>
+      'Are you sure you want to delete the selected accounts? This can\'t be undone';
 
   @override
-  String get deleteSelectedTransactionsConfirmBody => 'Are you sure you want to delete the selected entries? This can\'t be undone';
+  String get deleteSelectedTransactionsConfirmBody =>
+      'Are you sure you want to delete the selected entries? This can\'t be undone';
 
   @override
   String get editAccountTitle => 'Edit account';
@@ -732,7 +765,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contactPickFailedMessage => 'Couldn\'t open contacts';
 
   @override
-  String get accountNameMustBeTwoWords => 'Enter at least a first and last name';
+  String get accountNameMustBeTwoWords =>
+      'Enter at least a first and last name';
 
   @override
   String get attachmentRotateAction => 'Rotate';
@@ -748,4 +782,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchNoResults => 'No entries match your search';
+
+  @override
+  String get accountNameAlreadyExists =>
+      'This name is already used by another account';
+
+  @override
+  String get accountNameFullHint => 'Full account name (first and last name)';
+
+  @override
+  String get contactPermissionDeniedMessage =>
+      'Couldn\'t access contacts — check the app\'s permissions';
+
+  @override
+  String get localBackupScreenTitle => 'Local Backup';
+
+  @override
+  String get localBackupExplanation =>
+      'Creates a backup file containing every account, entry, and personal-data field, which you can save or share from your device. Note: voice-recording audio files themselves are not included — only the text linked to that entry.';
+
+  @override
+  String get localBackupNeverLabel => 'No backup yet';
+
+  @override
+  String localBackupLastLabel(String date) {
+    return 'Last backup: $date';
+  }
+
+  @override
+  String get localBackupCreateButton => 'Create backup now';
+
+  @override
+  String get localBackupCreatedSuccessMessage => 'Backup created successfully';
+
+  @override
+  String get localBackupRestoreButton => 'Restore from file';
+
+  @override
+  String get localBackupRestoreConfirmTitle => 'Restore a backup';
+
+  @override
+  String get localBackupRestoreConfirmBody =>
+      'This file\'s data will be merged into your current data (nothing existing will be deleted). Continue?';
+
+  @override
+  String get localBackupRestoredSuccessMessage => 'Data restored successfully';
+
+  @override
+  String get localBackupInvalidFileMessage =>
+      'This file is not a valid Dyooni backup';
+
+  @override
+  String get localBackupIncompatibleMessage =>
+      'This backup was made with a newer version of the app and can\'t be restored here';
 }

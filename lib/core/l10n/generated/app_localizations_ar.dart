@@ -15,25 +15,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get onboardingWelcomeTitle => 'مرحبًا بك في';
 
   @override
-  String get onboardingWelcomeSubtitlePrefix => 'تطبيق ذكي يساعدك على إدارة ديونك ومتابعتها بسهولة وأمان';
+  String get onboardingWelcomeSubtitlePrefix =>
+      'تطبيق ذكي يساعدك على إدارة ديونك ومتابعتها بسهولة وأمان';
 
   @override
   String get onboardingTitle2 => 'سجل ديونك بسهولة';
 
   @override
-  String get onboardingBody2 => 'أضف ديونك وتفاصيلها في ثوانٍ وبكل سهولة عبر التطبيق';
+  String get onboardingBody2 =>
+      'أضف ديونك وتفاصيلها في ثوانٍ وبكل سهولة عبر التطبيق';
 
   @override
   String get onboardingTitle3 => 'مساعد ذكي يفهمك';
 
   @override
-  String get onboardingBody3 => 'ذكاء اصطناعي يساعدك ويتأكد من التفاصيل قبل حفظها';
+  String get onboardingBody3 =>
+      'ذكاء اصطناعي يساعدك ويتأكد من التفاصيل قبل حفظها';
 
   @override
   String get onboardingTitle4 => 'آمن وموثوق دائمًا';
 
   @override
-  String get onboardingBody4 => 'بياناتك محمية ومتزامنة تلقائيًا على جميع أجهزتك';
+  String get onboardingBody4 =>
+      'بياناتك محمية ومتزامنة تلقائيًا على جميع أجهزتك';
 
   @override
   String get onboardingNext => 'التالي';
@@ -117,13 +121,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get signupSuccessMessage => 'تم إنشاء الحساب بنجاح';
 
   @override
-  String get forgotPasswordEmailSentMessage => 'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني';
+  String get forgotPasswordEmailSentMessage =>
+      'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني';
 
   @override
   String get forgotPasswordDialogTitle => 'إعادة تعيين كلمة المرور';
 
   @override
-  String get forgotPasswordDialogBody => 'أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة المرور';
+  String get forgotPasswordDialogBody =>
+      'أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة المرور';
 
   @override
   String get sendResetLink => 'إرسال الرابط';
@@ -198,7 +204,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeAddAccount => 'إضافة حساب';
 
   @override
-  String get homeEmptyAccounts => 'لا توجد حسابات بعد — اضغط "إضافة حساب" للبدء';
+  String get homeEmptyAccounts =>
+      'لا توجد حسابات بعد — اضغط \"إضافة حساب\" للبدء';
 
   @override
   String homeTransactionsCount(int count) {
@@ -332,7 +339,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get deleteAccountConfirmTitle => 'حذف الحساب';
 
   @override
-  String get deleteAccountConfirmBody => 'هل أنت متأكد أنك تريد حذف هذا الحساب؟ لا يمكن التراجع عن هذا الإجراء';
+  String get deleteAccountConfirmBody =>
+      'هل أنت متأكد أنك تريد حذف هذا الحساب؟ لا يمكن التراجع عن هذا الإجراء';
 
   @override
   String get delete => 'حذف';
@@ -407,7 +415,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get personalDataDeleteLogo => 'حذف الشعار';
 
   @override
-  String get personalDataReportHeaderNote => 'البيانات التي تظهر في ترويسة التقارير';
+  String get personalDataReportHeaderNote =>
+      'البيانات التي تظهر في ترويسة التقارير';
 
   @override
   String get nameArLabel => 'الإسم (عربي)';
@@ -431,7 +440,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get personalDataSavedMessage => 'تم حفظ البيانات بنجاح';
 
   @override
-  String get personalDataFeatureNote => 'سيتم استخدام هذه البيانات في رأس تقارير PDF قريبًا';
+  String get personalDataFeatureNote =>
+      'سيتم استخدام هذه البيانات في رأس تقارير PDF قريبًا';
 
   @override
   String get signatureScreenTitle => 'التوقيع';
@@ -473,13 +483,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get voiceSaved => 'تم حفظ العملية بنجاح';
 
   @override
-  String get voiceNeedAccount => 'لم أتعرف على اسم حساب مطابق. اختر حسابًا أو أعد المحاولة.';
+  String get voiceNeedAccount =>
+      'لم أتعرف على اسم حساب مطابق. اختر حسابًا أو أعد المحاولة.';
 
   @override
-  String get voiceNeedAmount => 'لم أتعرف على مبلغ صحيح. قل المبلغ ثم أعد المحاولة.';
+  String get voiceNeedAmount =>
+      'لم أتعرف على مبلغ صحيح. قل المبلغ ثم أعد المحاولة.';
 
   @override
-  String get voiceNeedDirection => 'لم أتعرف على نوع العملية. اختر "له" أو "عليه".';
+  String get voiceNeedDirection =>
+      'لم أتعرف على نوع العملية. اختر \"له\" أو \"عليه\".';
+
+  @override
+  String get voiceNoSpeechCaptured =>
+      'لم ألتقط أي صوت. تحدث بوضوح بالقرب من الميكروفون ثم أعد المحاولة.';
 
   @override
   String get voiceTranscriptLabel => 'ما تم سماعه';
@@ -506,13 +523,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get voiceBluetoothRetry => 'إعادة المحاولة';
 
   @override
-  String get voiceNoSpeechPermission => 'تعذر الوصول إلى الميكروفون أو التعرف على الكلام.';
+  String get voiceNoSpeechPermission =>
+      'تعذر الوصول إلى الميكروفون أو التعرف على الكلام.';
 
   @override
-  String get voiceNetworkError => 'تعذّر الاتصال بالشبكة أثناء التعرف على الصوت.';
+  String get voiceNetworkError =>
+      'تعذّر الاتصال بالشبكة أثناء التعرف على الصوت.';
 
   @override
-  String get voiceRecognitionError => 'تعذّر فهم الصوت، حاول التحدث بوضوح مرة أخرى.';
+  String get voiceRecognitionError =>
+      'تعذّر فهم الصوت، حاول التحدث بوضوح مرة أخرى.';
 
   @override
   String get voiceAudioUnavailable => 'ملف التسجيل غير متوفر على هذا الجهاز';
@@ -538,7 +558,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get voiceConfirmationHint => 'قل «نعم» للحفظ أو «تعديل» لإعادة الأمر';
 
   @override
-  String get voiceConfirmationNotUnderstood => 'لم أفهم التأكيد. قل «نعم» أو «تعديل».';
+  String get voiceConfirmationNotUnderstood =>
+      'لم أفهم التأكيد. قل «نعم» أو «تعديل».';
 
   @override
   String get voiceContinueSpeakingHint => 'استمر في التحدث';
@@ -550,7 +571,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get voiceInfoTitle => 'عن التسجيل الصوتي';
 
   @override
-  String get voiceInfoBody => 'اضغط ضغطة قصيرة على الميكروفون لتسجيل عملية مباشرة بصوتك. اضغط مطولًا لتفعيل وضع سماعة البلوتوث، حيث يستمع التطبيق لكلمة التنبيه "ديوني" قبل تسجيل أي أمر.';
+  String get voiceInfoBody =>
+      'اضغط ضغطة قصيرة على الميكروفون لتسجيل عملية مباشرة بصوتك. اضغط مطولًا لتفعيل وضع سماعة البلوتوث، حيث يستمع التطبيق لكلمة التنبيه \"ديوني\" قبل تسجيل أي أمر.';
 
   @override
   String get voiceLanguageArabic => 'العربية';
@@ -601,7 +623,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportTypeCategoryAndCurrencyTotals => 'إجمالي التصنيفات والعملات';
 
   @override
-  String get reportTypeMonthlyDetailsCurrentCategory => 'تفصيلي المبالغ شهرياً للتصنيف الحالي';
+  String get reportTypeMonthlyDetailsCurrentCategory =>
+      'تفصيلي المبالغ شهرياً للتصنيف الحالي';
 
   @override
   String get reportTypeStatement => 'تقرير كشف الحساب';
@@ -646,7 +669,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportShareFormatPdf => 'بي دي إف';
 
   @override
-  String get reportFeatureNotReadyMessage => 'هذا النوع من التقارير قيد التطوير حاليًا';
+  String get reportFeatureNotReadyMessage =>
+      'هذا النوع من التقارير قيد التطوير حاليًا';
 
   @override
   String get voiceScreenTitle => 'التسجيل الصوتي';
@@ -688,7 +712,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get deleteTransactionConfirmTitle => 'حذف العملية';
 
   @override
-  String get deleteTransactionConfirmBody => 'هل أنت متأكد أنك تريد حذف هذه العملية؟ لا يمكن التراجع عن هذا الإجراء';
+  String get deleteTransactionConfirmBody =>
+      'هل أنت متأكد أنك تريد حذف هذه العملية؟ لا يمكن التراجع عن هذا الإجراء';
 
   @override
   String get shareAction => 'مشاركة';
@@ -708,10 +733,12 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get deleteSelectedAccountsConfirmBody => 'هل أنت متأكد أنك تريد حذف الحسابات المحددة؟ لا يمكن التراجع عن هذا الإجراء';
+  String get deleteSelectedAccountsConfirmBody =>
+      'هل أنت متأكد أنك تريد حذف الحسابات المحددة؟ لا يمكن التراجع عن هذا الإجراء';
 
   @override
-  String get deleteSelectedTransactionsConfirmBody => 'هل أنت متأكد أنك تريد حذف العمليات المحددة؟ لا يمكن التراجع عن هذا الإجراء';
+  String get deleteSelectedTransactionsConfirmBody =>
+      'هل أنت متأكد أنك تريد حذف العمليات المحددة؟ لا يمكن التراجع عن هذا الإجراء';
 
   @override
   String get editAccountTitle => 'تعديل الحساب';
@@ -732,7 +759,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get contactPickFailedMessage => 'تعذر فتح جهات الاتصال';
 
   @override
-  String get accountNameMustBeTwoWords => 'أدخل الاسم الأول واسم العائلة على الأقل';
+  String get accountNameMustBeTwoWords =>
+      'أدخل الاسم الأول واسم العائلة على الأقل';
 
   @override
   String get attachmentRotateAction => 'تدوير';
@@ -748,4 +776,58 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get searchNoResults => 'لا توجد نتائج مطابقة للبحث';
+
+  @override
+  String get accountNameAlreadyExists => 'هذا الاسم مستخدم بالفعل لحساب آخر';
+
+  @override
+  String get accountNameFullHint =>
+      'اسم الحساب الكامل (الاسم الأول واسم العائلة)';
+
+  @override
+  String get contactPermissionDeniedMessage =>
+      'تعذر الوصول إلى جهات الاتصال — تحقق من صلاحيات التطبيق';
+
+  @override
+  String get localBackupScreenTitle => 'النسخ الاحتياطي المحلي';
+
+  @override
+  String get localBackupExplanation =>
+      'تُنشئ نسخة احتياطية تشمل كل الحسابات والعمليات والبيانات الشخصية في ملف واحد يمكنك حفظه أو مشاركته من جهازك. ملاحظة: ملفات التسجيلات الصوتية نفسها لا تُضمَّن في هذا الملف، فقط نص العملية المرتبط بها.';
+
+  @override
+  String get localBackupNeverLabel => 'لا توجد نسخة احتياطية بعد';
+
+  @override
+  String localBackupLastLabel(String date) {
+    return 'آخر نسخة احتياطية: $date';
+  }
+
+  @override
+  String get localBackupCreateButton => 'إنشاء نسخة احتياطية الآن';
+
+  @override
+  String get localBackupCreatedSuccessMessage =>
+      'تم إنشاء النسخة الاحتياطية بنجاح';
+
+  @override
+  String get localBackupRestoreButton => 'استعادة من ملف';
+
+  @override
+  String get localBackupRestoreConfirmTitle => 'استعادة نسخة احتياطية';
+
+  @override
+  String get localBackupRestoreConfirmBody =>
+      'سيتم دمج بيانات هذا الملف مع بياناتك الحالية (لن يُحذف أي شيء موجود حاليًا). هل تريد المتابعة؟';
+
+  @override
+  String get localBackupRestoredSuccessMessage => 'تمت استعادة البيانات بنجاح';
+
+  @override
+  String get localBackupInvalidFileMessage =>
+      'هذا الملف ليس نسخة احتياطية صالحة من ديوني';
+
+  @override
+  String get localBackupIncompatibleMessage =>
+      'هذه النسخة الاحتياطية من إصدار أحدث من التطبيق ولا يمكن استعادتها هنا';
 }
