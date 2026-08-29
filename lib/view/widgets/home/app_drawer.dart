@@ -67,7 +67,8 @@ class AppDrawer extends ConsumerWidget {
     final shell = context.shellColors;
 
     // (icon, label, route) — route is null for the items that are still honest "coming soon"
-    // placeholders; "البيانات الشخصية" is the first item in this list to get a real destination.
+    // placeholders; "البيانات الشخصية" and "حفظ واسترجاع البيانات من الجهاز" have real
+    // destinations now.
     final items = <(IconData, String, String?)>[
       (Icons.workspace_premium_outlined, l10n.drawerAdsRemoval, null),
       (Icons.chat_outlined, l10n.drawerContactUs, null),
@@ -77,7 +78,7 @@ class AppDrawer extends ConsumerWidget {
       (Icons.notifications_active_outlined, l10n.drawerAutoBalanceAlerts, null),
       (Icons.category_outlined, l10n.drawerCategories, null),
       (Icons.attach_money_outlined, l10n.drawerCurrencies, null),
-      (Icons.save_alt_outlined, l10n.drawerLocalBackup, null),
+      (Icons.save_alt_outlined, l10n.drawerLocalBackup, '/local-backup'),
       (Icons.cloud_outlined, l10n.drawerGoogleBackup, null),
       (Icons.sync_outlined, l10n.drawerGoogleDriveSync, null),
       (Icons.dns_outlined, l10n.drawerSendDatabase, null),

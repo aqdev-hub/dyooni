@@ -63,6 +63,14 @@ dependencies:
   share_plus: ^11.0.1
   path_provider: ^2.1.4
 
+  # NEW this batch — lets the person pick an existing file from their device (used by the local
+  # backup screen's "استعادة من ملف"/restore-from-file flow to choose a previously exported
+  # .json backup). Like arabic_reshaper, I could not verify this exact version against a live
+  # pub.dev listing from this offline sandbox — it is a long-established, extremely widely-used
+  # package for exactly this purpose, but please run `flutter pub get` and tell me immediately if
+  # it fails to resolve so I can pin a different version.
+  file_picker: ^8.1.2
+
   # Voice input: native STT for short commands, original local recordings,
   # and their in-app playback. Versions are constrained to the app's Dart 3.4 SDK.
   speech_to_text: ^7.4.0
