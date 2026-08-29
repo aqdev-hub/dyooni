@@ -412,6 +412,7 @@ class _ClarificationCard extends StatelessWidget {
     final message = switch (state.errorCode) {
       'amount' => l10n.voiceNeedAmount,
       'direction' => l10n.voiceNeedDirection,
+      'noSpeech' => l10n.voiceNoSpeechCaptured,
       _ => l10n.voiceNeedAccount,
     };
     return Container(
@@ -424,10 +425,14 @@ class _ClarificationCard extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.voiceProcessing.withValues(alpha: 0.14)),
-            child: const Icon(Icons.help_outline_rounded, color: AppColors.voiceProcessing, size: 28),
+            child: Icon(state.errorCode == 'noSpeech' ? Icons.mic_off_rounded : Icons.help_outline_rounded, color: AppColors.voiceProcessing, size: 28),
           ),
           const SizedBox(height: 10),
           Text(message, textAlign: TextAlign.center, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w600)),
+          if (state.errorCode != 'noSpeech' && state.transcript.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _TranscriptCard(text: state.transcript),
+          ],
           if (state.errorCode == 'account') ...[
             const SizedBox(height: 10),
             _AccountChoices(onSelected: controller.selectAccount),

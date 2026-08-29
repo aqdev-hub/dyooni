@@ -22,6 +22,7 @@ import '../../widgets/shared/attachment_preview.dart';
 import '../../widgets/shared/currency_picker_sheet.dart';
 import '../../widgets/shared/image_source_dialog.dart';
 import '../../widgets/shared/modal_header_bar.dart';
+import '../../widgets/shared/validated_field.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   const AddTransactionScreen({required this.accountId, this.accountName, this.existingTransaction, super.key});
@@ -41,7 +42,6 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
 }
 
 class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
-  final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _detailsController = TextEditingController();
 
@@ -49,7 +49,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   DateTime _date = DateTime.now();
   AccountDirection _direction = AccountDirection.debit;
   bool _isSaving = false;
+  bool _isRotating = false;
   String? _attachmentPath;
+
+  // Validated manually (not via Form/TextFormField.validator) — see ValidatedField's doc comment
+  // for the layout bug (error text overflowing the field's fixed-height box) that caused.
+  String? _amountError;
 
   @override
   void initState() {
@@ -105,14 +110,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   /// Rotates the currently-attached photo 90° in place. The file path never changes — see
   /// AttachmentPreview's doc comment for how the thumbnail still picks up the new bytes.
+  /// `_isRotating` disables the attachment's buttons and shows a spinner over the thumbnail while
+  /// the background isolate works, so the button never again looks like it "did nothing".
   Future<void> _rotateAttachment() async {
     final path = _attachmentPath;
-    if (path == null) return;
+    if (path == null || _isRotating) return;
+    setState(() => _isRotating = true);
     try {
       await rotateImageFile90(path);
       if (mounted) setState(() {});
     } catch (_) {
       if (mounted) AppSnackBar.showError(context, AppLocalizations.of(context)!.unexpectedError);
+    } finally {
+      if (mounted) setState(() => _isRotating = false);
     }
   }
 
@@ -122,6 +132,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     setState(() {
       _date = DateTime.now();
       _direction = AccountDirection.debit;
+      _amountError = null;
     });
   }
 
@@ -140,9 +151,18 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
   }
 
+  String? _validateAmount(AppLocalizations l10n) {
+    final parsed = double.tryParse(_amountController.text.trim());
+    if (parsed == null || parsed <= 0) return l10n.invalidAmount;
+    return null;
+  }
+
   Future<void> _save({required bool keepAdding}) async {
+    if (_isSaving) return;
     final l10n = AppLocalizations.of(context)!;
-    if (!_formKey.currentState!.validate()) return;
+    final amountError = _validateAmount(l10n);
+    setState(() => _amountError = amountError);
+    if (amountError != null) return;
 
     setState(() => _isSaving = true);
     final transaction = _buildTransaction();
@@ -165,8 +185,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   Future<void> _update() async {
+    if (_isSaving) return;
     final l10n = AppLocalizations.of(context)!;
-    if (!_formKey.currentState!.validate()) return;
+    final amountError = _validateAmount(l10n);
+    setState(() => _amountError = amountError);
+    if (amountError != null) return;
 
     setState(() => _isSaving = true);
     try {
@@ -233,222 +256,224 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(10),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ModalHeaderBar(
-                  title: isEditing ? l10n.editTransactionTitle : l10n.addTransactionTitle,
-                  onClose: () => context.pop(),
-                ),
-                const SizedBox(height: 8),
-                if (widget.accountName != null) ...[
-                  LabeledField(
-                    icon: Icons.person_outline_rounded,
-                    child: Center(child: Text(widget.accountName!, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary))),
-                  ),
-                  const SizedBox(height: 6),
-                ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ModalHeaderBar(
+                title: isEditing ? l10n.editTransactionTitle : l10n.addTransactionTitle,
+                onClose: () => context.pop(),
+              ),
+              const SizedBox(height: 8),
+              if (widget.accountName != null) ...[
                 LabeledField(
-                  icon: Icons.calculate_outlined,
-                  onIconTap: _openCalculator,
-                  child: TextFormField(
-                    controller: _amountController,
-                    textAlign: TextAlign.center,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(hintText: l10n.amountLabel, border: InputBorder.none),
-                    validator: (v) {
-                      final parsed = double.tryParse((v ?? '').trim());
-                      if (parsed == null || parsed <= 0) return l10n.invalidAmount;
-                      return null;
-                    },
-                  ),
+                  icon: Icons.person_outline_rounded,
+                  child: Center(child: Text(widget.accountName!, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary))),
                 ),
-                AmountInWords(amountText: _amountController.text),
                 const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Text(
-                      l10n.currencyLabel,
-                      style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textPrimary),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        height: 40,
-                        decoration: BoxDecoration(color: shell.headerBottom, borderRadius: BorderRadius.circular(5)),
-                        child: Directionality(
-                          textDirection: TextDirection.ltr,
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.edit_rounded, size: 25, color: shell.accent),
-                                onPressed: _chooseCurrency,
-                              ),
-                              Expanded(
-                                // Tapping the field itself now opens the SAME picker as the pencil
-                                // icon (see currency_picker_sheet.dart) — previously this was a
-                                // native DropdownButton, a second, differently-styled picker.
-                                child: InkWell(
-                                  onTap: _chooseCurrency,
-                                  child: Align(
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      currencies.firstWhere((c) => c.code == _currencyCode).label(l10n),
-                                      textAlign: TextAlign.center,
-                                      style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
-                                    ),
+              ],
+              ValidatedField(
+                icon: Icons.calculate_outlined,
+                onIconTap: _openCalculator,
+                errorText: _amountError,
+                child: TextFormField(
+                  controller: _amountController,
+                  textAlign: TextAlign.center,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) {
+                    if (_amountError != null) setState(() => _amountError = null);
+                  },
+                  decoration: InputDecoration(hintText: l10n.amountLabel, border: InputBorder.none),
+                ),
+              ),
+              AmountInWords(amountText: _amountController.text),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Text(
+                    l10n.currencyLabel,
+                    style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textPrimary),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(color: shell.headerBottom, borderRadius: BorderRadius.circular(5)),
+                      child: Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.edit_rounded, size: 25, color: shell.accent),
+                              onPressed: _chooseCurrency,
+                            ),
+                            Expanded(
+                              // Tapping the field itself now opens the SAME picker as the pencil
+                              // icon (see currency_picker_sheet.dart) — previously this was a
+                              // native DropdownButton, a second, differently-styled picker.
+                              child: InkWell(
+                                onTap: _chooseCurrency,
+                                child: Align(
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    currencies.firstWhere((c) => c.code == _currencyCode).label(l10n),
+                                    textAlign: TextAlign.center,
+                                    style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 42),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 42),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                LabeledField(
-                  icon: Icons.calendar_today_outlined,
-                  onIconTap: _pickDate,
-                  child: InkWell(
-                    onTap: _pickDate,
-                    child: Text(
-                      '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
-                      style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              LabeledField(
+                icon: Icons.calendar_today_outlined,
+                onIconTap: _pickDate,
+                child: InkWell(
+                  onTap: _pickDate,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Center(
+                      child: Text(
+                        '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
+                        style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                LabeledField(
-                  icon: Icons.camera_alt_outlined,
-                  onIconTap: _chooseImage,
-                  child: TextFormField(
-                    controller: _detailsController,
-                    textAlign: TextAlign.center,
-                    decoration: InputDecoration(hintText: l10n.detailsLabel, border: InputBorder.none),
-                  ),
+              ),
+              const SizedBox(height: 12),
+              LabeledField(
+                icon: Icons.camera_alt_outlined,
+                onIconTap: _chooseImage,
+                child: TextFormField(
+                  controller: _detailsController,
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(hintText: l10n.detailsLabel, border: InputBorder.none),
                 ),
-                if (_attachmentPath != null)
-                  AttachmentPreview(
-                    path: _attachmentPath!,
-                    onEdit: _chooseImage,
-                    onRotate: _rotateAttachment,
-                    onDelete: () => setState(() => _attachmentPath = null),
+              ),
+              if (_attachmentPath != null)
+                AttachmentPreview(
+                  path: _attachmentPath!,
+                  isBusy: _isRotating,
+                  onEdit: _chooseImage,
+                  onRotate: _rotateAttachment,
+                  onDelete: () => setState(() => _attachmentPath = null),
+                ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  DirectionChoice(
+                    label: l10n.directionCredit,
+                    color: AppColors.credit,
+                    selected: _direction == AccountDirection.credit,
+                    onTap: () => setState(() => _direction = AccountDirection.credit),
                   ),
-                const SizedBox(height: 20),
+                  const SizedBox(width: 24),
+                  DirectionChoice(
+                    label: l10n.directionDebit,
+                    color: AppColors.debit,
+                    selected: _direction == AccountDirection.debit,
+                    onTap: () => setState(() => _direction = AccountDirection.debit),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              if (isEditing)
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    DirectionChoice(
-                      label: l10n.directionCredit,
-                      color: AppColors.credit,
-                      selected: _direction == AccountDirection.credit,
-                      onTap: () => setState(() => _direction = AccountDirection.credit),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _isSaving ? null : _delete,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                          side: const BorderSide(color: AppColors.debit),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Text(
+                          l10n.delete,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.button(context).copyWith(color: AppColors.debit),
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 24),
-                    DirectionChoice(
-                      label: l10n.directionDebit,
-                      color: AppColors.debit,
-                      selected: _direction == AccountDirection.debit,
-                      onTap: () => setState(() => _direction = AccountDirection.debit),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isSaving ? null : _update,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.backgroundTop,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(52),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                              )
+                            : Text(
+                                l10n.edit,
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.button(context).copyWith(color: Colors.white),
+                              ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                // Two save actions, matching the reference exactly: exit after saving, or save
+                // and immediately start a fresh entry for the same account.
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _isSaving ? null : () => _save(keepAdding: false),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                          side: const BorderSide(color: AppColors.backgroundTop),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Text(
+                          l10n.saveAndExit,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.button(context).copyWith(color: AppColors.backgroundTop),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isSaving ? null : () => _save(keepAdding: true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.backgroundTop,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(52),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                              )
+                            : Text(
+                                l10n.saveAndAddAnother,
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.button(context).copyWith(color: Colors.white, fontSize: 13),
+                              ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                if (isEditing)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _isSaving ? null : _delete,
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(52),
-                            side: const BorderSide(color: AppColors.debit),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: Text(
-                            l10n.delete,
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.button(context).copyWith(color: AppColors.debit),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _isSaving ? null : _update,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.backgroundTop,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size.fromHeight(52),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: _isSaving
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
-                                )
-                              : Text(
-                                  l10n.edit,
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.button(context).copyWith(color: Colors.white),
-                                ),
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  // Two save actions, matching the reference exactly: exit after saving, or save
-                  // and immediately start a fresh entry for the same account.
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _isSaving ? null : () => _save(keepAdding: false),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(52),
-                            side: const BorderSide(color: AppColors.backgroundTop),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: Text(
-                            l10n.saveAndExit,
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.button(context).copyWith(color: AppColors.backgroundTop),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _isSaving ? null : () => _save(keepAdding: true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.backgroundTop,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size.fromHeight(52),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: _isSaving
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
-                                )
-                              : Text(
-                                  l10n.saveAndAddAnother,
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.button(context).copyWith(color: Colors.white, fontSize: 13),
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
+            ],
           ),
         ),
       ),

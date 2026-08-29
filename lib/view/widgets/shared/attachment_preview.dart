@@ -16,6 +16,7 @@ class AttachmentPreview extends StatelessWidget {
     required this.onEdit,
     required this.onRotate,
     required this.onDelete,
+    this.isBusy = false,
     super.key,
   });
 
@@ -23,6 +24,11 @@ class AttachmentPreview extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onRotate;
   final VoidCallback onDelete;
+
+  /// True while a rotate (or other background edit) is in progress — disables the three action
+  /// buttons and shows a small spinner over the thumbnail instead of leaving the button looking
+  /// like it did nothing while the work happens on a background isolate.
+  final bool isBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -42,30 +48,42 @@ class AttachmentPreview extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _ActionIcon(icon: Icons.edit_rounded, tooltip: l10n.edit, onTap: onEdit),
+              _ActionIcon(icon: Icons.edit_rounded, tooltip: l10n.edit, onTap: isBusy ? null : onEdit),
               const SizedBox(height: 6),
-              _ActionIcon(icon: Icons.rotate_right_rounded, tooltip: l10n.attachmentRotateAction, onTap: onRotate),
+              _ActionIcon(icon: Icons.rotate_right_rounded, tooltip: l10n.attachmentRotateAction, onTap: isBusy ? null : onRotate),
               const SizedBox(height: 6),
-              _ActionIcon(icon: Icons.delete_outline_rounded, tooltip: l10n.delete, onTap: onDelete, color: Colors.red),
+              _ActionIcon(icon: Icons.delete_outline_rounded, tooltip: l10n.delete, onTap: isBusy ? null : onDelete, color: Colors.red),
             ],
           ),
           const SizedBox(width: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.file(
-              file,
-              key: cacheBustingKey,
-              width: 110,
-              height: 140,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                width: 110,
-                height: 140,
-                color: shell.surface,
-                alignment: Alignment.center,
-                child: Icon(Icons.broken_image_outlined, color: shell.textSecondary),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(
+                  file,
+                  key: cacheBustingKey,
+                  width: 110,
+                  height: 140,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 110,
+                    height: 140,
+                    color: shell.surface,
+                    alignment: Alignment.center,
+                    child: Icon(Icons.broken_image_outlined, color: shell.textSecondary),
+                  ),
+                ),
               ),
-            ),
+              if (isBusy)
+                Container(
+                  width: 110,
+                  height: 140,
+                  decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(8)),
+                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white)),
+                ),
+            ],
           ),
         ],
       ),
@@ -77,12 +95,13 @@ class _ActionIcon extends StatelessWidget {
   const _ActionIcon({required this.icon, required this.tooltip, required this.onTap, this.color});
   final IconData icon;
   final String tooltip;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final shell = context.shellColors;
+    final disabled = onTap == null;
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -91,8 +110,8 @@ class _ActionIcon extends StatelessWidget {
         child: Container(
           width: 32,
           height: 32,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: shell.headerBottom),
-          child: Icon(icon, size: 17, color: color ?? shell.accent),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: shell.headerBottom.withValues(alpha: disabled ? 0.5 : 1)),
+          child: Icon(icon, size: 17, color: (color ?? shell.accent).withValues(alpha: disabled ? 0.5 : 1)),
         ),
       ),
     );

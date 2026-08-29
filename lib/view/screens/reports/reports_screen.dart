@@ -145,7 +145,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/${l10n.reportsTitle}.csv');
       await file.writeAsBytes(bytes);
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+      // Explicit mimeType — without it, some spreadsheet/office apps' share-receiver dumps the raw
+      // text into a single column instead of running their normal CSV-delimiter import.
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'text/csv')]));
     } catch (_) {
       if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
     } finally {
@@ -177,7 +179,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         final dir = await getTemporaryDirectory();
         final file = File('${dir.path}/${l10n.reportsTitle}.csv');
         await file.writeAsBytes(bytes);
-        await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+        await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'text/csv')]));
       }
     } catch (_) {
       if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);

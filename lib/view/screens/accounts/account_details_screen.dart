@@ -298,7 +298,12 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/${account.name}.csv');
       await file.writeAsBytes(bytes);
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+      // Explicit mimeType — without it, some spreadsheet/office apps' share-receiver dumps the raw
+      // text into a single column instead of running their normal CSV-delimiter import, which is
+      // exactly the "scrambled, not a real table" result reported. Still plain CSV, not a true
+      // .xlsx binary — see pubspec.yaml's dependency comment for why a real xlsx writer wasn't
+      // added without being able to verify its current API from this sandbox.
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'text/csv')]));
     } catch (_) {
       if (context.mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
     }
@@ -328,7 +333,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
         final dir = await getTemporaryDirectory();
         final file = File('${dir.path}/${account.name}.csv');
         await file.writeAsBytes(bytes);
-        await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+        await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'text/csv')]));
       }
     } catch (_) {
       if (context.mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);

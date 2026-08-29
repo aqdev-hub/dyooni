@@ -24,6 +24,7 @@ import '../../widgets/shared/amount_calculator_dialog.dart';
 import '../../widgets/shared/attachment_preview.dart';
 import '../../widgets/shared/image_source_dialog.dart';
 import '../../widgets/shared/modal_header_bar.dart';
+import '../../widgets/shared/validated_field.dart';
 
 class AddAccountScreen extends ConsumerStatefulWidget {
   const AddAccountScreen({this.existingAccount, super.key});
@@ -44,7 +45,6 @@ class AddAccountScreen extends ConsumerStatefulWidget {
 }
 
 class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
-  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _amountController = TextEditingController();
   final _detailsController = TextEditingController();
@@ -55,7 +55,14 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   AccountDirection _direction = AccountDirection.debit; // matches the reference's default selection
   AccountCategory _category = AccountCategory.client;
   bool _isSaving = false;
+  bool _isRotating = false;
   String? _attachmentPath;
+
+  // Validation is handled manually (not via Form/TextFormField.validator) on purpose — see
+  // ValidatedField's doc comment for the layout bug that caused. Each field's error lives here
+  // and is cleared the moment the person edits that field again.
+  String? _nameError;
+  String? _amountError;
 
   @override
   void initState() {
@@ -109,14 +116,19 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   }
 
   /// Rotates the currently-attached photo 90° in place — see AttachmentPreview's doc comment.
+  /// `_isRotating` disables the attachment's buttons and shows a spinner over the thumbnail while
+  /// the background isolate works, so the button never again looks like it "did nothing".
   Future<void> _rotateAttachment() async {
     final path = _attachmentPath;
-    if (path == null) return;
+    if (path == null || _isRotating) return;
+    setState(() => _isRotating = true);
     try {
       await rotateImageFile90(path);
       if (mounted) setState(() {});
     } catch (_) {
       if (mounted) AppSnackBar.showError(context, AppLocalizations.of(context)!.unexpectedError);
+    } finally {
+      if (mounted) setState(() => _isRotating = false);
     }
   }
 
@@ -127,11 +139,14 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     final l10n = AppLocalizations.of(context)!;
     try {
       final contact = await pickDeviceContact();
-      if (contact == null || !mounted) return; // person backed out of the picker
+      if (contact == null || !mounted) return; // person backed out of the picker, or permission was refused
       final name = displayName(contact);
       final phone = firstPhoneNumber(contact);
       setState(() {
-        if (name != null) _nameController.text = name;
+        if (name != null) {
+          _nameController.text = name;
+          _nameError = null;
+        }
         if (phone != null) _phoneController.text = phone;
       });
     } catch (_) {
@@ -154,9 +169,43 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     }
   }
 
+  /// Composite validation: required, must be at least two words (first + last name), and must
+  /// not collide with any OTHER existing account's name (case/whitespace-insensitive) — two
+  /// accounts can never share a name. Excludes the account currently being edited from that
+  /// duplicate check against itself.
+  String? _validateName(AppLocalizations l10n) {
+    final trimmed = _nameController.text.trim();
+    if (trimmed.isEmpty) return l10n.fieldRequired;
+    final words = trimmed.split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+    if (words.length < 2) return l10n.accountNameMustBeTwoWords;
+
+    final normalized = trimmed.toLowerCase();
+    final existing = ref.read(accountsProvider).value ?? const <Account>[];
+    final collides = existing.any(
+      (a) => a.id != widget.existingAccount?.id && a.name.trim().toLowerCase() == normalized,
+    );
+    if (collides) return l10n.accountNameAlreadyExists;
+    return null;
+  }
+
+  String? _validateAmount(AppLocalizations l10n) {
+    final parsed = double.tryParse(_amountController.text.trim());
+    if (parsed == null || parsed <= 0) return l10n.invalidAmount;
+    return null;
+  }
+
   Future<void> _save() async {
+    if (_isSaving) return; // defensive — the button is already disabled while saving, but a
+    // fast double-tap should never be able to slip through and create two entries.
     final l10n = AppLocalizations.of(context)!;
-    if (!_formKey.currentState!.validate()) return;
+
+    final nameError = _validateName(l10n);
+    final amountError = widget.isEditing ? null : _validateAmount(l10n);
+    setState(() {
+      _nameError = nameError;
+      _amountError = amountError;
+    });
+    if (nameError != null || amountError != null) return;
 
     setState(() => _isSaving = true);
 
@@ -227,208 +276,204 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(10),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ModalHeaderBar(
-                  title: widget.isEditing ? l10n.editAccountTitle : l10n.addAccountTitle,
-                  onClose: () => context.pop(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ModalHeaderBar(
+                title: widget.isEditing ? l10n.editAccountTitle : l10n.addAccountTitle,
+                onClose: () => context.pop(),
+              ),
+              const SizedBox(height: 8),
+              ValidatedField(
+                icon: Icons.person_outline_rounded,
+                onIconTap: _pickContactForName,
+                errorText: _nameError,
+                child: TextFormField(
+                  controller: _nameController,
+                  textAlign: TextAlign.center,
+                  onChanged: (_) {
+                    if (_nameError != null) setState(() => _nameError = null);
+                  },
+                  decoration: InputDecoration(hintText: l10n.accountNameFullHint, border: InputBorder.none),
                 ),
-                const SizedBox(height: 8),
-                LabeledField(
-                  icon: Icons.person_outline_rounded,
-                  onIconTap: _pickContactForName,
+              ),
+              const SizedBox(height: 6),
+              // The amount/currency/direction trio only ever applies to the account's FIRST
+              // transaction — meaningless when editing an account that already exists, so it's
+              // hidden entirely in that mode rather than shown-but-ignored.
+              if (!widget.isEditing) ...[
+                ValidatedField(
+                  icon: Icons.calculate_outlined,
+                  onIconTap: _openCalculator,
+                  errorText: _amountError,
                   child: TextFormField(
-                    controller: _nameController,
+                    controller: _amountController,
                     textAlign: TextAlign.center,
-                    decoration: InputDecoration(hintText: l10n.accountNameLabel, border: InputBorder.none),
-                    validator: (v) {
-                      final trimmed = (v ?? '').trim();
-                      if (trimmed.isEmpty) return l10n.fieldRequired;
-                      // The account name must be composite (first + last, at minimum) — a single
-                      // word is rejected. `split` on any run of whitespace then dropping empty
-                      // pieces handles multiple spaces between words correctly.
-                      final words = trimmed.split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
-                      if (words.length < 2) return l10n.accountNameMustBeTwoWords;
-                      return null;
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) {
+                      if (_amountError != null) setState(() => _amountError = null);
                     },
+                    decoration: InputDecoration(hintText: l10n.amountLabel, border: InputBorder.none),
                   ),
                 ),
+                AmountInWords(amountText: _amountController.text),
                 const SizedBox(height: 6),
-                // The amount/currency/direction trio only ever applies to the account's FIRST
-                // transaction — meaningless when editing an account that already exists, so it's
-                // hidden entirely in that mode rather than shown-but-ignored.
-                if (!widget.isEditing) ...[
-                  LabeledField(
-                    icon: Icons.calculate_outlined,
-                    onIconTap: _openCalculator,
-                    child: TextFormField(
-                      controller: _amountController,
-                      textAlign: TextAlign.center,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(hintText: l10n.amountLabel, border: InputBorder.none),
-                      validator: (v) {
-                        final parsed = double.tryParse((v ?? '').trim());
-                        if (parsed == null || parsed <= 0) return l10n.invalidAmount;
-                        return null;
-                      },
+                Row(
+                  children: [
+                    Text(
+                      l10n.currencyLabel,
+                      style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textPrimary),
                     ),
-                  ),
-                  AmountInWords(amountText: _amountController.text),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Text(
-                        l10n.currencyLabel,
-                        style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textPrimary),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Container(
-                          height: 40,
-                          decoration: BoxDecoration(color: shell.headerBottom, borderRadius: BorderRadius.circular(5)),
-                          child: Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: Row(
-                              children: [
-                                IconButton(
-                                  icon: Icon(Icons.edit_rounded, size: 25, color: shell.accent),
-                                  onPressed: _chooseCurrency,
-                                ),
-                                Expanded(
-                                  // Tapping the field itself now opens the SAME picker as the pencil
-                                  // icon (see currency_picker_sheet.dart) — previously this was a
-                                  // native DropdownButton, a second, differently-styled picker.
-                                  child: InkWell(
-                                    onTap: _chooseCurrency,
-                                    child: Align(
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        currencies.firstWhere((c) => c.code == _currencyCode).label(l10n),
-                                        textAlign: TextAlign.center,
-                                        style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
-                                      ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        height: 40,
+                        decoration: BoxDecoration(color: shell.headerBottom, borderRadius: BorderRadius.circular(5)),
+                        child: Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.edit_rounded, size: 25, color: shell.accent),
+                                onPressed: _chooseCurrency,
+                              ),
+                              Expanded(
+                                // Tapping the field itself now opens the SAME picker as the pencil
+                                // icon (see currency_picker_sheet.dart) — previously this was a
+                                // native DropdownButton, a second, differently-styled picker.
+                                child: InkWell(
+                                  onTap: _chooseCurrency,
+                                  child: Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      currencies.firstWhere((c) => c.code == _currencyCode).label(l10n),
+                                      textAlign: TextAlign.center,
+                                      style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 42),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 42),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                LabeledField(
-                  icon: Icons.calendar_today_outlined,
-                  onIconTap: _pickDate,
-                  child: InkWell(
-                    onTap: _pickDate,
-                    child: Text(
-                      '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
-                      style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                LabeledField(
-                  icon: Icons.camera_alt_outlined,
-                  onIconTap: _chooseImage,
-                  child: TextFormField(
-                    controller: _detailsController,
-                    textAlign: TextAlign.center,
-                    decoration: InputDecoration(hintText: l10n.detailsLabel, border: InputBorder.none),
-                  ),
-                ),
-                // Only meaningful while CREATING — this attachment belongs to the account's
-                // first transaction, and editing an account never touches a transaction at all
-                // (see the class doc comment on `existingAccount`).
-                if (!widget.isEditing && _attachmentPath != null)
-                  AttachmentPreview(
-                    path: _attachmentPath!,
-                    onEdit: _chooseImage,
-                    onRotate: _rotateAttachment,
-                    onDelete: () => setState(() => _attachmentPath = null),
-                  ),
-                const SizedBox(height: 12),
-                LabeledField(
-                  icon: Icons.phone_outlined,
-                  onIconTap: _pickContactForPhone,
-                  child: TextFormField(
-                    controller: _phoneController,
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(hintText: l10n.phoneLabel, border: InputBorder.none),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(l10n.categoryLabel, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _CategoryChoiceChip(
-                        label: l10n.categoryClient,
-                        selected: _category == AccountCategory.client,
-                        onTap: () => setState(() => _category = AccountCategory.client),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _CategoryChoiceChip(
-                        label: l10n.categorySupplier,
-                        selected: _category == AccountCategory.supplier,
-                        onTap: () => setState(() => _category = AccountCategory.supplier),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                if (!widget.isEditing)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      DirectionChoice(
-                        label: l10n.directionCredit,
-                        color: AppColors.credit,
-                        selected: _direction == AccountDirection.credit,
-                        onTap: () => setState(() => _direction = AccountDirection.credit),
-                      ),
-                      const SizedBox(width: 24),
-                      DirectionChoice(
-                        label: l10n.directionDebit,
-                        color: AppColors.debit,
-                        selected: _direction == AccountDirection.debit,
-                        onTap: () => setState(() => _direction = AccountDirection.debit),
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _isSaving ? null : _save,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.backgroundTop,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: _isSaving
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
-                        )
-                      : Text(
-                          widget.isEditing ? l10n.edit : l10n.saveButton,
-                          style: AppTextStyles.button(context).copyWith(color: Colors.white),
-                        ),
-                ),
+                const SizedBox(height: 12),
               ],
-            ),
+              LabeledField(
+                icon: Icons.calendar_today_outlined,
+                onIconTap: _pickDate,
+                child: InkWell(
+                  onTap: _pickDate,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Center(
+                      child: Text(
+                        '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
+                        style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              LabeledField(
+                icon: Icons.camera_alt_outlined,
+                onIconTap: _chooseImage,
+                child: TextFormField(
+                  controller: _detailsController,
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(hintText: l10n.detailsLabel, border: InputBorder.none),
+                ),
+              ),
+              // Only meaningful while CREATING — this attachment belongs to the account's
+              // first transaction, and editing an account never touches a transaction at all
+              // (see the class doc comment on `existingAccount`).
+              if (!widget.isEditing && _attachmentPath != null)
+                AttachmentPreview(
+                  path: _attachmentPath!,
+                  isBusy: _isRotating,
+                  onEdit: _chooseImage,
+                  onRotate: _rotateAttachment,
+                  onDelete: () => setState(() => _attachmentPath = null),
+                ),
+              const SizedBox(height: 12),
+              LabeledField(
+                icon: Icons.phone_outlined,
+                onIconTap: _pickContactForPhone,
+                child: TextFormField(
+                  controller: _phoneController,
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(hintText: l10n.phoneLabel, border: InputBorder.none),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(l10n.categoryLabel, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _CategoryChoiceChip(
+                      label: l10n.categoryClient,
+                      selected: _category == AccountCategory.client,
+                      onTap: () => setState(() => _category = AccountCategory.client),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _CategoryChoiceChip(
+                      label: l10n.categorySupplier,
+                      selected: _category == AccountCategory.supplier,
+                      onTap: () => setState(() => _category = AccountCategory.supplier),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              if (!widget.isEditing)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    DirectionChoice(
+                      label: l10n.directionCredit,
+                      color: AppColors.credit,
+                      selected: _direction == AccountDirection.credit,
+                      onTap: () => setState(() => _direction = AccountDirection.credit),
+                    ),
+                    const SizedBox(width: 24),
+                    DirectionChoice(
+                      label: l10n.directionDebit,
+                      color: AppColors.debit,
+                      selected: _direction == AccountDirection.debit,
+                      onTap: () => setState(() => _direction = AccountDirection.debit),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isSaving ? null : _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.backgroundTop,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                      )
+                    : Text(
+                        widget.isEditing ? l10n.edit : l10n.saveButton,
+                        style: AppTextStyles.button(context).copyWith(color: Colors.white),
+                      ),
+              ),
+            ],
           ),
         ),
       ),

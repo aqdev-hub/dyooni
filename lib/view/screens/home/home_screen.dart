@@ -13,7 +13,6 @@ import '../../widgets/home/app_drawer.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/entity_actions_sheet.dart';
-import '../../widgets/shared/main_bottom_nav.dart';
 import '../../widgets/shared/selection_toolbar.dart';
 import '../accounts/add_account_screen.dart';
 
@@ -27,6 +26,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _searchController = TextEditingController();
   String _query = '';
+  bool _voiceSheetOpen = false;
 
   Future<void> _openAddAccount() => showDialog<void>(
         context: context,
@@ -43,7 +43,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
 
   Future<void> _openVoiceScreen({required bool bluetoothMode}) async {
+    setState(() => _voiceSheetOpen = true);
     await context.push('/voice', extra: bluetoothMode);
+    if (mounted) setState(() => _voiceSheetOpen = false);
   }
 
   void _cancelSelection() {
@@ -244,11 +246,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             BottomSummaryBar(totalCredit: summary.totalCredit, totalDebit: summary.totalDebit, onAdd: _openAddAccount, addTooltip: l10n.homeAddAccount),
-            MainBottomNav(
-              activeTab: MainNavTab.home,
-              onHome: () {},
+            _HomeBottomNav(
               onVoice: () => _openVoiceScreen(bluetoothMode: false),
               onVoiceLongPress: () => _openVoiceScreen(bluetoothMode: true),
+              voiceActive: _voiceSheetOpen,
               onReports: () => context.push('/reports'),
             ),
           ],
@@ -314,6 +315,11 @@ class _Header extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
+              IconButton(
+                icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27),
+                tooltip: l10n.reportsOpenTooltip,
+                onPressed: () => context.push('/reports'),
+              ),
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert_rounded, color: shell.accent),
                 color: shell.surface,
@@ -323,14 +329,90 @@ class _Header extends StatelessWidget {
                   PopupMenuItem(value: 'sort', child: Text(l10n.homeSortNewest, style: TextStyle(color: shell.textPrimary))),
                 ],
               ),
-              IconButton(
-                icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27),
-                tooltip: l10n.reportsOpenTooltip,
-                onPressed: () => context.push('/reports'),
-              ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// New persistent bottom navigation, placed under BottomSummaryBar: Home / Voice / Reports, each
+/// opening its own screen. "Home" is deliberately non-navigating and shown as the active tab —
+/// there's no separate route to push to that isn't this very screen, so it behaves like the
+/// current tab in any standard bottom-nav bar rather than being a dead tap target.
+class _HomeBottomNav extends StatelessWidget {
+  const _HomeBottomNav({
+    required this.onVoice,
+    required this.onVoiceLongPress,
+    required this.voiceActive,
+    required this.onReports,
+  });
+
+  final VoidCallback onVoice;
+  final VoidCallback onVoiceLongPress;
+  final bool voiceActive;
+  final VoidCallback onReports;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final shell = context.shellColors;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: shell.headerBottom,
+        border: Border(top: BorderSide(color: shell.border)),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: _NavItem(icon: Icons.home_rounded, label: l10n.navHome, active: true, onTap: () {}),
+          ),
+          Expanded(
+            child: _NavItem(
+              icon: Icons.mic_none_rounded,
+              label: l10n.navVoice,
+              active: voiceActive,
+              onTap: onVoice,
+              onLongPress: onVoiceLongPress,
+            ),
+          ),
+          Expanded(
+            child: _NavItem(icon: Icons.picture_as_pdf_outlined, label: l10n.reportsTitle, active: false, onTap: onReports),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({required this.icon, required this.label, required this.active, required this.onTap, this.onLongPress});
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = context.shellColors;
+    final color = active ? shell.accent : Colors.white70;
+    return InkWell(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 22, color: color),
+            const SizedBox(height: 2),
+            Text(label, style: AppTextStyles.bodySecondary(context).copyWith(color: color, fontSize: 11)),
+          ],
+        ),
       ),
     );
   }
