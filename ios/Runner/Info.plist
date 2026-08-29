@@ -34,6 +34,8 @@
 	<string>يحتاج ديوني إلى الكاميرا لإرفاق صورة بالعملية. Dyooni needs camera access to attach an image to an entry.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>يحتاج ديوني إلى التعرف على الكلام لفهم أوامرك الصوتية. Dyooni needs speech recognition to understand voice commands.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>يحتاج ديوني إلى جهات الاتصال لتعبئة اسم الحساب ورقم الهاتف تلقائيًا عند اختيار جهة اتصال. Dyooni needs contacts access to auto-fill an account's name and phone number when you pick a contact.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
