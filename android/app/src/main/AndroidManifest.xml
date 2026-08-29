@@ -2,6 +2,11 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- NEW this batch — see core/utils/contact_picker.dart. Even the "external pick" flow needs
+         this actually GRANTED on some devices/plugin versions to read back the picked contact's
+         name/phone; without it, selecting a contact was reproducing a hard native crash instead
+         of a catchable error. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
     <application
         android:label="dyooni"
         android:name="${applicationName}"
@@ -78,5 +83,16 @@
              (Android 11+ يتطلب هذا التصريح صراحة بسبب Package Visibility) -->
         <package android:name="com.facebook.katana" />
         <package android:name="com.facebook.orca" />
+        <!-- NEW this batch — same Package Visibility requirement (Android 11+), but for the
+             contact-picker intent used by core/utils/contact_picker.dart. Without this, launching
+             the system contact picker can silently fail or crash instead of just returning null. -->
+        <intent>
+            <action android:name="android.intent.action.PICK" />
+            <data android:mimeType="vnd.android.cursor.dir/contact" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PICK" />
+            <data android:mimeType="vnd.android.cursor.dir/phone_v2" />
+        </intent>
     </queries>
 </manifest>
