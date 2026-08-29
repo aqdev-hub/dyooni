@@ -261,6 +261,13 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand) {
       final combined = state.committedTranscript.isEmpty ? text : '${state.committedTranscript} $text'.trim();
       state = state.copyWith(transcript: combined);
+      // The recognizer itself has decided the utterance is complete (silence timeout via
+      // `pauseFor`, or the max `listenFor` duration reached) — move straight into understanding
+      // it, with NO manual step required. This is the automatic "الاستماع ← انتهاء الكلام ←
+      // الحصول على النص" transition the spec calls for; previously `finalResult` was received and
+      // silently ignored here, so nothing ever happened until the user also tapped the mic
+      // circle to stop manually — a real gap, not a stylistic choice.
+      if (result.finalResult) unawaited(_finishListening());
       return;
     }
     if (state.status == VoiceStatus.confirmationListening) {
@@ -301,7 +308,17 @@ class VoiceController extends StateNotifier<VoiceState> {
     });
   }
 
+  /// Manual escape hatch — ends listening early even if the recognizer hasn't reported
+  /// `finalResult` yet (e.g. `pauseFor`'s silence window hasn't elapsed). The automatic path via
+  /// `_onSpeechResult`'s `finalResult` handling is what fires in the ordinary case; this exists
+  /// for whenever the user wants to stop sooner, or as a fallback if a platform never reports a
+  /// final result for some reason.
   Future<void> stopAndAnalyze() async {
+    if (state.status != VoiceStatus.listening && state.status != VoiceStatus.bluetoothListeningCommand) return;
+    await _finishListening();
+  }
+
+  Future<void> _finishListening() async {
     if (state.status != VoiceStatus.listening && state.status != VoiceStatus.bluetoothListeningCommand) return;
     final current = state;
     state = state.copyWith(status: VoiceStatus.processing);
