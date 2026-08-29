@@ -105,14 +105,22 @@ class PdfReportService {
       children: [
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
+          // The whole document is RTL (see MultiPage below), so a Row's FIRST child renders on
+          // the page's RIGHT and its LAST child renders on the LEFT. The Arabic identity block
+          // is listed FIRST here so it lands on the right, and the English block is listed LAST
+          // so it lands on the left — exactly the "Arabic right / English left" letterhead layout
+          // requested. (This was previously backwards: English was first, so RTL ordering put it
+          // on the right and Arabic on the left — the opposite of what was intended.)
           children: [
             pw.Expanded(
               child: pw.Column(
+                // `.start` under RTL means "right-aligned" — keeps the Arabic text flush to the
+                // page's outer right edge, the natural letterhead look for this column's position.
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text(personalData.nameEn, style: pw.TextStyle(font: boldFont, fontSize: 11)),
+                  pw.Text(shapeArabicForPdf(personalData.nameAr), style: pw.TextStyle(font: boldFont, fontSize: 11)),
                   pw.SizedBox(height: 2),
-                  contactLine(personalData.addressEn, align: pw.CrossAxisAlignment.start),
+                  pw.Text(shapeArabicForPdf(personalData.addressAr), style: pw.TextStyle(font: regularFont, fontSize: 9, color: PdfColors.grey700)),
                   if (personalData.phone.isNotEmpty) contactLine(personalData.phone, align: pw.CrossAxisAlignment.start),
                   contactLine(personalData.email, align: pw.CrossAxisAlignment.start),
                 ],
@@ -126,11 +134,13 @@ class PdfReportService {
             ),
             pw.Expanded(
               child: pw.Column(
+                // `.end` under RTL means "left-aligned" — both the correct natural reading
+                // alignment for English text AND flush to this column's outer (left) page edge.
                 crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
-                  pw.Text(shapeArabicForPdf(personalData.nameAr), style: pw.TextStyle(font: boldFont, fontSize: 11)),
+                  pw.Text(personalData.nameEn, style: pw.TextStyle(font: boldFont, fontSize: 11)),
                   pw.SizedBox(height: 2),
-                  pw.Text(shapeArabicForPdf(personalData.addressAr), style: pw.TextStyle(font: regularFont, fontSize: 9, color: PdfColors.grey700)),
+                  contactLine(personalData.addressEn, align: pw.CrossAxisAlignment.end),
                   if (personalData.phone.isNotEmpty) contactLine(personalData.phone, align: pw.CrossAxisAlignment.end),
                   contactLine(personalData.email, align: pw.CrossAxisAlignment.end),
                 ],

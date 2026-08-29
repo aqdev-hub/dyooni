@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/utils/app_logger.dart';
 import '../../core/voice/local_audio_recording_service.dart';
 import '../../core/voice/bluetooth_audio_route_service.dart';
 import '../../core/voice/speech_recognition_service.dart';
@@ -196,25 +197,37 @@ class VoiceController extends StateNotifier<VoiceState> {
       return;
     }
     final startedAt = DateTime.now();
-    String? recordingPath;
-    try {
-      recordingPath = await _recorder.start('voice_${_uuid.v4()}');
-    } catch (_) {
-      // Recognition remains useful even if a specific device cannot record and
-      // recognize at the same time. The UI never claims a recording exists.
-    }
     state = state.copyWith(
       status: bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
-      recordingPath: recordingPath,
       recordingStartedAt: startedAt,
       clearError: true,
     );
+    // Recognition starts FIRST and owns the microphone — it is the functionally critical path
+    // (nothing works at all without it). The raw recorder starts AFTER and is best-effort: on
+    // some devices two simultaneous mic sessions don't both get real audio, and a saved-but-empty
+    // recording is a far smaller loss than the recognizer hearing nothing.
     await _startRecognizer();
+    try {
+      final recordingPath = await _recorder.start('voice_${_uuid.v4()}');
+      state = state.copyWith(recordingPath: recordingPath);
+    } catch (e, st) {
+      appLogger.e('Voice raw audio recorder failed to start (recognition continues without a saved recording)', error: e, stackTrace: st);
+    }
   }
+
+  /// Falls back to a fully-qualified regional tag when the device doesn't report one matching
+  /// [languageCode] via [SpeechRecognitionService.resolveLocaleId] — passing a bare language code
+  /// like `'ar'` (no region) to the native recognizer can silently fail to configure it correctly
+  /// on some platforms, which looks identical to "the recognizer heard nothing" from the outside.
+  String _fallbackLocaleId(String languageCode) => switch (languageCode) {
+        'ar' => 'ar-SA',
+        'en' => 'en-US',
+        _ => languageCode,
+      };
 
   Future<void> _startRecognizer() async {
     final languageCode = _ref.read(voiceRecognitionLanguageProvider);
-    final localeId = await _speech.resolveLocaleId(languageCode) ?? languageCode;
+    final localeId = await _speech.resolveLocaleId(languageCode) ?? _fallbackLocaleId(languageCode);
     await _speech.start(localeId: localeId);
   }
 
@@ -228,7 +241,9 @@ class VoiceController extends StateNotifier<VoiceState> {
     await _speech.stop();
     try {
       await _recorder.pause();
-    } catch (_) {}
+    } catch (e, st) {
+      appLogger.e('Voice raw audio recorder failed to pause', error: e, stackTrace: st);
+    }
     state = state.copyWith(
       status: VoiceStatus.paused,
       committedTranscript: state.transcript,
@@ -240,7 +255,9 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (state.status != VoiceStatus.paused) return;
     try {
       await _recorder.resume();
-    } catch (_) {}
+    } catch (e, st) {
+      appLogger.e('Voice raw audio recorder failed to resume', error: e, stackTrace: st);
+    }
     state = state.copyWith(
       status: state.bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
       recordingStartedAt: DateTime.now(),
@@ -301,6 +318,10 @@ class VoiceController extends StateNotifier<VoiceState> {
   }
 
   void _onSpeechStatus(String status) {
+    if (status == 'done' && (state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand)) {
+      unawaited(_finishListening());
+      return;
+    }
     if (state.status != VoiceStatus.bluetoothWaitingWakeWord || status != 'done') return;
     _ref.read(bluetoothAudioRouteServiceProvider).isHeadsetConnected().then((connected) {
       if (!connected || state.status != VoiceStatus.bluetoothWaitingWakeWord) return;
@@ -326,7 +347,17 @@ class VoiceController extends StateNotifier<VoiceState> {
     String? path;
     try {
       path = await _recorder.stop();
-    } catch (_) {}
+    } catch (e, st) {
+      appLogger.e('Voice raw audio recorder failed to stop', error: e, stackTrace: st);
+    }
+    if (current.transcript.trim().isEmpty) {
+      // Nothing was ever recognized — a fundamentally different situation from "something was
+      // said but a field couldn't be understood" (see VoiceCommandSheet's clarification card,
+      // which now shows this distinctly and never claims an amount was misheard when nothing was
+      // heard at all).
+      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'noSpeech', recordingPath: path ?? current.recordingPath);
+      return;
+    }
     final draft = _ref.read(voiceCommandParserProvider).parse(current.transcript);
     final account = _matchAccount(draft.accountName, current.transcript);
     state = state.copyWith(draft: draft, account: account, recordingPath: path ?? current.recordingPath);
@@ -463,6 +494,7 @@ class VoiceController extends StateNotifier<VoiceState> {
         : code.contains('network')
             ? 'network'
             : 'recognition';
+    appLogger.w('Speech recognition error: $errorMsg (classified as $errorCode)');
     if (state.bluetoothMode) {
       state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: errorCode);
     } else {
