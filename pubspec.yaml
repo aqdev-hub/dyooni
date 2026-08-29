@@ -69,7 +69,7 @@ dependencies:
   # pub.dev listing from this offline sandbox — it is a long-established, extremely widely-used
   # package for exactly this purpose, but please run `flutter pub get` and tell me immediately if
   # it fails to resolve so I can pin a different version.
-  file_picker: ^8.1.2
+  file_picker: ^10.3.3
 
   # Voice input: native STT for short commands, original local recordings,
   # and their in-app playback. Versions are constrained to the app's Dart 3.4 SDK.
@@ -153,3 +153,5 @@ flutter_launcher_icons:
   image_path: "assets/icons/app_icon.png"
   min_sdk_android: 21
   background_color_ios: "#0C1A2B"
+  adaptive_icon_background: "#061A3A"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
