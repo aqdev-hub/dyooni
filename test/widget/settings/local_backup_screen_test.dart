@@ -54,10 +54,11 @@ void main() {
     expect(find.text(l10n.localBackupRestoreButton), findsOneWidget);
   });
 
-  testWidgets('shows the persisted last-backup date instead, when one already exists',
+  testWidgets('shows the persisted last-backup date (and a share icon) when one already exists',
       (tester) async {
     SharedPreferences.setMockInitialValues({
       'last_local_backup_at': DateTime(2026, 1, 1, 9, 30).toIso8601String(),
+      'last_local_backup_path': '/storage/emulated/0/Download/ديوني/dyooni_backup_test.dyoonibackup',
     });
     final prefs = await SharedPreferences.getInstance();
 
@@ -67,5 +68,43 @@ void main() {
 
     expect(find.text(l10n.localBackupLastLabel('2026-01-01 09:30')), findsOneWidget);
     expect(find.text(l10n.localBackupNeverLabel), findsNothing);
+    expect(find.byIcon(Icons.ios_share_rounded), findsOneWidget);
+  });
+
+  testWidgets('tapping "إنشاء نسخة احتياطية الآن" opens the password-setup dialog', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(_wrap(repository, prefs));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
+
+    await tester.tap(find.text(l10n.localBackupCreateButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.localBackupSetPasswordTitle), findsOneWidget);
+    expect(find.text(l10n.localBackupConfirmPasswordLabel), findsOneWidget);
+  });
+
+  testWidgets('the password-setup dialog rejects a password shorter than 5 characters',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(_wrap(repository, prefs));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
+
+    await tester.tap(find.text(l10n.localBackupCreateButton));
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'ab1');
+    await tester.enterText(fields.at(1), 'ab1');
+    await tester.tap(find.text(l10n.confirm));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.localBackupPasswordTooShort), findsWidgets);
+    verifyNever(() => repository.buildSnapshot());
   });
 }

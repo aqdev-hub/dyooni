@@ -85,6 +85,48 @@ void main() {
       final text = utf8.decode(bytes.skip(3).toList());
       expect(text, contains('"محمد, أحمد"'));
     });
+
+    test('omits any title line when reportTitle is not provided (unchanged default behavior)', () {
+      final bytes = service.build(
+        accountNameHeader: 'Name',
+        categoryHeader: 'Category',
+        balanceHeader: 'Balance',
+        directionHeader: 'Status',
+        entriesHeader: 'Entries',
+        creditLabel: 'Credit',
+        debitLabel: 'Debit',
+        clientLabel: 'Client',
+        supplierLabel: 'Supplier',
+        rows: [clientRow],
+      );
+
+      final text = utf8.decode(bytes.skip(3).toList());
+      final lines = text.trim().split('\n');
+      expect(lines.first, 'Name,Category,Balance,Status,Entries');
+    });
+
+    test('writes reportTitle as its own line above the header row when provided', () {
+      final bytes = service.build(
+        reportTitle: 'إجمالي المبالغ - عام',
+        accountNameHeader: 'Name',
+        categoryHeader: 'Category',
+        balanceHeader: 'Balance',
+        directionHeader: 'Status',
+        entriesHeader: 'Entries',
+        creditLabel: 'Credit',
+        debitLabel: 'Debit',
+        clientLabel: 'Client',
+        supplierLabel: 'Supplier',
+        rows: [clientRow],
+      );
+
+      final text = utf8.decode(bytes.skip(3).toList());
+      final lines = text.trim().split('\n');
+
+      expect(lines[0], 'إجمالي المبالغ - عام');
+      expect(lines[1], 'Name,Category,Balance,Status,Entries');
+      expect(lines, hasLength(3)); // title + header + 1 data row
+    });
   });
 
   group('buildAccountStatement', () {
@@ -179,6 +221,26 @@ void main() {
       // header + totals row (0,0) + final-balance row (0)
       expect(lines, hasLength(3));
       expect(lines[0], 'Date,Details,Debit,Credit,Balance');
+    });
+
+    test('writes reportTitle as its own line above the header row when provided', () {
+      final bytes = service.buildAccountStatement(
+        reportTitle: 'تقرير كشف الحساب - أحمد محمد',
+        dateHeader: 'Date',
+        detailsHeader: 'Details',
+        debitHeader: 'Debit',
+        creditHeader: 'Credit',
+        balanceHeader: 'Balance',
+        totalRowLabel: 'Total',
+        attachmentPresentLabel: '(attachment)',
+        rows: [StatementRow(transaction: credit, runningBalance: 500)],
+      );
+
+      final text = utf8.decode(bytes.skip(3).toList());
+      final lines = text.trim().split('\n');
+
+      expect(lines[0], 'تقرير كشف الحساب - أحمد محمد');
+      expect(lines[1], 'Date,Details,Debit,Credit,Balance');
     });
   });
 }
