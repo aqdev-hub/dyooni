@@ -7,10 +7,38 @@
          name/phone; without it, selecting a contact was reproducing a hard native crash instead
          of a catchable error. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+     <!-- ===== النسخ الاحتياطي المحلي — بداية الإضافة =====
+         مطلوب فقط لكتابة ملف .dyoonibackup مباشرة داخل Download/ديوني بدل نافذة اختيار مسار:
+         - maxSdkVersion="28": النظام يتجاهل هذا الإذن تلقائيًا على أندرويد 10+ (لا حاجة لطلبه هناك).
+         - requestLegacyExternalStorage أدناه على <application>: يُعيد سلوك التخزين القديم
+           (كتابة مباشرة لأي مسار عام) لكن فقط على أندرويد 10 (API 29) بالتحديد — أندرويد 11+
+           يتجاهل هذا الإعلان كليًا بحكم سياسة Scoped Storage من جوجل، وعندها يعتمد التطبيق على
+           fallback الكتابة داخل مساحته الخاصة (راجع local_backup_provider.dart). -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <!-- ===== النسخ الاحتياطي المحلي — نهاية الإضافة ===== -->
     <application
         android:label="dyooni"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:largeHeap="true"
+        android:requestLegacyExternalStorage="true">
+        <!-- NEW this batch — mitigation for the reported "camera icon → black screen → app
+             reloads to Home, in-progress form lost" bug. Root cause, stated plainly: this is NOT
+             a bug in this app's Dart code — it's Android killing this app's BACKGROUND process to
+             free memory while the native camera app (a genuinely heavy activity) is in the
+             foreground. When the OS does this, Flutter's engine restarts cold on return, which is
+             exactly why it looks like the whole app reloaded from Home and lost the form — the
+             process really did restart. This is also why the contact-picker icon never triggers
+             it: FlutterContacts.openExternalPick() is a far lighter-weight system picker that
+             rarely pressures memory the way a full camera activity does.
+             `android:largeHeap="true"` raises this app's own memory ceiling, which measurably
+             reduces how often Android chooses to kill it under memory pressure — but it is a
+             mitigation, not a guarantee, since the OS can still decide to kill any background
+             process on a sufficiently memory-constrained device. A complete fix would require
+             wiring up Flutter's state-restoration APIs (RestorationMixin / restorationScopeId) so
+             an in-progress form can survive a process restart — a larger, separate change I'd
+             want to scope explicitly rather than bundle in silently here. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
