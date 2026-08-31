@@ -44,13 +44,26 @@ class TransactionsController extends AsyncNotifier<List<Transaction>> {
     return initial;
   }
 
+  /// FIX for the reported "entry gets added twice, then the duplicate silently disappears after
+  /// a few minutes / on revisiting the screen" bug — same root cause and same fix as
+  /// `AccountsController.addAccount` in accounts_provider.dart (see that doc comment for the
+  /// full explanation): this repository is backed by a LIVE Firestore snapshot stream that can
+  /// deliver the new transaction into `state` before this method's own `await` resolves, so the
+  /// old unconditional append here could double it up temporarily. Checking for the id first
+  /// makes the append idempotent no matter which update lands first.
   Future<void> addTransaction(Transaction transaction) async {
     await ref.read(transactionsRepositoryProvider).addTransaction(transaction);
-    state = AsyncData([...state.value ?? const <Transaction>[], transaction]);
+    final current = state.value ?? const <Transaction>[];
+    if (current.any((t) => t.id == transaction.id)) return;
+    state = AsyncData([...current, transaction]);
   }
 
   /// Persists an edit to an existing transaction (same id) — used by the new "tap a transaction
   /// row to edit it" flow on Account Details.
+  ///
+  /// No duplicate-race risk here like [addTransaction]'s (fixed above): this only ever REMAPS an
+  /// existing id in place, so re-applying it after the live stream already updated the same
+  /// entry is a harmless no-op overwrite, not an appended extra row.
   Future<void> updateTransaction(Transaction transaction) async {
     await ref.read(transactionsRepositoryProvider).updateTransaction(transaction);
     state = AsyncData([

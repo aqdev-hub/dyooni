@@ -44,9 +44,24 @@ class AccountsController extends AsyncNotifier<List<Account>> {
     return initial;
   }
 
+  /// FIX for the reported "account gets added twice, then the duplicate silently disappears
+  /// after a few minutes or on revisiting the screen" bug: this repository is backed by a LIVE
+  /// Firestore snapshot stream (see `build()` above, subscribed via `watchAccounts()`). That
+  /// stream can — and very often does — deliver the newly-written account into `state` before
+  /// this method's own `await` resolves. The old code then unconditionally appended the same
+  /// account a second time here, producing a real (if temporary) duplicate row. The duplicate
+  /// "fixed itself" later only because the NEXT snapshot event replaced `state` wholesale with
+  /// the true, single-copy list from Firestore — which is exactly the "disappears after a few
+  /// minutes / after leaving and reopening the screen" symptom that was reported.
+  ///
+  /// The fix: check whether the live stream has already delivered this id into `state` before
+  /// appending. This makes the append idempotent regardless of which update — the stream's or
+  /// this method's — happens to land first, so no duplicate can ever appear even momentarily.
   Future<void> addAccount(Account account) async {
     await ref.read(accountsRepositoryProvider).addAccount(account);
-    state = AsyncData([...state.value ?? const <Account>[], account]);
+    final current = state.value ?? const <Account>[];
+    if (current.any((a) => a.id == account.id)) return;
+    state = AsyncData([...current, account]);
   }
 
   /// Persists an edit to an EXISTING account (same id) — used by the new "تعديل" flow (3-dot
@@ -55,6 +70,10 @@ class AccountsController extends AsyncNotifier<List<Account>> {
   /// is an upsert, so the same repository call works for both create and update — the only real
   /// difference is how the LOCAL state list is reconciled afterwards: [addAccount] above always
   /// appends, which would wrongly duplicate an existing entry if it were reused here.
+  ///
+  /// No duplicate-race risk here like [addAccount]'s (fixed above): this only ever REMAPS an
+  /// existing id in place, so re-applying it after the live stream already updated the same
+  /// entry is a harmless no-op overwrite with the same result, not an appended extra row.
   Future<void> updateAccount(Account account) async {
     await ref.read(accountsRepositoryProvider).addAccount(account);
     state = AsyncData([

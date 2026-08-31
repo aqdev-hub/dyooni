@@ -246,6 +246,10 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
 
   Uint8List _generateStatementCsv(WidgetRef ref, AppLocalizations l10n, List<StatementRow> rows) {
     return ref.read(csvReportServiceProvider).buildAccountStatement(
+          // NEW: the report title line above the table, requested explicitly — see
+          // csv_report_service.dart's class doc comment for the honest limits of what CSV can
+          // and can't carry beyond that (no real cell coloring/centering is possible in CSV).
+          reportTitle: '${l10n.reportTypeStatement} - ${account.name}',
           dateHeader: l10n.dateLabel,
           detailsHeader: l10n.detailsLabel,
           debitHeader: l10n.directionDebit,
@@ -457,11 +461,22 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                   ),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                // Order matters: whichever visual side is "first" in this RTL row, the 3-dot menu
-                // must always be the LAST of the three icon buttons (closest to the Spacer/name),
-                // with the reports icon immediately before it — both explicitly requested.
+                // Reordered to match home_screen.dart's `_Header` rhythm exactly, per explicit
+                // feedback that this header still looked out of order after Home's was fixed:
+                // leading nav icon (there: hamburger menu / here: back arrow) → title (there:
+                // "عام" / here: account name) → expanded filler → trailing icon group (search,
+                // reports, 3-dot menu) — all read right-to-left in RTL, same as Home.
                 child: Row(
                   children: [
+                    IconButton(icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20), onPressed: () => context.pop()),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        account.name,
+                        style: AppTextStyles.title(context).copyWith(color: Colors.white),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     IconButton(icon: const Icon(Icons.search_rounded, color: Colors.white, size: 20), onPressed: _openSearch),
                     IconButton(
                       icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27),
@@ -484,9 +499,6 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                         PopupMenuItem(value: 'delete', child: Text(l10n.delete, style: const TextStyle(color: AppColors.debit))),
                       ],
                     ),
-                    const Spacer(),
-                    Text(account.name, style: AppTextStyles.title(context).copyWith(color: Colors.white), overflow: TextOverflow.ellipsis),
-                    IconButton(icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20), onPressed: () => context.pop()),
                   ],
                 ),
               ),

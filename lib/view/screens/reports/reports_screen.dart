@@ -96,6 +96,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   Uint8List _generateSummaryCsv(AppLocalizations l10n, List<ReportRow> rows) {
     return ref.read(csvReportServiceProvider).build(
+          // NEW: the report title line above the table, requested explicitly — see
+          // csv_report_service.dart's class doc comment for the honest limits of what CSV can
+          // and can't carry beyond that (no real cell coloring/centering is possible in CSV).
+          reportTitle: '${l10n.reportTypeTotalAmounts} - ${_categoryLabel(l10n)}',
           accountNameHeader: l10n.accountNameLabel,
           categoryHeader: l10n.categoryLabel,
           balanceHeader: l10n.reportBalanceHeader,

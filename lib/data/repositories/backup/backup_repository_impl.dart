@@ -32,11 +32,22 @@ class BackupRepositoryImpl implements BackupRepository {
   }
 
   @override
-  Future<void> restoreSnapshot(BackupSnapshot snapshot) async {
+  Future<void> restoreSnapshot(BackupSnapshot snapshot, {required RestoreMode mode}) async {
     if (snapshot.schemaVersion > BackupSnapshot.currentSchemaVersion) {
       throw const ValidationException('backupIncompatible');
     }
     try {
+      if (mode == RestoreMode.replace) {
+        // Mirrors AccountsController.deleteAccount's own cascade (delete the account's
+        // transactions first, then the account) — reimplemented here at the repository level
+        // since this repository has no access to the transactions PROVIDER, only the plain
+        // TransactionsRepository interface, which is enough for the same cascade.
+        final currentAccounts = await _accounts.getAccounts();
+        for (final account in currentAccounts) {
+          await _transactions.deleteTransactionsForAccount(account.id);
+          await _accounts.deleteAccount(account.id);
+        }
+      }
       // Sequential, not Future.wait: accounts are written before their transactions on purpose,
       // matching the order they're created in normally (add_account_screen.dart creates the
       // account, then its first transaction) — never strictly required since both writes are
