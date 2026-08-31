@@ -274,16 +274,34 @@
   "accountNameFullHint": "Full account name (first and last name)",
   "contactPermissionDeniedMessage": "Couldn't access contacts — check the app's permissions",
   "localBackupScreenTitle": "Local Backup",
-  "localBackupExplanation": "Creates a backup file containing every account, entry, and personal-data field, which you can save or share from your device. Note: voice-recording audio files themselves are not included — only the text linked to that entry.",
+  "localBackupExplanation": "Creates a password-encrypted backup containing every account, entry, and personal-data field, saved automatically inside a \"Dyooni\" folder in your device's Downloads. Note: voice-recording audio files themselves are not included — only the text linked to that entry.",
   "localBackupNeverLabel": "No backup yet",
   "localBackupLastLabel": "Last backup: {date}",
-  "@localBackupLastLabel": { "placeholders": { "date": { "type": "String" } } },
+  "@localBackupLastLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "localBackupCreateButton": "Create backup now",
-  "localBackupCreatedSuccessMessage": "Backup created successfully",
+  "localBackupSetPasswordTitle": "Backup password",
+  "localBackupSetPasswordHint": "This password encrypts the file — keep it safe, you won't be able to restore your data without it",
+  "localBackupPasswordLabel": "Password",
+  "localBackupConfirmPasswordLabel": "Confirm password",
+  "localBackupPasswordTooShort": "Password must be at least 5 letters and/or digits",
+  "localBackupPasswordsDontMatch": "Passwords don't match",
+  "localBackupSavedToDownloadsMessage": "Backup created and saved to the Dyooni folder in Downloads",
+  "localBackupSavedToAppFolderMessage": "Backup created, but Downloads wasn't reachable on this device, so it was saved inside the app's own storage instead — use the share button to move it anywhere you like",
+  "localBackupShareLastTooltip": "Share last backup",
   "localBackupRestoreButton": "Restore from file",
   "localBackupRestoreConfirmTitle": "Restore a backup",
-  "localBackupRestoreConfirmBody": "This file's data will be merged into your current data (nothing existing will be deleted). Continue?",
+  "localBackupModeMerge": "Merge with current data",
+  "localBackupModeMergeHint": "Only adds or updates — nothing in your current data is deleted",
+  "localBackupModeReplace": "Replace all data",
+  "localBackupModeReplaceHint": "Permanently deletes all your current accounts and entries, then restores only what's in the file — this can't be undone",
   "localBackupRestoredSuccessMessage": "Data restored successfully",
   "localBackupInvalidFileMessage": "This file is not a valid Dyooni backup",
-  "localBackupIncompatibleMessage": "This backup was made with a newer version of the app and can't be restored here"
+  "localBackupIncompatibleMessage": "This backup was made with a newer version of the app and can't be restored here",
+  "localBackupWrongPasswordMessage": "Incorrect password"
 }

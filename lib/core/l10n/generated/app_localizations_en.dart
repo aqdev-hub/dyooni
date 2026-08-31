@@ -799,7 +799,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get localBackupExplanation =>
-      'Creates a backup file containing every account, entry, and personal-data field, which you can save or share from your device. Note: voice-recording audio files themselves are not included — only the text linked to that entry.';
+      'Creates a password-encrypted backup containing every account, entry, and personal-data field, saved automatically inside a \"Dyooni\" folder in your device\'s Downloads. Note: voice-recording audio files themselves are not included — only the text linked to that entry.';
 
   @override
   String get localBackupNeverLabel => 'No backup yet';
@@ -813,7 +813,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get localBackupCreateButton => 'Create backup now';
 
   @override
-  String get localBackupCreatedSuccessMessage => 'Backup created successfully';
+  String get localBackupSetPasswordTitle => 'Backup password';
+
+  @override
+  String get localBackupSetPasswordHint =>
+      'This password encrypts the file — keep it safe, you won\'t be able to restore your data without it';
+
+  @override
+  String get localBackupPasswordLabel => 'Password';
+
+  @override
+  String get localBackupConfirmPasswordLabel => 'Confirm password';
+
+  @override
+  String get localBackupPasswordTooShort =>
+      'Password must be at least 5 letters and/or digits';
+
+  @override
+  String get localBackupPasswordsDontMatch => 'Passwords don\'t match';
+
+  @override
+  String get localBackupSavedToDownloadsMessage =>
+      'Backup created and saved to the Dyooni folder in Downloads';
+
+  @override
+  String get localBackupSavedToAppFolderMessage =>
+      'Backup created, but Downloads wasn\'t reachable on this device, so it was saved inside the app\'s own storage instead — use the share button to move it anywhere you like';
+
+  @override
+  String get localBackupShareLastTooltip => 'Share last backup';
 
   @override
   String get localBackupRestoreButton => 'Restore from file';
@@ -822,8 +850,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get localBackupRestoreConfirmTitle => 'Restore a backup';
 
   @override
-  String get localBackupRestoreConfirmBody =>
-      'This file\'s data will be merged into your current data (nothing existing will be deleted). Continue?';
+  String get localBackupModeMerge => 'Merge with current data';
+
+  @override
+  String get localBackupModeMergeHint =>
+      'Only adds or updates — nothing in your current data is deleted';
+
+  @override
+  String get localBackupModeReplace => 'Replace all data';
+
+  @override
+  String get localBackupModeReplaceHint =>
+      'Permanently deletes all your current accounts and entries, then restores only what\'s in the file — this can\'t be undone';
 
   @override
   String get localBackupRestoredSuccessMessage => 'Data restored successfully';
@@ -835,4 +873,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get localBackupIncompatibleMessage =>
       'This backup was made with a newer version of the app and can\'t be restored here';
+
+  @override
+  String get localBackupWrongPasswordMessage => 'Incorrect password';
 }

@@ -1601,7 +1601,7 @@ abstract class AppLocalizations {
   /// No description provided for @localBackupExplanation.
   ///
   /// In ar, this message translates to:
-  /// **'تُنشئ نسخة احتياطية تشمل كل الحسابات والعمليات والبيانات الشخصية في ملف واحد يمكنك حفظه أو مشاركته من جهازك. ملاحظة: ملفات التسجيلات الصوتية نفسها لا تُضمَّن في هذا الملف، فقط نص العملية المرتبط بها.'**
+  /// **'تُنشئ نسخة احتياطية مشفّرة بكلمة مرور تختارها، تشمل كل الحسابات والعمليات والبيانات الشخصية، وتُحفظ تلقائيًا داخل مجلد \"ديوني\" في مجلد التنزيلات على جهازك. ملاحظة: ملفات التسجيلات الصوتية نفسها لا تُضمَّن، فقط نص العملية المرتبط بها.'**
   String get localBackupExplanation;
 
   /// No description provided for @localBackupNeverLabel.
@@ -1622,11 +1622,59 @@ abstract class AppLocalizations {
   /// **'إنشاء نسخة احتياطية الآن'**
   String get localBackupCreateButton;
 
-  /// No description provided for @localBackupCreatedSuccessMessage.
+  /// No description provided for @localBackupSetPasswordTitle.
   ///
   /// In ar, this message translates to:
-  /// **'تم إنشاء النسخة الاحتياطية بنجاح'**
-  String get localBackupCreatedSuccessMessage;
+  /// **'كلمة مرور النسخة الاحتياطية'**
+  String get localBackupSetPasswordTitle;
+
+  /// No description provided for @localBackupSetPasswordHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'تُستخدم هذه الكلمة لتشفير الملف — احفظها جيدًا، فلن تتمكن من استعادة البيانات بدونها'**
+  String get localBackupSetPasswordHint;
+
+  /// No description provided for @localBackupPasswordLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور'**
+  String get localBackupPasswordLabel;
+
+  /// No description provided for @localBackupConfirmPasswordLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد كلمة المرور'**
+  String get localBackupConfirmPasswordLabel;
+
+  /// No description provided for @localBackupPasswordTooShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجب ألا تقل كلمة المرور عن 5 أحرف أو أرقام'**
+  String get localBackupPasswordTooShort;
+
+  /// No description provided for @localBackupPasswordsDontMatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمتا المرور غير متطابقتين'**
+  String get localBackupPasswordsDontMatch;
+
+  /// No description provided for @localBackupSavedToDownloadsMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إنشاء النسخة الاحتياطية وحفظها في مجلد ديوني بالتنزيلات'**
+  String get localBackupSavedToDownloadsMessage;
+
+  /// No description provided for @localBackupSavedToAppFolderMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إنشاء النسخة الاحتياطية، لكن تعذّر الوصول لمجلد التنزيلات على هذا الجهاز فحُفظت داخل مساحة التطبيق الخاصة — استخدم زر المشاركة لنقلها لأي مكان تريده'**
+  String get localBackupSavedToAppFolderMessage;
+
+  /// No description provided for @localBackupShareLastTooltip.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشاركة آخر نسخة احتياطية'**
+  String get localBackupShareLastTooltip;
 
   /// No description provided for @localBackupRestoreButton.
   ///
@@ -1640,11 +1688,29 @@ abstract class AppLocalizations {
   /// **'استعادة نسخة احتياطية'**
   String get localBackupRestoreConfirmTitle;
 
-  /// No description provided for @localBackupRestoreConfirmBody.
+  /// No description provided for @localBackupModeMerge.
   ///
   /// In ar, this message translates to:
-  /// **'سيتم دمج بيانات هذا الملف مع بياناتك الحالية (لن يُحذف أي شيء موجود حاليًا). هل تريد المتابعة؟'**
-  String get localBackupRestoreConfirmBody;
+  /// **'دمج مع البيانات الحالية'**
+  String get localBackupModeMerge;
+
+  /// No description provided for @localBackupModeMergeHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يضيف أو يحدّث فقط — لن يُحذف أي شيء من بياناتك الحالية'**
+  String get localBackupModeMergeHint;
+
+  /// No description provided for @localBackupModeReplace.
+  ///
+  /// In ar, this message translates to:
+  /// **'استبدال كل البيانات'**
+  String get localBackupModeReplace;
+
+  /// No description provided for @localBackupModeReplaceHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يحذف كل حساباتك وعملياتك الحالية نهائيًا ثم يستعيد محتوى الملف فقط — لا يمكن التراجع عن هذا'**
+  String get localBackupModeReplaceHint;
 
   /// No description provided for @localBackupRestoredSuccessMessage.
   ///
@@ -1663,6 +1729,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'هذه النسخة الاحتياطية من إصدار أحدث من التطبيق ولا يمكن استعادتها هنا'**
   String get localBackupIncompatibleMessage;
+
+  /// No description provided for @localBackupWrongPasswordMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور غير صحيحة'**
+  String get localBackupWrongPasswordMessage;
 }
 
 class _AppLocalizationsDelegate

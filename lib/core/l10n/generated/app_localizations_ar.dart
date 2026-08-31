@@ -793,7 +793,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get localBackupExplanation =>
-      'تُنشئ نسخة احتياطية تشمل كل الحسابات والعمليات والبيانات الشخصية في ملف واحد يمكنك حفظه أو مشاركته من جهازك. ملاحظة: ملفات التسجيلات الصوتية نفسها لا تُضمَّن في هذا الملف، فقط نص العملية المرتبط بها.';
+      'تُنشئ نسخة احتياطية مشفّرة بكلمة مرور تختارها، تشمل كل الحسابات والعمليات والبيانات الشخصية، وتُحفظ تلقائيًا داخل مجلد \"ديوني\" في مجلد التنزيلات على جهازك. ملاحظة: ملفات التسجيلات الصوتية نفسها لا تُضمَّن، فقط نص العملية المرتبط بها.';
 
   @override
   String get localBackupNeverLabel => 'لا توجد نسخة احتياطية بعد';
@@ -807,8 +807,35 @@ class AppLocalizationsAr extends AppLocalizations {
   String get localBackupCreateButton => 'إنشاء نسخة احتياطية الآن';
 
   @override
-  String get localBackupCreatedSuccessMessage =>
-      'تم إنشاء النسخة الاحتياطية بنجاح';
+  String get localBackupSetPasswordTitle => 'كلمة مرور النسخة الاحتياطية';
+
+  @override
+  String get localBackupSetPasswordHint =>
+      'تُستخدم هذه الكلمة لتشفير الملف — احفظها جيدًا، فلن تتمكن من استعادة البيانات بدونها';
+
+  @override
+  String get localBackupPasswordLabel => 'كلمة المرور';
+
+  @override
+  String get localBackupConfirmPasswordLabel => 'تأكيد كلمة المرور';
+
+  @override
+  String get localBackupPasswordTooShort =>
+      'يجب ألا تقل كلمة المرور عن 5 أحرف أو أرقام';
+
+  @override
+  String get localBackupPasswordsDontMatch => 'كلمتا المرور غير متطابقتين';
+
+  @override
+  String get localBackupSavedToDownloadsMessage =>
+      'تم إنشاء النسخة الاحتياطية وحفظها في مجلد ديوني بالتنزيلات';
+
+  @override
+  String get localBackupSavedToAppFolderMessage =>
+      'تم إنشاء النسخة الاحتياطية، لكن تعذّر الوصول لمجلد التنزيلات على هذا الجهاز فحُفظت داخل مساحة التطبيق الخاصة — استخدم زر المشاركة لنقلها لأي مكان تريده';
+
+  @override
+  String get localBackupShareLastTooltip => 'مشاركة آخر نسخة احتياطية';
 
   @override
   String get localBackupRestoreButton => 'استعادة من ملف';
@@ -817,8 +844,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get localBackupRestoreConfirmTitle => 'استعادة نسخة احتياطية';
 
   @override
-  String get localBackupRestoreConfirmBody =>
-      'سيتم دمج بيانات هذا الملف مع بياناتك الحالية (لن يُحذف أي شيء موجود حاليًا). هل تريد المتابعة؟';
+  String get localBackupModeMerge => 'دمج مع البيانات الحالية';
+
+  @override
+  String get localBackupModeMergeHint =>
+      'يضيف أو يحدّث فقط — لن يُحذف أي شيء من بياناتك الحالية';
+
+  @override
+  String get localBackupModeReplace => 'استبدال كل البيانات';
+
+  @override
+  String get localBackupModeReplaceHint =>
+      'يحذف كل حساباتك وعملياتك الحالية نهائيًا ثم يستعيد محتوى الملف فقط — لا يمكن التراجع عن هذا';
 
   @override
   String get localBackupRestoredSuccessMessage => 'تمت استعادة البيانات بنجاح';
@@ -830,4 +867,7 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get localBackupIncompatibleMessage =>
       'هذه النسخة الاحتياطية من إصدار أحدث من التطبيق ولا يمكن استعادتها هنا';
+
+  @override
+  String get localBackupWrongPasswordMessage => 'كلمة المرور غير صحيحة';
 }

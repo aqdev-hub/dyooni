@@ -274,16 +274,34 @@
   "accountNameFullHint": "اسم الحساب الكامل (الاسم الأول واسم العائلة)",
   "contactPermissionDeniedMessage": "تعذر الوصول إلى جهات الاتصال — تحقق من صلاحيات التطبيق",
   "localBackupScreenTitle": "النسخ الاحتياطي المحلي",
-  "localBackupExplanation": "تُنشئ نسخة احتياطية تشمل كل الحسابات والعمليات والبيانات الشخصية في ملف واحد يمكنك حفظه أو مشاركته من جهازك. ملاحظة: ملفات التسجيلات الصوتية نفسها لا تُضمَّن في هذا الملف، فقط نص العملية المرتبط بها.",
+  "localBackupExplanation": "تُنشئ نسخة احتياطية مشفّرة بكلمة مرور تختارها، تشمل كل الحسابات والعمليات والبيانات الشخصية، وتُحفظ تلقائيًا داخل مجلد \"ديوني\" في مجلد التنزيلات على جهازك. ملاحظة: ملفات التسجيلات الصوتية نفسها لا تُضمَّن، فقط نص العملية المرتبط بها.",
   "localBackupNeverLabel": "لا توجد نسخة احتياطية بعد",
   "localBackupLastLabel": "آخر نسخة احتياطية: {date}",
-  "@localBackupLastLabel": { "placeholders": { "date": { "type": "String" } } },
+  "@localBackupLastLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "localBackupCreateButton": "إنشاء نسخة احتياطية الآن",
-  "localBackupCreatedSuccessMessage": "تم إنشاء النسخة الاحتياطية بنجاح",
+  "localBackupSetPasswordTitle": "كلمة مرور النسخة الاحتياطية",
+  "localBackupSetPasswordHint": "تُستخدم هذه الكلمة لتشفير الملف — احفظها جيدًا، فلن تتمكن من استعادة البيانات بدونها",
+  "localBackupPasswordLabel": "كلمة المرور",
+  "localBackupConfirmPasswordLabel": "تأكيد كلمة المرور",
+  "localBackupPasswordTooShort": "يجب ألا تقل كلمة المرور عن 5 أحرف أو أرقام",
+  "localBackupPasswordsDontMatch": "كلمتا المرور غير متطابقتين",
+  "localBackupSavedToDownloadsMessage": "تم إنشاء النسخة الاحتياطية وحفظها في مجلد ديوني بالتنزيلات",
+  "localBackupSavedToAppFolderMessage": "تم إنشاء النسخة الاحتياطية، لكن تعذّر الوصول لمجلد التنزيلات على هذا الجهاز فحُفظت داخل مساحة التطبيق الخاصة — استخدم زر المشاركة لنقلها لأي مكان تريده",
+  "localBackupShareLastTooltip": "مشاركة آخر نسخة احتياطية",
   "localBackupRestoreButton": "استعادة من ملف",
   "localBackupRestoreConfirmTitle": "استعادة نسخة احتياطية",
-  "localBackupRestoreConfirmBody": "سيتم دمج بيانات هذا الملف مع بياناتك الحالية (لن يُحذف أي شيء موجود حاليًا). هل تريد المتابعة؟",
+  "localBackupModeMerge": "دمج مع البيانات الحالية",
+  "localBackupModeMergeHint": "يضيف أو يحدّث فقط — لن يُحذف أي شيء من بياناتك الحالية",
+  "localBackupModeReplace": "استبدال كل البيانات",
+  "localBackupModeReplaceHint": "يحذف كل حساباتك وعملياتك الحالية نهائيًا ثم يستعيد محتوى الملف فقط — لا يمكن التراجع عن هذا",
   "localBackupRestoredSuccessMessage": "تمت استعادة البيانات بنجاح",
   "localBackupInvalidFileMessage": "هذا الملف ليس نسخة احتياطية صالحة من ديوني",
-  "localBackupIncompatibleMessage": "هذه النسخة الاحتياطية من إصدار أحدث من التطبيق ولا يمكن استعادتها هنا"
+  "localBackupIncompatibleMessage": "هذه النسخة الاحتياطية من إصدار أحدث من التطبيق ولا يمكن استعادتها هنا",
+  "localBackupWrongPasswordMessage": "كلمة المرور غير صحيحة"
 }
