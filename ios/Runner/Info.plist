@@ -34,8 +34,45 @@
 	<string>يحتاج ديوني إلى الكاميرا لإرفاق صورة بالعملية. Dyooni needs camera access to attach an image to an entry.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>يحتاج ديوني إلى التعرف على الكلام لفهم أوامرك الصوتية. Dyooni needs speech recognition to understand voice commands.</string>
-	<key>NSContactsUsageDescription</key>
-	<string>يحتاج ديوني إلى جهات الاتصال لتعبئة اسم الحساب ورقم الهاتف تلقائيًا عند اختيار جهة اتصال. Dyooni needs contacts access to auto-fill an account's name and phone number when you pick a contact.</string>
+
+	<!-- ===== Facebook Login SDK — بداية الإضافة =====
+	     استبدل YOUR_FACEBOOK_APP_ID و YOUR_FACEBOOK_CLIENT_TOKEN بالقيم الحقيقية من
+	     Facebook for Developers → إعدادات التطبيق → Basic (نفس القيم المستخدمة في Android). -->
+	<key>FacebookAppID</key>
+	<string>YOUR_FACEBOOK_APP_ID</string>
+	<key>FacebookClientToken</key>
+	<string>YOUR_FACEBOOK_CLIENT_TOKEN</string>
+	<key>FacebookDisplayName</key>
+	<string>ديوني</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- يجب أن يكون بالضبط: fb ثم رقم الـ App ID بدون فراغات -->
+				<string>fbYOUR_FACEBOOK_APP_ID</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+		<string>fbauth2</string>
+		<string>fbshareextension</string>
+	</array>
+	<!-- ===== Facebook Login SDK — نهاية الإضافة ===== -->
+
+	<!-- ===== النسخ الاحتياطي المحلي — بداية الإضافة =====
+	     iOS لا يملك مجلد "Downloads" عام تصل إليه تطبيقات الطرف الثالث مثل أندرويد — أقرب بديل
+	     رسمي هو إظهار مجلد مستندات التطبيق نفسه (حيث تُحفظ ملفات .dyoonibackup فعليًا) داخل
+	     تطبيق "الملفات" ضمن "على iPhone الخاص بي/ديوني"، وهذان المفتاحان بالضبط ما يفعل ذلك. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<!-- ===== النسخ الاحتياطي المحلي — نهاية الإضافة ===== -->
+
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
