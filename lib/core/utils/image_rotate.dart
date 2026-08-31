@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show PaintingBinding, FileImage;
 import 'package:image/image.dart' as img;
 
 /// Rotates the image file at [path] 90° clockwise IN PLACE (same path, overwritten). Silently
@@ -12,12 +13,24 @@ import 'package:image/image.dart' as img;
 /// several seconds) and runs via [compute] on a background isolate — running it directly on the
 /// main isolate was blocking the UI thread for that whole time, which is what made the rotate
 /// button feel "stuck"/unresponsive rather than actually broken.
+///
+/// FIX for the reported "rotate button responds (spinner runs fine) but the picture on screen
+/// never actually turns" bug: writing new bytes to the SAME path and rebuilding the widget with a
+/// fresh cache-busting `key` (see AttachmentPreview) is not enough on its own. Flutter's
+/// `ImageCache` caches DECODED image bytes keyed by the `ImageProvider` itself — for `Image.file`
+/// that's a `FileImage`, whose cache key is the file's PATH (and scale), not its contents or
+/// modified time. A widget `key` change forces the Element/RenderObject to rebuild, but that is a
+/// completely separate mechanism from the ImageProvider's own cache — so the old, pre-rotation
+/// bytes kept being served from that cache even after the file on disk had genuinely changed.
+/// Evicting this exact `FileImage` entry right after the write forces the very next paint to
+/// actually re-read the file from disk instead of reusing the stale cached decode.
 Future<void> rotateImageFile90(String path) async {
   final file = File(path);
   final bytes = await file.readAsBytes();
   final rotatedBytes = await compute(_rotateBytes90, _RotateJob(bytes, path.toLowerCase().endsWith('.png')));
   if (rotatedBytes == null) return;
   await file.writeAsBytes(rotatedBytes);
+  PaintingBinding.instance.imageCache.evict(FileImage(file));
 }
 
 class _RotateJob {

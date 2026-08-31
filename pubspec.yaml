@@ -47,12 +47,8 @@ dependencies:
   # Local ID generation for the accounts feature (Phase 1)
   uuid: ^4.5.1
 
-  # Reports export (this batch): real PDF generation + native print/share sheet, and sharing the
-  # CSV report file. NOTE: deliberately CSV, not a true .xlsx binary — the `excel` package's API
-  # has changed across major versions and I can't verify the exact installed API from this
-  # sandbox (no network); CSV has zero such risk (it's just UTF-8 text) and opens natively in
-  # Excel/Sheets, so it's the safer choice for something that must compile correctly on the first
-  # try. See README "التصدير" for the one dependency here that genuinely needs your confirmation.
+  # Reports export (this batch): real PDF generation + native print/share sheet, and a real
+  # colored/centered .xlsx workbook for the "Excel" export.
   pdf: ^3.11.1
   printing: ^5.13.4
   # Pinned to the 7.x line deliberately — share_plus 9/10 introduced a newer instance-based
@@ -62,6 +58,18 @@ dependencies:
   # correctly on the first try.
   share_plus: ^11.0.1
   path_provider: ^2.1.4
+
+  # NEW this batch, added at your explicit request/acceptance of the version-verification risk:
+  # produces a real `.xlsx` workbook (colored header/totals rows, centered cells, a merged title
+  # row) — something plain CSV genuinely cannot do. This is the ONE package in this batch I
+  # cannot verify against a live pub.dev listing from this sandbox (no network access to pub.dev
+  # here), same situation as arabic_reshaper/file_picker below. Written against the typed
+  # `CellValue`/`ExcelColor` API used by the package's 4.x line — see
+  # lib/logic/reports/xlsx_report_service.dart's doc comment. Please run `flutter pub get`
+  # immediately and tell me right away if it fails to resolve, or if `flutter analyze` reports
+  # type errors in that file, so I can pin a different version or adjust the API calls to match
+  # whatever actually resolves.
+  excel: ^4.0.6
 
   # Lets the person pick an existing file from their device (the local backup screen's
   # "استعادة من ملف" / restore-from-file flow, to choose a previously exported .dyoonibackup

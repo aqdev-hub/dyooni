@@ -23,6 +23,10 @@ import '../../widgets/home/summary_card.dart';
 import '../../widgets/reports/report_options_sheet.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
+/// Real .xlsx MIME type — Excel/Sheets and most spreadsheet apps use this to recognize the file
+/// on receipt, the same reason the earlier CSV export always set an explicit mimeType too.
+const _xlsxMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
 
@@ -94,11 +98,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         );
   }
 
-  Uint8List _generateSummaryCsv(AppLocalizations l10n, List<ReportRow> rows) {
-    return ref.read(csvReportServiceProvider).build(
-          // NEW: the report title line above the table, requested explicitly — see
-          // csv_report_service.dart's class doc comment for the honest limits of what CSV can
-          // and can't carry beyond that (no real cell coloring/centering is possible in CSV).
+  Uint8List _generateSummaryXlsx(AppLocalizations l10n, List<ReportRow> rows) {
+    return ref.read(xlsxReportServiceProvider).build(
           reportTitle: '${l10n.reportTypeTotalAmounts} - ${_categoryLabel(l10n)}',
           accountNameHeader: l10n.accountNameLabel,
           categoryHeader: l10n.categoryLabel,
@@ -145,13 +146,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     setState(() => _isExporting = true);
     try {
       final rows = _buildSummaryRows(_filteredAccounts(), range, sort);
-      final bytes = _generateSummaryCsv(l10n, rows);
+      final bytes = _generateSummaryXlsx(l10n, rows);
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/${l10n.reportsTitle}.csv');
+      final file = File('${dir.path}/${l10n.reportsTitle}.xlsx');
       await file.writeAsBytes(bytes);
-      // Explicit mimeType — without it, some spreadsheet/office apps' share-receiver dumps the raw
-      // text into a single column instead of running their normal CSV-delimiter import.
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'text/csv')]));
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: _xlsxMimeType)]));
     } catch (_) {
       if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
     } finally {
@@ -179,11 +178,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         // is no stable cross-platform API to hand a file directly and exclusively to WhatsApp.
         await Printing.sharePdf(bytes: bytes, filename: '${l10n.reportsTitle}.pdf');
       } else {
-        final bytes = _generateSummaryCsv(l10n, rows);
+        final bytes = _generateSummaryXlsx(l10n, rows);
         final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/${l10n.reportsTitle}.csv');
+        final file = File('${dir.path}/${l10n.reportsTitle}.xlsx');
         await file.writeAsBytes(bytes);
-        await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'text/csv')]));
+        await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: _xlsxMimeType)]));
       }
     } catch (_) {
       if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);

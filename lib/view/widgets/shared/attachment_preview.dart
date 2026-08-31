@@ -9,7 +9,7 @@ import '../../../core/theme/app_shell_colors.dart';
 /// thumbnail with three actions matching the reference: pencil = replace the photo (re-opens the
 /// camera/gallery picker), circular arrow = rotate it 90° in place, trash = remove the attachment
 /// entirely. This same attachment is what gets embedded into the PDF statement report and noted
-/// in the CSV export when present (see pdf_report_service.dart / csv_report_service.dart).
+/// in the Excel export when present (see pdf_report_service.dart / xlsx_report_service.dart).
 class AttachmentPreview extends StatelessWidget {
   const AttachmentPreview({
     required this.path,
@@ -37,25 +37,20 @@ class AttachmentPreview extends StatelessWidget {
     final file = File(path);
     // A rotated/replaced attachment keeps the exact same PATH, so Flutter's image cache would
     // otherwise keep showing the stale bytes after a rotate — keying on the file's own
-    // modification time forces a fresh decode whenever the attachment actually changes.
+    // modification time forces a fresh decode whenever the attachment actually changes. This
+    // widget-level key alone isn't sufficient by itself (see core/utils/image_rotate.dart's doc
+    // comment for the other half of that fix — evicting the ImageProvider's own cache entry).
     final cacheBustingKey = ValueKey(file.existsSync() ? file.lastModifiedSync().microsecondsSinceEpoch : path);
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
+        // Swapped order (image first, action icons second) and widened the gap between them —
+        // per explicit feedback this puts the three action icons on the OPPOSITE side of the
+        // image from before, with noticeably more breathing room. Nothing about what each icon
+        // does changed, only their position.
         children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _ActionIcon(icon: Icons.edit_rounded, tooltip: l10n.edit, onTap: isBusy ? null : onEdit),
-              const SizedBox(height: 6),
-              _ActionIcon(icon: Icons.rotate_right_rounded, tooltip: l10n.attachmentRotateAction, onTap: isBusy ? null : onRotate),
-              const SizedBox(height: 6),
-              _ActionIcon(icon: Icons.delete_outline_rounded, tooltip: l10n.delete, onTap: isBusy ? null : onDelete, color: Colors.red),
-            ],
-          ),
-          const SizedBox(width: 10),
           Stack(
             alignment: Alignment.center,
             children: [
@@ -83,6 +78,17 @@ class AttachmentPreview extends StatelessWidget {
                   decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(8)),
                   child: const Center(child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white)),
                 ),
+            ],
+          ),
+          const SizedBox(width: 22),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _ActionIcon(icon: Icons.edit_rounded, tooltip: l10n.edit, onTap: isBusy ? null : onEdit),
+              const SizedBox(height: 6),
+              _ActionIcon(icon: Icons.rotate_right_rounded, tooltip: l10n.attachmentRotateAction, onTap: isBusy ? null : onRotate),
+              const SizedBox(height: 6),
+              _ActionIcon(icon: Icons.delete_outline_rounded, tooltip: l10n.delete, onTap: isBusy ? null : onDelete, color: Colors.red),
             ],
           ),
         ],

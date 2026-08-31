@@ -31,6 +31,10 @@ import '../../widgets/shared/selection_toolbar.dart';
 import '../accounts/add_account_screen.dart';
 import '../transactions/add_transaction_screen.dart';
 
+/// Real .xlsx MIME type — same reasoning as the earlier CSV export's explicit mimeType: without
+/// it, some spreadsheet/office apps' share-receiver mishandles the file on receipt.
+const _xlsxMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 class AccountDetailsScreen extends ConsumerStatefulWidget {
   const AccountDetailsScreen({required this.account, super.key});
   final Account account;
@@ -244,11 +248,8 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
         );
   }
 
-  Uint8List _generateStatementCsv(WidgetRef ref, AppLocalizations l10n, List<StatementRow> rows) {
-    return ref.read(csvReportServiceProvider).buildAccountStatement(
-          // NEW: the report title line above the table, requested explicitly — see
-          // csv_report_service.dart's class doc comment for the honest limits of what CSV can
-          // and can't carry beyond that (no real cell coloring/centering is possible in CSV).
+  Uint8List _generateStatementXlsx(WidgetRef ref, AppLocalizations l10n, List<StatementRow> rows) {
+    return ref.read(xlsxReportServiceProvider).buildAccountStatement(
           reportTitle: '${l10n.reportTypeStatement} - ${account.name}',
           dateHeader: l10n.dateLabel,
           detailsHeader: l10n.detailsLabel,
@@ -298,16 +299,11 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
     }
     try {
       final rows = _buildStatementRows(transactions, range, sort);
-      final bytes = _generateStatementCsv(ref, l10n, rows);
+      final bytes = _generateStatementXlsx(ref, l10n, rows);
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/${account.name}.csv');
+      final file = File('${dir.path}/${account.name}.xlsx');
       await file.writeAsBytes(bytes);
-      // Explicit mimeType — without it, some spreadsheet/office apps' share-receiver dumps the raw
-      // text into a single column instead of running their normal CSV-delimiter import, which is
-      // exactly the "scrambled, not a real table" result reported. Still plain CSV, not a true
-      // .xlsx binary — see pubspec.yaml's dependency comment for why a real xlsx writer wasn't
-      // added without being able to verify its current API from this sandbox.
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'text/csv')]));
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: _xlsxMimeType)]));
     } catch (_) {
       if (context.mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
     }
@@ -333,11 +329,11 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
         final bytes = await _generateStatementPdf(ref, l10n, rows);
         await Printing.sharePdf(bytes: bytes, filename: '${account.name}.pdf');
       } else {
-        final bytes = _generateStatementCsv(ref, l10n, rows);
+        final bytes = _generateStatementXlsx(ref, l10n, rows);
         final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/${account.name}.csv');
+        final file = File('${dir.path}/${account.name}.xlsx');
         await file.writeAsBytes(bytes);
-        await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'text/csv')]));
+        await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: _xlsxMimeType)]));
       }
     } catch (_) {
       if (context.mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
@@ -461,11 +457,10 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                   ),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                // Reordered to match home_screen.dart's `_Header` rhythm exactly, per explicit
-                // feedback that this header still looked out of order after Home's was fixed:
-                // leading nav icon (there: hamburger menu / here: back arrow) → title (there:
-                // "عام" / here: account name) → expanded filler → trailing icon group (search,
-                // reports, 3-dot menu) — all read right-to-left in RTL, same as Home.
+                // Matches home_screen.dart's `_Header` rhythm exactly: leading nav icon (there:
+                // hamburger menu / here: back arrow) → title (there: "عام" / here: account name)
+                // → expanded filler → trailing icon group (search, reports, 3-dot menu) — all
+                // read right-to-left in RTL, same as Home.
                 child: Row(
                   children: [
                     IconButton(icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20), onPressed: () => context.pop()),
