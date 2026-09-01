@@ -1735,6 +1735,120 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'كلمة المرور غير صحيحة'**
   String get localBackupWrongPasswordMessage;
+
+  /// No description provided for @driveBackupScreenTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'النسخ الاحتياطي إلى جوجل درايف'**
+  String get driveBackupScreenTitle;
+
+  /// No description provided for @driveBackupExplanation.
+  ///
+  /// In ar, this message translates to:
+  /// **'يحتفظ التطبيق تلقائيًا بآخر 7 نسخ يومية من بياناتك على Google Drive الخاص بك، بمعزل عن المزامنة المعتادة — هذه نقاط استعادة تاريخية للحماية من الحذف أو التلف، وليست وسيلة مزامنة بين أجهزتك.'**
+  String get driveBackupExplanation;
+
+  /// No description provided for @driveBackupStatusLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحالة'**
+  String get driveBackupStatusLabel;
+
+  /// No description provided for @driveBackupStatusEnabled.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفعّل'**
+  String get driveBackupStatusEnabled;
+
+  /// No description provided for @driveBackupStatusNeedsAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'يتطلب ربط حساب جوجل'**
+  String get driveBackupStatusNeedsAccount;
+
+  /// No description provided for @driveBackupLastSuccessLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر نسخة ناجحة'**
+  String get driveBackupLastSuccessLabel;
+
+  /// No description provided for @driveBackupTodayLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'النسخة الحالية'**
+  String get driveBackupTodayLabel;
+
+  /// No description provided for @driveBackupTodayReady.
+  ///
+  /// In ar, this message translates to:
+  /// **'اليوم'**
+  String get driveBackupTodayReady;
+
+  /// No description provided for @driveBackupConnectButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'ربط حساب جوجل'**
+  String get driveBackupConnectButton;
+
+  /// No description provided for @driveBackupSaveNowButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ نسخة احتياطية الآن'**
+  String get driveBackupSaveNowButton;
+
+  /// No description provided for @driveBackupSavedSuccessMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حفظ النسخة الاحتياطية بنجاح'**
+  String get driveBackupSavedSuccessMessage;
+
+  /// No description provided for @driveBackupRestoreButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'استعادة نسخة احتياطية'**
+  String get driveBackupRestoreButton;
+
+  /// No description provided for @driveBackupNoAccountMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'يتطلب هذا ربط حساب جوجل أولًا'**
+  String get driveBackupNoAccountMessage;
+
+  /// No description provided for @driveBackupListTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'النسخ الاحتياطية على درايف'**
+  String get driveBackupListTitle;
+
+  /// No description provided for @driveBackupListEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد نسخ احتياطية على درايف بعد'**
+  String get driveBackupListEmpty;
+
+  /// No description provided for @driveBackupTypeDaily.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخة يومية'**
+  String get driveBackupTypeDaily;
+
+  /// No description provided for @driveBackupTypeManual.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخة يدوية'**
+  String get driveBackupTypeManual;
+
+  /// No description provided for @voiceModelDownloadingHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ تحميل نموذج التعرف الصوتي العربي لأول مرة (~300 ميجابايت) — بعدها سيعمل الأمر الصوتي بلا إنترنت نهائيًا'**
+  String get voiceModelDownloadingHint;
+
+  /// No description provided for @voiceModelDownloadFailedMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل نموذج التعرف الصوتي، تحقق من الاتصال بالإنترنت وحاول مجددًا'**
+  String get voiceModelDownloadFailedMessage;
 }
 
 class _AppLocalizationsDelegate

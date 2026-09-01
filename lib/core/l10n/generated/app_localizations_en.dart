@@ -876,4 +876,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get localBackupWrongPasswordMessage => 'Incorrect password';
+
+  @override
+  String get driveBackupScreenTitle => 'Google Drive Backup';
+
+  @override
+  String get driveBackupExplanation =>
+      'The app automatically keeps the last 7 daily snapshots of your data on your own Google Drive, separate from normal syncing — these are historical restore points to protect against deletion or corruption, not a way to sync between your devices.';
+
+  @override
+  String get driveBackupStatusLabel => 'Status';
+
+  @override
+  String get driveBackupStatusEnabled => 'Enabled';
+
+  @override
+  String get driveBackupStatusNeedsAccount =>
+      'Needs a connected Google account';
+
+  @override
+  String get driveBackupLastSuccessLabel => 'Last successful backup';
+
+  @override
+  String get driveBackupTodayLabel => 'Current version';
+
+  @override
+  String get driveBackupTodayReady => 'Today';
+
+  @override
+  String get driveBackupConnectButton => 'Connect Google account';
+
+  @override
+  String get driveBackupSaveNowButton => 'Save backup now';
+
+  @override
+  String get driveBackupSavedSuccessMessage => 'Backup saved successfully';
+
+  @override
+  String get driveBackupRestoreButton => 'Restore a backup';
+
+  @override
+  String get driveBackupNoAccountMessage =>
+      'This requires connecting a Google account first';
+
+  @override
+  String get driveBackupListTitle => 'Drive Backups';
+
+  @override
+  String get driveBackupListEmpty => 'No Drive backups yet';
+
+  @override
+  String get driveBackupTypeDaily => 'Daily backup';
+
+  @override
+  String get driveBackupTypeManual => 'Manual backup';
+
+  @override
+  String get voiceModelDownloadingHint =>
+      'Downloading the offline Arabic speech model for the first time (~300MB) — after this, voice commands work fully offline forever';
+
+  @override
+  String get voiceModelDownloadFailedMessage =>
+      'Couldn\'t download the speech recognition model, check your internet connection and try again';
 }

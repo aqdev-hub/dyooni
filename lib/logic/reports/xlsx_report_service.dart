@@ -15,9 +15,11 @@ import 'pdf_report_service.dart' show ReportRow, StatementRow;
 /// same pattern): the `excel` package has no network-reachable pub.dev listing from this sandbox,
 /// so its exact currently-resolving API could not be compiled/verified here before delivery.
 /// This file is written against the typed `CellValue`/`ExcelColor` API used by the package's 4.x
-/// line. **Please run `flutter pub get` immediately and tell me right away if it fails to
-/// resolve, or if `flutter analyze` reports type errors in this file** — I'll pin a different
-/// version or adjust the API calls the moment I know which one actually installed.
+/// line, including the `Border`/`BorderStyle` cell-border API added this batch — same risk class
+/// as the fill/alignment calls already here, just extended a bit further. **Please run
+/// `flutter pub get` immediately and tell me right away if it fails to resolve, or if
+/// `flutter analyze` reports type errors in this file** — I'll pin a different version or adjust
+/// the API calls the moment I know which one actually installed.
 ///
 /// KNOWN SIMPLIFICATION, stated plainly: the worksheet's own column order is left-to-right
 /// (Excel's native default) even though the report content is Arabic — a genuine right-to-left
@@ -33,9 +35,17 @@ class XlsxReportService {
   static const _creditFill = '#DCEFE0'; // matches AppColors.creditCell
   static const _debitFill = '#F6D9D2'; // matches AppColors.debitCell
   static const _totalsFill = '#C8E6C9'; // matches PdfColors.green100 used in the PDF export
+  static const _gridlineColor = '#C7CDD6'; // thin neutral gray, close to PDF's PdfColors.grey300
+
+  /// One shared thin-gray border, reused on every side of every styled cell below — this is what
+  /// makes the sheet read as an actual bordered TABLE rather than just colored blocks of text,
+  /// which is what was missing before this batch.
+  Border get _gridBorder => Border(borderStyle: BorderStyle.Thin, borderColorHex: ExcelColor.fromHexString(_gridlineColor));
 
   /// "إجمالي المبالغ" — one row per account, same column order as the old CSV export (name,
-  /// category, balance, direction, entry count).
+  /// category, balance, direction, entry count). Column widths are sized to each column's actual
+  /// content (the account name needs the most room; category/direction are short fixed labels)
+  /// instead of one flat width for every column.
   Uint8List build({
     required String reportTitle,
     required String accountNameHeader,
@@ -75,16 +85,13 @@ class XlsxReportService {
       rowIndex++;
     }
 
-    for (var i = 0; i < columnCount; i++) {
-      sheet.setColumnWidth(i, 20);
-    }
-
+    _writeColumnWidths(sheet, [28, 14, 16, 14, 12]);
     return _encode(workbook);
   }
 
   /// "تقرير كشف الحساب" — the full ledger for ONE account: date, details, debit, credit, running
   /// balance, then a totals row and a final-balance row — same column layout and semantics as the
-  /// old CSV export.
+  /// old CSV export. The details column gets the most width since it holds free-text notes.
   Uint8List buildAccountStatement({
     required String reportTitle,
     required String dateHeader,
@@ -139,10 +146,7 @@ class XlsxReportService {
     rowIndex++;
     _writeTotalsRow(sheet, rowIndex, ['', totalRowLabel, '', '', finalBalance.abs().toStringAsFixed(0)]);
 
-    for (var i = 0; i < columnCount; i++) {
-      sheet.setColumnWidth(i, 20);
-    }
-
+    _writeColumnWidths(sheet, [14, 28, 14, 14, 14]);
     return _encode(workbook);
   }
 
@@ -152,6 +156,12 @@ class XlsxReportService {
       throw StateError('Failed to encode the Excel workbook');
     }
     return Uint8List.fromList(encoded);
+  }
+
+  void _writeColumnWidths(Sheet sheet, List<double> widths) {
+    for (var i = 0; i < widths.length; i++) {
+      sheet.setColumnWidth(i, widths[i]);
+    }
   }
 
   void _writeTitleRow(Sheet sheet, String title, int columnCount) {
@@ -168,11 +178,16 @@ class XlsxReportService {
       fontSize: 13,
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
+      topBorder: _gridBorder,
+      bottomBorder: _gridBorder,
+      leftBorder: _gridBorder,
+      rightBorder: _gridBorder,
     );
     sheet.setRowHeight(0, 26);
   }
 
   void _writeHeaderRow(Sheet sheet, int rowIndex, List<String> headers) {
+    sheet.setRowHeight(rowIndex, 20);
     for (var col = 0; col < headers.length; col++) {
       final cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: rowIndex));
       cell.value = TextCellValue(headers[col]);
@@ -182,6 +197,10 @@ class XlsxReportService {
         bold: true,
         horizontalAlign: HorizontalAlign.Center,
         verticalAlign: VerticalAlign.Center,
+        topBorder: _gridBorder,
+        bottomBorder: _gridBorder,
+        leftBorder: _gridBorder,
+        rightBorder: _gridBorder,
       );
     }
   }
@@ -194,6 +213,10 @@ class XlsxReportService {
         backgroundColorHex: ExcelColor.fromHexString(fillHex),
         horizontalAlign: HorizontalAlign.Center,
         verticalAlign: VerticalAlign.Center,
+        topBorder: _gridBorder,
+        bottomBorder: _gridBorder,
+        leftBorder: _gridBorder,
+        rightBorder: _gridBorder,
       );
     }
   }
@@ -207,6 +230,10 @@ class XlsxReportService {
         bold: true,
         horizontalAlign: HorizontalAlign.Center,
         verticalAlign: VerticalAlign.Center,
+        topBorder: _gridBorder,
+        bottomBorder: _gridBorder,
+        leftBorder: _gridBorder,
+        rightBorder: _gridBorder,
       );
     }
   }

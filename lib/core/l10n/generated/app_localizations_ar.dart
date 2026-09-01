@@ -870,4 +870,64 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get localBackupWrongPasswordMessage => 'كلمة المرور غير صحيحة';
+
+  @override
+  String get driveBackupScreenTitle => 'النسخ الاحتياطي إلى جوجل درايف';
+
+  @override
+  String get driveBackupExplanation =>
+      'يحتفظ التطبيق تلقائيًا بآخر 7 نسخ يومية من بياناتك على Google Drive الخاص بك، بمعزل عن المزامنة المعتادة — هذه نقاط استعادة تاريخية للحماية من الحذف أو التلف، وليست وسيلة مزامنة بين أجهزتك.';
+
+  @override
+  String get driveBackupStatusLabel => 'الحالة';
+
+  @override
+  String get driveBackupStatusEnabled => 'مفعّل';
+
+  @override
+  String get driveBackupStatusNeedsAccount => 'يتطلب ربط حساب جوجل';
+
+  @override
+  String get driveBackupLastSuccessLabel => 'آخر نسخة ناجحة';
+
+  @override
+  String get driveBackupTodayLabel => 'النسخة الحالية';
+
+  @override
+  String get driveBackupTodayReady => 'اليوم';
+
+  @override
+  String get driveBackupConnectButton => 'ربط حساب جوجل';
+
+  @override
+  String get driveBackupSaveNowButton => 'حفظ نسخة احتياطية الآن';
+
+  @override
+  String get driveBackupSavedSuccessMessage => 'تم حفظ النسخة الاحتياطية بنجاح';
+
+  @override
+  String get driveBackupRestoreButton => 'استعادة نسخة احتياطية';
+
+  @override
+  String get driveBackupNoAccountMessage => 'يتطلب هذا ربط حساب جوجل أولًا';
+
+  @override
+  String get driveBackupListTitle => 'النسخ الاحتياطية على درايف';
+
+  @override
+  String get driveBackupListEmpty => 'لا توجد نسخ احتياطية على درايف بعد';
+
+  @override
+  String get driveBackupTypeDaily => 'نسخة يومية';
+
+  @override
+  String get driveBackupTypeManual => 'نسخة يدوية';
+
+  @override
+  String get voiceModelDownloadingHint =>
+      'جارٍ تحميل نموذج التعرف الصوتي العربي لأول مرة (~300 ميجابايت) — بعدها سيعمل الأمر الصوتي بلا إنترنت نهائيًا';
+
+  @override
+  String get voiceModelDownloadFailedMessage =>
+      'تعذّر تحميل نموذج التعرف الصوتي، تحقق من الاتصال بالإنترنت وحاول مجددًا';
 }
