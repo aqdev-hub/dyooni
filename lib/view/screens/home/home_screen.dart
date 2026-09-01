@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +10,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/settings/drive_backup_controller.dart';
 import '../../widgets/home/account_list_tile.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
@@ -133,6 +136,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     ref.read(selectedCategoryProvider.notifier).state = null;
+    // Opportunistic daily Drive-backup check — fires once per app session. Any failure here
+    // (offline, no Google account connected, etc.) is ALSO independently swallowed inside
+    // DriveBackupController.build() itself, but this extra try/catch is what stops a failure
+    // from ever surfacing as an unhandled Future error in this screen's own zone.
+    unawaited(_checkDriveBackupSilently());
+  }
+
+  Future<void> _checkDriveBackupSilently() async {
+    try {
+      await ref.read(driveBackupControllerProvider.future);
+    } catch (_) {
+      // See DriveBackupController's doc comment — a background Drive check must never surface
+      // an error to the person.
+    }
   }
 
   @override

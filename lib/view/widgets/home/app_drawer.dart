@@ -67,8 +67,11 @@ class AppDrawer extends ConsumerWidget {
     final shell = context.shellColors;
 
     // (icon, label, route) — route is null for the items that are still honest "coming soon"
-    // placeholders; "البيانات الشخصية" and "حفظ واسترجاع البيانات من الجهاز" have real
-    // destinations now.
+    // placeholders. "حفظ/استرجاع البيانات من جوجل" AND "مزامنة البيانات على جوجل درايف" now
+    // BOTH point at the same real Drive-backup screen: the approved design brief for this
+    // feature explicitly rejects a separate live "sync" concept ("Google Drive ليس Mirror
+    // لحظيًا لـ Firestore") — a second menu entry implementing something different there would
+    // just be a confusing dead end pointing at a feature that was deliberately never built.
     final items = <(IconData, String, String?)>[
       (Icons.workspace_premium_outlined, l10n.drawerAdsRemoval, null),
       (Icons.chat_outlined, l10n.drawerContactUs, null),
@@ -79,8 +82,8 @@ class AppDrawer extends ConsumerWidget {
       (Icons.category_outlined, l10n.drawerCategories, null),
       (Icons.attach_money_outlined, l10n.drawerCurrencies, null),
       (Icons.save_alt_outlined, l10n.drawerLocalBackup, '/local-backup'),
-      (Icons.cloud_outlined, l10n.drawerGoogleBackup, null),
-      (Icons.sync_outlined, l10n.drawerGoogleDriveSync, null),
+      (Icons.cloud_outlined, l10n.drawerGoogleBackup, '/drive-backup'),
+      (Icons.sync_outlined, l10n.drawerGoogleDriveSync, '/drive-backup'),
       (Icons.dns_outlined, l10n.drawerSendDatabase, null),
       (Icons.share_outlined, l10n.drawerShareApp, null),
       (Icons.star_outline, l10n.drawerRateApp, null),

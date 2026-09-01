@@ -106,7 +106,15 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
   Future<void> _pickStampImage() async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+      // maxWidth/maxHeight cap — a stamp is a small graphic shown at a few dozen pixels; there's
+      // no reason to hold a multi-megapixel gallery original in memory for it (same reasoning as
+      // image_source_dialog.dart's picker call, applied here for consistency/lower memory use).
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
       if (picked == null || !mounted) return; // person cancelled the picker
       setState(() {
         _stampPath = picked.path;
@@ -124,7 +132,12 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
   Future<void> _pickLogoImage() async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
       if (picked == null || !mounted) return; // person cancelled the picker
       setState(() => _logoPath = picked.path);
     } catch (_) {

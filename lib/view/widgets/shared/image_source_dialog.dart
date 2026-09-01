@@ -25,7 +25,21 @@ class _ImageSourceDialogState extends State<_ImageSourceDialog> {
   Future<void> _confirm() async {
     setState(() => _picking = true);
     try {
-      final image = await ImagePicker().pickImage(source: _source, imageQuality: 85);
+      // FIX for the reported "camera → black screen → app reloads, in-progress entry lost" bug:
+      // without maxWidth/maxHeight, the picker hands back the CAMERA'S FULL-RESOLUTION original
+      // (often 12–108MP on a modern phone). Decoding/holding that in memory — right after the
+      // native camera app itself was using heavy memory in the foreground — is a very plausible
+      // concrete trigger for Android killing this app's background process to reclaim memory
+      // (see AndroidManifest.xml's `largeHeap` comment for the fuller story on that crash; that
+      // mitigation alone wasn't enough, this addresses the actual memory spike more directly).
+      // 1600px is comfortably more resolution than a receipt/document photo or an attachment
+      // thumbnail ever needs, and this doesn't crop — the full frame is still kept, just capped.
+      final image = await ImagePicker().pickImage(
+        source: _source,
+        imageQuality: 85,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
       if (mounted) Navigator.of(context).pop(image);
     } finally {
       if (mounted) setState(() => _picking = false);
