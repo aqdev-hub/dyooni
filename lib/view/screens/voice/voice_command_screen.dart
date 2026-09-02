@@ -10,16 +10,11 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../logic/voice/voice_provider.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/shared/main_bottom_nav.dart';
-import '../../widgets/voice/vosk_model_download_sheet.dart';
 import '../../widgets/voice/voice_command_sheet.dart';
 
 /// A real full-page recording experience, sharing the same header/drawer/bottom-nav chrome as
 /// Home (see the reference design) rather than a modal pushed on top of it. It owns the
 /// recording lifecycle so the recognizer never starts behind an unopened sheet.
-///
-/// CHANGED: [VoiceCommandSheet] is now wrapped in [VoskModelGate] — the offline Arabic speech
-/// model must finish downloading/loading before the mic UI is usable at all. On every run after
-/// the first successful download this gate is invisible (resolves instantly from local cache).
 class VoiceCommandScreen extends ConsumerStatefulWidget {
   const VoiceCommandScreen({required this.bluetoothMode, super.key});
   final bool bluetoothMode;
@@ -117,11 +112,7 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
                 ],
               ),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                child: VoskModelGate(child: const VoiceCommandSheet()),
-              ),
-            ),
+            const Expanded(child: SingleChildScrollView(child: VoiceCommandSheet())),
             MainBottomNav(
               activeTab: MainNavTab.voice,
               onHome: () => _goHome(context),

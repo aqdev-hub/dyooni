@@ -433,6 +433,10 @@ class _ClarificationCard extends StatelessWidget {
             const SizedBox(height: 10),
             _TranscriptCard(text: state.transcript),
           ],
+          if (state.errorCode == 'noSpeech') ...[
+            const SizedBox(height: 10),
+            _DiagnosticsPanel(state: state),
+          ],
           if (state.errorCode == 'account') ...[
             const SizedBox(height: 10),
             _AccountChoices(onSelected: controller.selectAccount),
@@ -576,6 +580,41 @@ class _Line extends StatelessWidget {
           Expanded(child: Text(value, textAlign: TextAlign.end, style: AppTextStyles.bodySecondary(context).copyWith(fontWeight: FontWeight.w700))),
         ]),
       );
+}
+
+/// Shown ONLY when nothing was heard at all. Surfaces the three concrete numbers that
+/// distinguish "the OS never gave the recognizer audio" from "audio arrived but transcribed to
+/// nothing" — see the doc comments on VoiceState's diagnostic* fields for what each one means.
+/// Deliberately plain/monospace-flavored so it reads as technical information, not app content.
+class _DiagnosticsPanel extends StatelessWidget {
+  const _DiagnosticsPanel({required this.state});
+  final VoiceState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final shell = context.shellColors;
+    final permissionText = switch (state.diagnosticMicPermission) {
+      true => l10n.voiceDiagnosticsGranted,
+      false => l10n.voiceDiagnosticsDenied,
+      null => l10n.voiceDiagnosticsUnknown,
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(color: shell.background, border: Border.all(color: shell.border), borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.voiceDiagnosticsTitle, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontWeight: FontWeight.w700, fontSize: 11)),
+          const SizedBox(height: 4),
+          _Line(l10n.voiceDiagnosticsMicPermissionLabel, permissionText),
+          _Line(l10n.voiceDiagnosticsLocaleLabel, state.diagnosticLocaleId ?? l10n.voiceDiagnosticsUnknown),
+          _Line(l10n.voiceDiagnosticsRawCountLabel, '${state.diagnosticRawCallbackCount ?? 0}'),
+        ],
+      ),
+    );
+  }
 }
 
 /// Reference state 10 — green checkmark, then the SHORT-PRESS-ONLY "start another recording"
