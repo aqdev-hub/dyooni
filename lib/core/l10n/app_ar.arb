@@ -168,6 +168,13 @@
   "voiceNeedAmount": "لم أتعرف على مبلغ صحيح. قل المبلغ ثم أعد المحاولة.",
   "voiceNeedDirection": "لم أتعرف على نوع العملية. اختر \"له\" أو \"عليه\".",
   "voiceNoSpeechCaptured": "لم ألتقط أي صوت. تحدث بوضوح بالقرب من الميكروفون ثم أعد المحاولة.",
+  "voiceDiagnosticsTitle": "معلومات تقنية (لتشخيص المشكلة)",
+  "voiceDiagnosticsMicPermissionLabel": "إذن الميكروفون",
+  "voiceDiagnosticsLocaleLabel": "اللغة المستخدمة للتعرف",
+  "voiceDiagnosticsRawCountLabel": "عدد الإشارات المستلمة من المُتعرِّف",
+  "voiceDiagnosticsGranted": "ممنوح",
+  "voiceDiagnosticsDenied": "غير ممنوح",
+  "voiceDiagnosticsUnknown": "غير معروف",
   "voiceTranscriptLabel": "ما تم سماعه",
   "voiceBluetoothConnecting": "جاري الاتصال بسماعة البلوتوث…",
   "voiceBluetoothConnected": "تم الاتصال بسماعة البلوتوث",
@@ -320,7 +327,5 @@
   "driveBackupListTitle": "النسخ الاحتياطية على درايف",
   "driveBackupListEmpty": "لا توجد نسخ احتياطية على درايف بعد",
   "driveBackupTypeDaily": "نسخة يومية",
-  "driveBackupTypeManual": "نسخة يدوية",
-  "voiceModelDownloadingHint": "جارٍ تحميل نموذج التعرف الصوتي العربي لأول مرة (~300 ميجابايت) — بعدها سيعمل الأمر الصوتي بلا إنترنت نهائيًا",
-  "voiceModelDownloadFailedMessage": "تعذّر تحميل نموذج التعرف الصوتي، تحقق من الاتصال بالإنترنت وحاول مجددًا"
+  "driveBackupTypeManual": "نسخة يدوية"
 }

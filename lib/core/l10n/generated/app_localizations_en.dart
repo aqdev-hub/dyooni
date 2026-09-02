@@ -501,6 +501,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'I didn\'t capture any speech. Speak clearly near the microphone and try again.';
 
   @override
+  String get voiceDiagnosticsTitle =>
+      'Technical info (for diagnosing the problem)';
+
+  @override
+  String get voiceDiagnosticsMicPermissionLabel => 'Microphone permission';
+
+  @override
+  String get voiceDiagnosticsLocaleLabel => 'Recognition language used';
+
+  @override
+  String get voiceDiagnosticsRawCountLabel =>
+      'Signals received from the recognizer';
+
+  @override
+  String get voiceDiagnosticsGranted => 'Granted';
+
+  @override
+  String get voiceDiagnosticsDenied => 'Denied';
+
+  @override
+  String get voiceDiagnosticsUnknown => 'Unknown';
+
+  @override
   String get voiceTranscriptLabel => 'Heard';
 
   @override
@@ -930,12 +953,4 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get driveBackupTypeManual => 'Manual backup';
-
-  @override
-  String get voiceModelDownloadingHint =>
-      'Downloading the offline Arabic speech model for the first time (~300MB) — after this, voice commands work fully offline forever';
-
-  @override
-  String get voiceModelDownloadFailedMessage =>
-      'Couldn\'t download the speech recognition model, check your internet connection and try again';
 }

@@ -1046,6 +1046,48 @@ abstract class AppLocalizations {
   /// **'لم ألتقط أي صوت. تحدث بوضوح بالقرب من الميكروفون ثم أعد المحاولة.'**
   String get voiceNoSpeechCaptured;
 
+  /// No description provided for @voiceDiagnosticsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'معلومات تقنية (لتشخيص المشكلة)'**
+  String get voiceDiagnosticsTitle;
+
+  /// No description provided for @voiceDiagnosticsMicPermissionLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إذن الميكروفون'**
+  String get voiceDiagnosticsMicPermissionLabel;
+
+  /// No description provided for @voiceDiagnosticsLocaleLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'اللغة المستخدمة للتعرف'**
+  String get voiceDiagnosticsLocaleLabel;
+
+  /// No description provided for @voiceDiagnosticsRawCountLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'عدد الإشارات المستلمة من المُتعرِّف'**
+  String get voiceDiagnosticsRawCountLabel;
+
+  /// No description provided for @voiceDiagnosticsGranted.
+  ///
+  /// In ar, this message translates to:
+  /// **'ممنوح'**
+  String get voiceDiagnosticsGranted;
+
+  /// No description provided for @voiceDiagnosticsDenied.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير ممنوح'**
+  String get voiceDiagnosticsDenied;
+
+  /// No description provided for @voiceDiagnosticsUnknown.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير معروف'**
+  String get voiceDiagnosticsUnknown;
+
   /// No description provided for @voiceTranscriptLabel.
   ///
   /// In ar, this message translates to:
@@ -1837,18 +1879,6 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'نسخة يدوية'**
   String get driveBackupTypeManual;
-
-  /// No description provided for @voiceModelDownloadingHint.
-  ///
-  /// In ar, this message translates to:
-  /// **'جارٍ تحميل نموذج التعرف الصوتي العربي لأول مرة (~300 ميجابايت) — بعدها سيعمل الأمر الصوتي بلا إنترنت نهائيًا'**
-  String get voiceModelDownloadingHint;
-
-  /// No description provided for @voiceModelDownloadFailedMessage.
-  ///
-  /// In ar, this message translates to:
-  /// **'تعذّر تحميل نموذج التعرف الصوتي، تحقق من الاتصال بالإنترنت وحاول مجددًا'**
-  String get voiceModelDownloadFailedMessage;
 }
 
 class _AppLocalizationsDelegate

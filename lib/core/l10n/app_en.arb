@@ -168,6 +168,13 @@
   "voiceNeedAmount": "I could not recognize a valid amount. Say the amount and try again.",
   "voiceNeedDirection": "I couldn't tell if this is credit or debit. Choose one.",
   "voiceNoSpeechCaptured": "I didn't capture any speech. Speak clearly near the microphone and try again.",
+  "voiceDiagnosticsTitle": "Technical info (for diagnosing the problem)",
+  "voiceDiagnosticsMicPermissionLabel": "Microphone permission",
+  "voiceDiagnosticsLocaleLabel": "Recognition language used",
+  "voiceDiagnosticsRawCountLabel": "Signals received from the recognizer",
+  "voiceDiagnosticsGranted": "Granted",
+  "voiceDiagnosticsDenied": "Denied",
+  "voiceDiagnosticsUnknown": "Unknown",
   "voiceTranscriptLabel": "Heard",
   "voiceBluetoothConnecting": "Connecting to Bluetooth headset…",
   "voiceBluetoothConnected": "Bluetooth headset connected",
@@ -320,7 +327,5 @@
   "driveBackupListTitle": "Drive Backups",
   "driveBackupListEmpty": "No Drive backups yet",
   "driveBackupTypeDaily": "Daily backup",
-  "driveBackupTypeManual": "Manual backup",
-  "voiceModelDownloadingHint": "Downloading the offline Arabic speech model for the first time (~300MB) — after this, voice commands work fully offline forever",
-  "voiceModelDownloadFailedMessage": "Couldn't download the speech recognition model, check your internet connection and try again"
+  "driveBackupTypeManual": "Manual backup"
 }
