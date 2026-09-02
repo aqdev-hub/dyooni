@@ -5,7 +5,7 @@ publish_to: "none"
 version: 0.1.0+1
 
 environment:
-  sdk: ">=3.5.2 <4.0.0"
+  sdk: ">=3.4.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -87,12 +87,9 @@ dependencies:
 
   # Voice input: native STT for short commands, original local recordings,
   # and their in-app playback. Versions are constrained to the app's Dart 3.4 SDK.
-  
+  speech_to_text: ^7.4.0
+  flutter_tts: ^4.2.2
   record: ^6.0.0
-    # Offline Arabic speech recognition + true simultaneous raw-audio recording — see
-  # core/voice/offline_speech_engine.dart. Run `flutter pub add vosk_flutter` instead of pinning
-  # a version number by hand here, so the exact currently-published version resolves correctly.
-  
   just_audio: ^0.9.46
 
   # Arabic letter shaping for the PDF — the `pdf` package has no text-shaping engine of its own,
