@@ -168,13 +168,6 @@
   "voiceNeedAmount": "لم أتعرف على مبلغ صحيح. قل المبلغ ثم أعد المحاولة.",
   "voiceNeedDirection": "لم أتعرف على نوع العملية. اختر \"له\" أو \"عليه\".",
   "voiceNoSpeechCaptured": "لم ألتقط أي صوت. تحدث بوضوح بالقرب من الميكروفون ثم أعد المحاولة.",
-  "voiceDiagnosticsTitle": "معلومات تقنية (لتشخيص المشكلة)",
-  "voiceDiagnosticsMicPermissionLabel": "إذن الميكروفون",
-  "voiceDiagnosticsLocaleLabel": "اللغة المستخدمة للتعرف",
-  "voiceDiagnosticsRawCountLabel": "عدد الإشارات المستلمة من المُتعرِّف",
-  "voiceDiagnosticsGranted": "ممنوح",
-  "voiceDiagnosticsDenied": "غير ممنوح",
-  "voiceDiagnosticsUnknown": "غير معروف",
   "voiceTranscriptLabel": "ما تم سماعه",
   "voiceBluetoothConnecting": "جاري الاتصال بسماعة البلوتوث…",
   "voiceBluetoothConnected": "تم الاتصال بسماعة البلوتوث",
@@ -327,5 +320,9 @@
   "driveBackupListTitle": "النسخ الاحتياطية على درايف",
   "driveBackupListEmpty": "لا توجد نسخ احتياطية على درايف بعد",
   "driveBackupTypeDaily": "نسخة يومية",
-  "driveBackupTypeManual": "نسخة يدوية"
+  "driveBackupTypeManual": "نسخة يدوية",
+  "voiceModelDownloadingHint": "جارٍ تحميل نموذج التعرف الصوتي العربي لأول مرة — بعدها سيعمل الأمر الصوتي بلا إنترنت نهائيًا",
+  "voiceModelExtracting": "جارٍ تجهيز نموذج التعرف الصوتي، لحظات...",
+  "voiceModelDownloadFailedMessage": "تعذّر تجهيز نموذج التعرف الصوتي. التفاصيل أدناه — أعد المحاولة (سيُكمل تلقائيًا من حيث توقف، ولن يعيد التنزيل من الصفر)",
+  "openLinkFailedMessage": "تعذّر فتح الرابط، تحقق من اتصالك بالإنترنت"
 }

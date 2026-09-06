@@ -499,28 +499,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'لم ألتقط أي صوت. تحدث بوضوح بالقرب من الميكروفون ثم أعد المحاولة.';
 
   @override
-  String get voiceDiagnosticsTitle => 'معلومات تقنية (لتشخيص المشكلة)';
-
-  @override
-  String get voiceDiagnosticsMicPermissionLabel => 'إذن الميكروفون';
-
-  @override
-  String get voiceDiagnosticsLocaleLabel => 'اللغة المستخدمة للتعرف';
-
-  @override
-  String get voiceDiagnosticsRawCountLabel =>
-      'عدد الإشارات المستلمة من المُتعرِّف';
-
-  @override
-  String get voiceDiagnosticsGranted => 'ممنوح';
-
-  @override
-  String get voiceDiagnosticsDenied => 'غير ممنوح';
-
-  @override
-  String get voiceDiagnosticsUnknown => 'غير معروف';
-
-  @override
   String get voiceTranscriptLabel => 'ما تم سماعه';
 
   @override
@@ -944,4 +922,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get driveBackupTypeManual => 'نسخة يدوية';
+
+  @override
+  String get voiceModelDownloadingHint =>
+      'جارٍ تحميل نموذج التعرف الصوتي العربي لأول مرة — بعدها سيعمل الأمر الصوتي بلا إنترنت نهائيًا';
+
+  @override
+  String get voiceModelExtracting => 'جارٍ تجهيز نموذج التعرف الصوتي، لحظات...';
+
+  @override
+  String get voiceModelDownloadFailedMessage =>
+      'تعذّر تجهيز نموذج التعرف الصوتي. التفاصيل أدناه — أعد المحاولة (سيُكمل تلقائيًا من حيث توقف، ولن يعيد التنزيل من الصفر)';
+
+  @override
+  String get openLinkFailedMessage =>
+      'تعذّر فتح الرابط، تحقق من اتصالك بالإنترنت';
 }
