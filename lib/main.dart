@@ -7,10 +7,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/l10n/generated/app_localizations.dart';
 import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'data/models/general_settings.dart';
 import 'firebase_options.dart';
 import 'logic/onboarding/onboarding_provider.dart';
+import 'logic/settings/general_settings_provider.dart';
 import 'logic/settings/locale_provider.dart';
 import 'logic/settings/theme_mode_provider.dart';
+import 'view/screens/app_lock/app_lock_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,14 +34,55 @@ Future<void> main() async {
   );
 }
 
-class App extends ConsumerWidget {
+class App extends ConsumerStatefulWidget {
   const App({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<App> createState() => _AppState();
+}
+
+class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
+  /// `false` = مقفل، `true` = فُتح بنجاح خلال هذه الجلسة. تبدأ `false` عمدًا، وهذا وحده ما يجعل
+  /// القفل يظهر عند بدء تشغيل التطبيق (Cold start) دون أي منطق تنقّل إضافي — انظر [_isLocked].
+  bool _unlockedThisSession = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // إعادة القفل عند تصغير التطبيق (paused) إن كانت أي حماية مفعّلة — الخروج من التطبيق أو
+    // تصغيره ثم العودة إليه يجب أن يعيد طلب المصادقة، لا مرة واحدة فقط عند أول تشغيل.
+    if (state == AppLifecycleState.paused) {
+      final settings = ref.read(generalSettingsProvider).value;
+      if (settings != null && (settings.passwordEnabled || settings.biometricEnabled)) {
+        setState(() => _unlockedThisSession = false);
+      }
+    }
+  }
+
+  bool _isLocked(AsyncValue<GeneralSettings> settingsAsync) {
+    final settings = settingsAsync.value;
+    if (settings == null) return false; // لم تُحمَّل الإعدادات بعد — لا تحجب المستخدم بشاشة قفل
+    final lockEnabled = settings.passwordEnabled || settings.biometricEnabled;
+    return lockEnabled && !_unlockedThisSession;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     final locale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final settingsAsync = ref.watch(generalSettingsProvider);
 
     return MaterialApp.router(
       title: 'ديوني',
@@ -50,6 +94,13 @@ class App extends ConsumerWidget {
       supportedLocales: const [Locale('ar'), Locale('en')],
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       routerConfig: router,
+      builder: (context, child) {
+        if (child == null) return const SizedBox.shrink();
+        if (_isLocked(settingsAsync)) {
+          return AppLockScreen(onUnlocked: () => setState(() => _unlockedThisSession = true));
+        }
+        return child;
+      },
     );
   }
 }

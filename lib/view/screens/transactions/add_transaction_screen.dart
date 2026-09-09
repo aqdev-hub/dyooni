@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,9 +11,11 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/dyooni_picker_theme.dart';
+import '../../../core/utils/form_draft_storage.dart';
 import '../../../core/utils/image_rotate.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/transaction.dart';
+import '../../../logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/shared/amount_in_words.dart';
 import '../../widgets/shared/app_snackbar.dart';
@@ -56,6 +60,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   // for the layout bug (error text overflowing the field's fixed-height box) that caused.
   String? _amountError;
 
+  /// Scoped per account — only meaningful while CREATING (never editing) a new entry for THIS
+  /// account. See FormDraftStorage's doc comment for the full story on why this exists.
+  String get _draftKey => 'draft_add_transaction_${widget.accountId}';
+
+  FormDraftStorage get _draft => FormDraftStorage(ref.read(sharedPreferencesProvider), _draftKey);
+
   @override
   void initState() {
     super.initState();
@@ -70,7 +80,46 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _date = existing.date;
       _direction = existing.direction;
       _attachmentPath = existing.attachmentPath;
+    } else {
+      _restoreDraftIfAny();
     }
+  }
+
+  void _restoreDraftIfAny() {
+    final saved = _draft.read();
+    if (saved == null) return;
+    _amountController.text = saved['amount'] as String? ?? '';
+    _detailsController.text = saved['details'] as String? ?? '';
+    _currencyCode = saved['currencyCode'] as String? ?? currencies.first.code;
+    final savedDate = DateTime.tryParse(saved['date'] as String? ?? '');
+    if (savedDate != null) _date = savedDate;
+    final savedDirection = saved['direction'] as String?;
+    if (savedDirection != null) _direction = AccountDirection.values.byName(savedDirection);
+    _attachmentPath = saved['attachmentPath'] as String?;
+  }
+
+  /// Called right before handing off to the camera/gallery — see AddAccountScreen's identical
+  /// method for the full reasoning (same underlying process-kill risk).
+  Future<void> _saveDraft() async {
+    if (widget.isEditing) return;
+    await _draft.save({
+      'amount': _amountController.text,
+      'details': _detailsController.text,
+      'currencyCode': _currencyCode,
+      'date': _date.toIso8601String(),
+      'direction': _direction.name,
+      'attachmentPath': _attachmentPath,
+    });
+  }
+
+  Future<void> _clearDraft() async {
+    if (widget.isEditing) return;
+    await _draft.clear();
+  }
+
+  void _close() {
+    unawaited(_clearDraft()); // explicit close = discard, not "save for later"
+    context.pop();
   }
 
   @override
@@ -104,6 +153,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   Future<void> _chooseImage() async {
+    // Safety net for the exact scenario reported: opening the camera can cause Android to kill
+    // this app's process to free memory (see AndroidManifest.xml) — saving the draft NOW, right
+    // before that risky handoff, is what lets the person's typed data survive it.
+    await _saveDraft();
     final image = await showImageSourceDialog(context);
     if (image != null && mounted) setState(() => _attachmentPath = image.path);
   }
@@ -133,6 +186,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _date = DateTime.now();
       _direction = AccountDirection.debit;
       _amountError = null;
+      _attachmentPath = null;
     });
   }
 
@@ -169,6 +223,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     try {
       await ref.read(transactionsProvider.notifier).addTransaction(transaction);
+      await _clearDraft(); // the safety-net draft has served its purpose — never resurrect it
       if (!mounted) return;
       AppSnackBar.showSuccess(context, l10n.transactionSavedSuccessMessage);
       if (keepAdding) {
@@ -261,7 +316,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             children: [
               ModalHeaderBar(
                 title: isEditing ? l10n.editTransactionTitle : l10n.addTransactionTitle,
-                onClose: () => context.pop(),
+                onClose: _close,
               ),
               const SizedBox(height: 8),
               if (widget.accountName != null) ...[

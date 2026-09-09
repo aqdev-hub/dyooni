@@ -10,6 +10,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/drive_backup_controller.dart';
 import '../../widgets/home/account_list_tile.dart';
 import '../../widgets/home/app_drawer.dart';
@@ -158,6 +159,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
+  /// يرتّب الحسابات المرئية حسب استعلام البحث الحالي. عندما تكون "تثبيت قائمة الحسابات عند
+  /// البحث" (GeneralSettings.pinMatchingAccountsOnSearch) مفعّلة، تبقى القائمة كاملة لكن
+  /// المطابقات تُرفَع لأعلاها بدل إخفاء بقية الحسابات؛ عند تعطيلها يعود السلوك لتصفية اعتيادية
+  /// (إخفاء غير المطابق) — انظر view/screens/settings/general_settings_screen.dart.
+  List<Account> _visibleAccounts(List<Account> categoryFiltered, bool pinMatches) {
+    if (_query.isEmpty) return categoryFiltered;
+    final matches = categoryFiltered.where((a) => a.name.contains(_query)).toList();
+    if (!pinMatches) return matches;
+    final rest = categoryFiltered.where((a) => !a.name.contains(_query)).toList();
+    return [...matches, ...rest];
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -167,6 +180,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final summary = ref.watch(accountsSummaryProvider);
     final selectionMode = ref.watch(accountSelectionModeProvider);
     final selectedIds = ref.watch(selectedAccountIdsProvider);
+    final pinMatches = ref.watch(generalSettingsProvider).value?.pinMatchingAccountsOnSearch ?? true;
 
     return Scaffold(
       backgroundColor: shell.background,
@@ -216,9 +230,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Expanded(
               child: accountsAsync.when(
                 data: (_) {
-                  final filtered = _query.isEmpty
-                      ? categoryFiltered
-                      : categoryFiltered.where((a) => a.name.contains(_query)).toList();
+                  final filtered = _visibleAccounts(categoryFiltered, pinMatches);
 
                   return RefreshIndicator(
                     onRefresh: () => ref.refresh(accountsProvider.future),

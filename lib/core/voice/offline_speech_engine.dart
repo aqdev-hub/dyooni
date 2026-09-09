@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
-import 'package:vosk_flutter/vosk_flutter.dart';
+import 'package:vosk_flutter_service/vosk_flutter_service.dart';
 
 import 'vosk_model_provider.dart' show voskSampleRate;
 import 'wav_file_writer.dart';
@@ -79,7 +79,22 @@ class OfflineSpeechEngine {
       ),
     );
 
-    _micSubscription = stream.listen(_onAudioChunk);
+    // CRITICAL FIX for the reported "only catches the last word or two, never understands the
+    // amount" bug: `_onAudioChunk` is an async function, but `Stream.listen()`'s callback
+    // signature is `void Function(T)` — it does NOT wait for a returned Future. Every new audio
+    // chunk was therefore starting its OWN overlapping call into the native Vosk recognizer
+    // (`acceptWaveformBytes`/`getPartialResult`) before the previous chunk's call had finished,
+    // racing dozens of times per second. Most chunks were being processed out of order or
+    // effectively dropped by that race — the recognizer only ever ended up with fragments of
+    // what was actually said, which is exactly the "only the last word or two" symptom.
+    //
+    // The fix: pause the subscription the instant a chunk arrives, fully await its processing,
+    // THEN resume — guaranteeing every chunk is handed to the recognizer strictly one at a time,
+    // in the order it was recorded, with no possible overlap.
+    _micSubscription = stream.listen((chunk) {
+      _micSubscription?.pause();
+      unawaited(_onAudioChunk(chunk).whenComplete(() => _micSubscription?.resume()));
+    });
   }
 
   /// Every chunk goes to BOTH consumers — this is the fan-out that replaces the old two-mic-

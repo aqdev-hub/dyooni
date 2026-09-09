@@ -1,13 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../core/utils/app_logger.dart';
-import '../../core/voice/local_audio_recording_service.dart';
 import '../../core/voice/bluetooth_audio_route_service.dart';
-import '../../core/voice/speech_recognition_service.dart';
+import '../../core/voice/offline_speech_engine.dart';
+import '../../core/voice/vosk_model_provider.dart';
 import '../../core/voice/voice_output_service.dart';
 import '../../data/models/account.dart';
 import '../../data/models/transaction.dart';
@@ -15,25 +13,25 @@ import '../accounts/accounts_provider.dart';
 import '../transactions/transactions_provider.dart';
 import 'voice_command_parser.dart';
 
-final speechRecognitionServiceProvider = Provider<SpeechRecognitionService>((ref) {
-  final service = SpeechRecognitionService();
-  ref.onDispose(service.dispose);
-  return service;
-});
-
-final localAudioRecordingServiceProvider = Provider<LocalAudioRecordingService>((ref) {
-  final service = LocalAudioRecordingService();
-  ref.onDispose(service.dispose);
-  return service;
+/// Built once the Vosk model has finished loading (see vosk_model_provider.dart /
+/// VoskModelGate) — `as VoskModelReady` is safe here specifically because every screen that can
+/// reach this provider is already gated behind [voskModelControllerProvider] being in the
+/// `VoskModelReady` state; if that ever stops being true, this throws loudly instead of silently
+/// listening with a broken engine.
+final offlineSpeechEngineProvider = Provider<OfflineSpeechEngine>((ref) {
+  final modelState = ref.watch(voskModelControllerProvider);
+  final model = (modelState as VoskModelReady).model;
+  final engine = OfflineSpeechEngine(model: model);
+  ref.onDispose(engine.dispose);
+  return engine;
 });
 
 final bluetoothAudioRouteServiceProvider = Provider<BluetoothAudioRouteService>((ref) => BluetoothAudioRouteService());
 
-/// Speaks the assistant's side of the dialogue (confirmation prompts, clarification questions,
-/// the final "saved" acknowledgement). See VoiceController's phrase-builder functions for why
-/// these sentences are hardcoded per recognition language here rather than pulled from the app's
-/// ARB files: they're keyed to `voiceRecognitionLanguageProvider` (an independent axis from the
-/// app's DISPLAY language, which the ARB files track), not to the display locale.
+/// Speaks every step of the dialogue out loud — the confirmation question, clarification
+/// questions, the final "saved" acknowledgement, edit prompts... This is what makes the whole
+/// scenario work hands-free: without it, the person would have no way to know what the app
+/// understood or what it's asking for next without looking at (and tapping) the screen.
 final voiceOutputServiceProvider = Provider<VoiceOutputService>((ref) {
   final service = VoiceOutputService();
   ref.onDispose(service.dispose);
@@ -42,11 +40,9 @@ final voiceOutputServiceProvider = Provider<VoiceOutputService>((ref) {
 
 final voiceCommandParserProvider = Provider<VoiceCommandParser>((ref) => const VoiceCommandParser());
 
-/// Which language the SPEECH RECOGNIZER listens for — deliberately independent of the app's
-/// DISPLAY language (`localeProvider`, toggled elsewhere in Settings/the drawer). This is what
-/// the "العربية" button on the voice screen controls (see VoiceCommandSheet). Session-only by
-/// design: recognition language is a per-recording choice, not a persisted app setting, so
-/// `.autoDispose` resets it once the voice screen is left.
+/// KNOWN LIMITATION (see vosk_model_provider.dart's doc comment): kept as UI state for the
+/// language-toggle button, but the offline engine is Arabic-only for now — toggling this does not
+/// yet change which model/recognizer is used.
 final voiceRecognitionLanguageProvider = StateProvider.autoDispose<String>((ref) => 'ar');
 
 final voiceProvider = StateNotifierProvider.autoDispose<VoiceController, VoiceState>((ref) {
@@ -85,51 +81,34 @@ class VoiceState {
     this.elapsedBeforePause = Duration.zero,
     this.errorCode,
     this.bluetoothMode = false,
-    this.diagnosticMicPermission,
-    this.diagnosticLocaleId,
-    this.diagnosticRawCallbackCount,
+    this.clarifyingField,
   });
 
   final VoiceStatus status;
 
-  /// The full recognized text so far, INCLUDING anything said before a pause (see
-  /// [committedTranscript]) — this is what gets parsed and what the transcript card shows.
+  /// The full recognized text so far — this is what gets parsed and what the transcript card
+  /// shows.
   final String transcript;
 
-  /// Snapshot of [transcript] taken at the moment recording was paused. A fresh `listen()`
-  /// session started on resume only reports what's said AFTER resuming — without this, resuming
-  /// would silently discard everything captured before the pause (see
-  /// VoiceController._onSpeechResult).
+  /// Snapshot of [transcript] taken at the moment recording was paused.
   final String committedTranscript;
 
   final VoiceCommandDraft? draft;
   final Account? account;
   final String? recordingPath;
   final DateTime? recordingStartedAt;
-
-  /// Total recording time accumulated across any PREVIOUS listen/pause cycles this session.
-  /// Combined with `now - recordingStartedAt` while actively listening to display a continuous
-  /// running timer that correctly freezes while paused (see the recording-timer widget).
   final Duration elapsedBeforePause;
-
   final String? errorCode;
   final bool bluetoothMode;
 
-  /// Whether the OS reports RECORD_AUDIO as granted — captured once per listening attempt purely
-  /// for the 'noSpeech' diagnostic panel (see VoiceCommandSheet), independent of whether the raw
-  /// recorder is actually running (see LocalAudioRecordingService.hasPermission's doc comment).
-  final bool? diagnosticMicPermission;
-
-  /// The exact locale tag actually passed to the native recognizer this session — shown in the
-  /// 'noSpeech' diagnostic panel so a wrong/unsupported tag is visible rather than silent.
-  final String? diagnosticLocaleId;
-
-  /// How many times the native layer called back with ANY result (even an empty one that gets
-  /// filtered before reaching [transcript]) — see SpeechRecognitionService.totalResultCallbacks.
-  /// If this is 0 after a full listening attempt, the OS never delivered audio to the recognizer
-  /// at all; if it's >0 but [transcript] is still empty, audio arrived but never transcribed to
-  /// anything usable — two very different problems, both invisible without this counter.
-  final int? diagnosticRawCallbackCount;
+  /// Which single field a `listening`/`bluetoothListeningCommand` session is currently gathering
+  /// a spoken ANSWER for — `'amount'`, `'account'`, `'direction'`, or `null` when this is an
+  /// ordinary fresh command (not a follow-up clarification). This is what lets
+  /// [VoiceController._onFinal] tell "the person just spoke a whole new command" apart from "the
+  /// person just answered the one specific question I asked them a moment ago" — the two need
+  /// completely different handling (re-parse everything vs. merge one field into the existing
+  /// draft) even though both arrive through the exact same `listening` status.
+  final String? clarifyingField;
 
   VoiceState copyWith({
     VoiceStatus? status,
@@ -142,12 +121,11 @@ class VoiceState {
     Duration? elapsedBeforePause,
     String? errorCode,
     bool? bluetoothMode,
-    bool? diagnosticMicPermission,
-    String? diagnosticLocaleId,
-    int? diagnosticRawCallbackCount,
+    String? clarifyingField,
     bool clearDraft = false,
     bool clearAccount = false,
     bool clearError = false,
+    bool clearClarifyingField = false,
   }) => VoiceState(
         status: status ?? this.status,
         transcript: transcript ?? this.transcript,
@@ -159,88 +137,86 @@ class VoiceState {
         elapsedBeforePause: elapsedBeforePause ?? this.elapsedBeforePause,
         errorCode: clearError ? null : errorCode ?? this.errorCode,
         bluetoothMode: bluetoothMode ?? this.bluetoothMode,
-        diagnosticMicPermission: diagnosticMicPermission ?? this.diagnosticMicPermission,
-        diagnosticLocaleId: diagnosticLocaleId ?? this.diagnosticLocaleId,
-        diagnosticRawCallbackCount: diagnosticRawCallbackCount ?? this.diagnosticRawCallbackCount,
+        clarifyingField: clearClarifyingField ? null : clarifyingField ?? this.clarifyingField,
       );
+}
+
+/// The result of trying to interpret something said DURING confirmation as an EDIT instruction
+/// (e.g. "عدّل المبلغ إلى 3500") rather than a plain yes/no/cancel reply. [accountNameHint] is
+/// kept separate from [draft] because re-matching a spoken account name against the real account
+/// list needs [VoiceController._matchAccount], which this pure parsing step has no access to.
+class _VoiceEditResult {
+  const _VoiceEditResult({this.draft, this.accountNameHint});
+  final VoiceCommandDraft? draft;
+  final String? accountNameHint;
+  bool get isEmpty => draft == null && accountNameHint == null;
 }
 
 class VoiceController extends StateNotifier<VoiceState> {
   VoiceController(this._ref) : super(const VoiceState()) {
-    _resultsSubscription = _speech.results.listen(_onSpeechResult);
-    _statusSubscription = _speech.statuses.listen(_onSpeechStatus);
+    _partialSubscription = _engine.partialResults.listen(_onPartial);
+    _finalSubscription = _engine.finalResults.listen(_onFinal);
   }
-
-  /// TEMPORARILY disabled. Running the raw audio recorder (`record` package) AT THE SAME TIME as
-  /// the speech recognizer (`speech_to_text`, which needs its own exclusive mic session) is the
-  /// leading, most defensible explanation for the recognizer receiving no usable audio at all
-  /// regardless of what was actually said: on many devices only one app-level microphone consumer
-  /// gets real audio, and the other is silently starved. Recognition is the functionally critical
-  /// path (nothing works without it), so it now runs ALONE. Flip this back to `true` (and restore
-  /// the calls guarded by it below) once real-device testing confirms recognition works reliably
-  /// on its own — the original "save the actual recording" requirement is not abandoned, only
-  /// deferred until it can be reintroduced without risking the very capability it would break.
-  static const _rawRecordingEnabled = false;
 
   static const wakeWord = 'ديوني';
   final Ref _ref;
-  SpeechRecognitionService get _speech => _ref.read(speechRecognitionServiceProvider);
-  LocalAudioRecordingService get _recorder => _ref.read(localAudioRecordingServiceProvider);
+  OfflineSpeechEngine get _engine => _ref.read(offlineSpeechEngineProvider);
   VoiceOutputService get _voiceOutput => _ref.read(voiceOutputServiceProvider);
-  late final StreamSubscription<SpeechRecognitionResult> _resultsSubscription;
-  late final StreamSubscription<String> _statusSubscription;
+  late final StreamSubscription<String> _partialSubscription;
+  late final StreamSubscription<String> _finalSubscription;
   Timer? _bluetoothMonitor;
   final _uuid = const Uuid();
 
-  /// Speaks [text] in whichever language the recognizer is currently set to listen for — TTS
-  /// output intentionally mirrors the RECOGNITION language (see voiceRecognitionLanguageProvider)
-  /// rather than the app's display language, since a person speaking Arabic commands expects the
-  /// assistant to reply in Arabic regardless of which language the rest of the UI is shown in.
-  void _speak(String text) {
-    final languageCode = _ref.read(voiceRecognitionLanguageProvider);
-    unawaited(_voiceOutput.speak(text, languageCode: languageCode));
-  }
+  // ─────────────────────────── Phrase builders (all spoken aloud) ───────────────────────────
 
-  /// Phrase wording is hardcoded here (not pulled from the ARB files that back on-screen text)
-  /// because it's keyed by voice RECOGNITION language, an axis independent of the app's display
-  /// locale — the two can legitimately differ (e.g. an English-display user dictating in Arabic).
-  String _confirmationSpeech(VoiceCommandDraft draft, Account account, String languageCode) {
+  String _confirmationSpeech(VoiceCommandDraft draft, Account account, String languageCode, {bool editApplied = false}) {
     final amountText = draft.amount!.toStringAsFixed(0);
     if (languageCode == 'en') {
+      final prefix = editApplied ? 'Updated. ' : '';
       final directionWord = draft.direction == AccountDirection.debit ? 'as a debit for' : 'as a credit for';
       final details = draft.details != null ? ', details ${draft.details}' : '';
-      return "I'll add $amountText ${draft.currency} $directionWord ${account.name}$details. Should I save it?";
+      return "${prefix}I'll add $amountText ${draft.currency} $directionWord ${account.name}$details. Should I save it?";
     }
+    final prefix = editApplied ? 'تم التعديل. ' : '';
     final directionWord = draft.direction == AccountDirection.debit ? 'على' : 'لـ';
     final details = draft.details != null ? '، التفاصيل ${draft.details}' : '';
-    return 'سأضيف $directionWord ${account.name} مبلغ $amountText ${draft.currency}$details. هل تريد الحفظ؟';
+    return '$prefixسأضيف $directionWord ${account.name} مبلغ $amountText ${draft.currency}$details. هل تريد الحفظ؟';
   }
 
-  String _clarificationSpeech(String errorCode, String languageCode) {
+  String _clarificationSpeech(String field, String languageCode) {
     if (languageCode == 'en') {
-      return switch (errorCode) {
-        'amount' => "I couldn't understand the amount. Say it clearly and try again.",
-        'account' => "I couldn't match an account. Choose one or try again.",
-        'direction' => 'Is this credit or debit?',
+      return switch (field) {
+        'amount' => "I couldn't understand the amount. Please say the amount clearly.",
+        'account' => "I couldn't match an account. Please say the account name clearly.",
+        'direction' => 'Is this credit or debit? Please say credit or debit.',
         _ => "I didn't hear anything. Please try speaking clearly.",
       };
     }
-    return switch (errorCode) {
-      'amount' => 'لم أفهم المبلغ. قل المبلغ بوضوح ثم أعد المحاولة.',
-      'account' => 'لم أتعرف على الحساب. اختره من القائمة أو أعد المحاولة.',
-      'direction' => 'هل هذا الدين له أم عليه؟',
-      _ => 'لم ألتقط أي صوت. حاول التحدث بوضوح.',
+    return switch (field) {
+      'amount' => 'لم أتعرف على المبلغ. من فضلك قل المبلغ بوضوح.',
+      'account' => 'لم أتعرف على اسم الحساب. من فضلك قل اسم الحساب بوضوح.',
+      'direction' => 'لم أفهم هل هذا الدين له أم عليه. من فضلك قل له أو عليه.',
+      _ => 'لم ألتقط أي صوت. من فضلك حاول التحدث بوضوح.',
     };
   }
 
   String _successSpeech(String languageCode) => languageCode == 'en' ? 'Entry saved successfully.' : 'تم حفظ العملية بنجاح.';
 
-  /// Called once when the voice screen opens, for BOTH entry modes. Deliberately does nothing
-  /// beyond recording which mode was requested — the reference design's idle state ("اضغط لبدء
-  /// التسجيل") is the first thing the user sees whether they short-pressed or long-pressed the
-  /// mic on Home; actually starting to listen (short-press) or searching for a headset
-  /// (Bluetooth) only happens once they tap the mic circle on THIS screen (see
-  /// VoiceCommandSheet's tap dispatch).
+  String _notUnderstoodSpeech(String languageCode) =>
+      languageCode == 'en' ? "I didn't understand. Say yes to save, or edit to change something." : 'لم أفهم. قل نعم للحفظ، أو عدّل لتغيير شيء.';
+
+  String _askEditSpeech(String languageCode) => languageCode == 'en' ? 'Please say your edit.' : 'من فضلك قل تعديلك.';
+
+  String _cancelledSpeech(String languageCode) => languageCode == 'en' ? 'Cancelled.' : 'تم الإلغاء.';
+
+  Future<void> _speak(String text) async {
+    final languageCode = _ref.read(voiceRecognitionLanguageProvider);
+    await _voiceOutput.speak(text, languageCode: languageCode);
+  }
+
+  // ─────────────────────────────────── Entry points ───────────────────────────────────
+
+  /// Called once when the voice screen opens, for BOTH entry modes.
   void setEntryMode({required bool bluetoothMode}) {
     state = VoiceState(bluetoothMode: bluetoothMode);
   }
@@ -249,17 +225,13 @@ class VoiceController extends StateNotifier<VoiceState> {
     await _beginListening(bluetoothMode: false);
   }
 
-  /// Audio routing is performed by Android/iOS. This mode is intentionally a
-  /// state machine, not a fake "always connected" flag; native recognizer
-  /// errors surface as an interrupted connection and can be retried.
   Future<void> startBluetoothMode() async {
     state = const VoiceState(status: VoiceStatus.bluetoothConnecting, bluetoothMode: true);
     if (!await _ref.read(bluetoothAudioRouteServiceProvider).isHeadsetConnected()) {
       state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'connection');
       return;
     }
-    final ready = await _speech.initialize(onError: _onSpeechError);
-    if (!ready) {
+    if (!await _engine.hasPermission()) {
       state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'permission');
       return;
     }
@@ -267,7 +239,11 @@ class VoiceController extends StateNotifier<VoiceState> {
     await Future<void>.delayed(const Duration(milliseconds: 350));
     state = state.copyWith(status: VoiceStatus.bluetoothWaitingWakeWord);
     _startBluetoothMonitor();
-    await _startRecognizer();
+    try {
+      await _engine.start();
+    } catch (_) {
+      state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'recognition');
+    }
   }
 
   void _startBluetoothMonitor() {
@@ -275,74 +251,35 @@ class VoiceController extends StateNotifier<VoiceState> {
     _bluetoothMonitor = Timer.periodic(const Duration(seconds: 2), (_) async {
       if (!await _ref.read(bluetoothAudioRouteServiceProvider).isHeadsetConnected()) {
         _bluetoothMonitor?.cancel();
-        await _speech.cancel();
+        await _engine.cancel();
         state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'connection');
       }
     });
   }
 
   Future<void> _beginListening({required bool bluetoothMode}) async {
-    await _voiceOutput.stop();
     state = VoiceState(status: VoiceStatus.preparing, bluetoothMode: bluetoothMode);
-    final micGranted = await _recorder.hasPermission();
-    final ready = await _speech.initialize(onError: _onSpeechError);
-    if (!ready) {
-      state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission', diagnosticMicPermission: micGranted);
+    if (!await _engine.hasPermission()) {
+      state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
       return;
     }
-    final startedAt = DateTime.now();
     state = state.copyWith(
       status: bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
-      recordingStartedAt: startedAt,
+      recordingStartedAt: DateTime.now(),
       clearError: true,
-      diagnosticMicPermission: micGranted,
     );
-    // Recognition starts FIRST and — while _rawRecordingEnabled is false — is currently the ONLY
-    // thing touching the microphone. See the doc comment on _rawRecordingEnabled above.
-    final resolvedLocale = await _startRecognizer();
-    state = state.copyWith(diagnosticLocaleId: resolvedLocale);
-    if (_rawRecordingEnabled) {
-      try {
-        final recordingPath = await _recorder.start('voice_${_uuid.v4()}');
-        state = state.copyWith(recordingPath: recordingPath);
-      } catch (e, st) {
-        appLogger.e('Voice raw audio recorder failed to start (recognition continues without a saved recording)', error: e, stackTrace: st);
-      }
+    try {
+      await _engine.start();
+    } catch (_) {
+      state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
     }
   }
 
-  /// Falls back to a fully-qualified regional tag when the device doesn't report one matching
-  /// [languageCode] via [SpeechRecognitionService.resolveLocaleId] — passing a bare language code
-  /// like `'ar'` (no region) to the native recognizer can silently fail to configure it correctly
-  /// on some platforms, which looks identical to "the recognizer heard nothing" from the outside.
-  String _fallbackLocaleId(String languageCode) => switch (languageCode) {
-        'ar' => 'ar-SA',
-        'en' => 'en-US',
-        _ => languageCode,
-      };
-
-  Future<String> _startRecognizer() async {
-    final languageCode = _ref.read(voiceRecognitionLanguageProvider);
-    final localeId = await _speech.resolveLocaleId(languageCode) ?? _fallbackLocaleId(languageCode);
-    await _speech.start(localeId: localeId);
-    return localeId;
-  }
-
-  /// Pauses BOTH the recognizer and the raw audio recording in place, without finishing or
-  /// analyzing anything — resuming continues the SAME recording (see
-  /// LocalAudioRecordingService.pause's doc comment) and the same sentence.
   Future<void> pauseRecording() async {
     if (state.status != VoiceStatus.listening && state.status != VoiceStatus.bluetoothListeningCommand) return;
     final startedAt = state.recordingStartedAt;
     final elapsedThisRun = startedAt == null ? Duration.zero : DateTime.now().difference(startedAt);
-    await _speech.stop();
-    if (_rawRecordingEnabled) {
-      try {
-        await _recorder.pause();
-      } catch (e, st) {
-        appLogger.e('Voice raw audio recorder failed to pause', error: e, stackTrace: st);
-      }
-    }
+    await _engine.pause();
     state = state.copyWith(
       status: VoiceStatus.paused,
       committedTranscript: state.transcript,
@@ -352,148 +289,343 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   Future<void> resumeRecording() async {
     if (state.status != VoiceStatus.paused) return;
-    if (_rawRecordingEnabled) {
-      try {
-        await _recorder.resume();
-      } catch (e, st) {
-        appLogger.e('Voice raw audio recorder failed to resume', error: e, stackTrace: st);
-      }
-    }
+    await _engine.resume();
     state = state.copyWith(
       status: state.bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
       recordingStartedAt: DateTime.now(),
       clearError: true,
     );
-    await _startRecognizer();
   }
 
-  void _onSpeechResult(SpeechRecognitionResult result) {
-    final text = result.recognizedWords;
+  // ───────────────────────── Recognition result routing ─────────────────────────
+
+  void _onPartial(String text) {
+    if (state.status == VoiceStatus.listening ||
+        state.status == VoiceStatus.bluetoothListeningCommand ||
+        state.status == VoiceStatus.confirmationListening) {
+      state = state.copyWith(transcript: text);
+      return;
+    }
     if (state.status == VoiceStatus.bluetoothWaitingWakeWord) {
       if (text.replaceAll(' ', '').contains(wakeWord)) {
         state = state.copyWith(status: VoiceStatus.bluetoothWakeWordDetected, transcript: text);
-        _speech.stop().whenComplete(() => _beginListening(bluetoothMode: true));
+        unawaited(_engine.stop());
+        unawaited(_beginListening(bluetoothMode: true));
       }
-      return;
     }
+  }
+
+  /// The instant the person stops talking and the engine settles on a final transcript, this
+  /// fires and moves the dialogue forward immediately — no button, no delay beyond the analysis
+  /// itself, matching "بمجرد أن ينتهي المستخدم من التحدث يرد مباشرة".
+  void _onFinal(String text) {
     if (state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand) {
-      final combined = state.committedTranscript.isEmpty ? text : '${state.committedTranscript} $text'.trim();
-      state = state.copyWith(transcript: combined);
-      // The recognizer itself has decided the utterance is complete (silence timeout via
-      // `pauseFor`, or the max `listenFor` duration reached) — move straight into understanding
-      // it, with NO manual step required. This is the automatic "الاستماع ← انتهاء الكلام ←
-      // الحصول على النص" transition the spec calls for; previously `finalResult` was received and
-      // silently ignored here, so nothing ever happened until the user also tapped the mic
-      // circle to stop manually — a real gap, not a stylistic choice.
-      if (result.finalResult) unawaited(_finishListening());
+      state = state.copyWith(transcript: text);
+      if (state.clarifyingField != null) {
+        unawaited(_finishClarificationListening());
+      } else {
+        unawaited(_finishListening());
+      }
       return;
     }
     if (state.status == VoiceStatus.confirmationListening) {
       state = state.copyWith(transcript: text);
-      if (result.finalResult) _handleVoiceConfirmation(text);
+      unawaited(_engine.stop());
+      unawaited(_handleVoiceConfirmation(text));
     }
   }
 
-  Future<void> startVoiceConfirmation() async {
-    if (state.status != VoiceStatus.awaitingConfirmation) return;
-    await _voiceOutput.stop();
-    state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true);
-    final ready = await _speech.initialize(onError: _onSpeechError);
-    if (!ready) {
-      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
-      return;
-    }
-    await _startRecognizer();
-  }
-
-  void _handleVoiceConfirmation(String spoken) {
-    final normalized = spoken.toLowerCase().replaceAll('أ', 'ا');
-    if (['نعم', 'ايوه', 'ايوا', 'صحيح', 'احفظ', 'yes', 'correct', 'save'].any(normalized.contains)) {
-      unawaited(confirm());
-      return;
-    }
-    if (['تعديل', 'اعد', 'غير', 'لا', 'edit', 'again', 'no'].any(normalized.contains)) {
-      unawaited(retry());
-      return;
-    }
-    state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'confirmation');
-  }
-
-  void _onSpeechStatus(String status) {
-    if (status == 'done' && (state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand)) {
-      unawaited(_finishListening());
-      return;
-    }
-    if (state.status != VoiceStatus.bluetoothWaitingWakeWord || status != 'done') return;
-    _ref.read(bluetoothAudioRouteServiceProvider).isHeadsetConnected().then((connected) {
-      if (!connected || state.status != VoiceStatus.bluetoothWaitingWakeWord) return;
-      _startRecognizer().catchError((_) => _onSpeechError('connection'));
-    });
-  }
-
-  /// Manual escape hatch — ends listening early even if the recognizer hasn't reported
-  /// `finalResult` yet (e.g. `pauseFor`'s silence window hasn't elapsed). The automatic path via
-  /// `_onSpeechResult`'s `finalResult` handling is what fires in the ordinary case; this exists
-  /// for whenever the user wants to stop sooner, or as a fallback if a platform never reports a
-  /// final result for some reason.
   Future<void> stopAndAnalyze() async {
     if (state.status != VoiceStatus.listening && state.status != VoiceStatus.bluetoothListeningCommand) return;
-    await _finishListening();
+    if (state.clarifyingField != null) {
+      await _finishClarificationListening();
+    } else {
+      await _finishListening();
+    }
   }
 
+  /// Fresh top-level command finished — parse EVERYTHING from scratch. If nothing was heard at
+  /// all, this now asks again OUT LOUD and starts listening again automatically instead of
+  /// stopping and waiting for a manual tap.
   Future<void> _finishListening() async {
     if (state.status != VoiceStatus.listening && state.status != VoiceStatus.bluetoothListeningCommand) return;
     final current = state;
     state = state.copyWith(status: VoiceStatus.processing);
-    await _speech.stop();
-    String? path;
-    if (_rawRecordingEnabled) {
-      try {
-        path = await _recorder.stop();
-      } catch (e, st) {
-        appLogger.e('Voice raw audio recorder failed to stop', error: e, stackTrace: st);
-      }
-    }
-    if (current.transcript.trim().isEmpty) {
-      // Nothing was ever recognized — a fundamentally different situation from "something was
-      // said but a field couldn't be understood" (see VoiceCommandSheet's clarification card,
-      // which now shows this distinctly, never claims an amount was misheard when nothing was
-      // heard at all, and surfaces the diagnostic counter below).
-      final languageCode = _ref.read(voiceRecognitionLanguageProvider);
+
+    final (engineTranscript, recordingPath) = await _engine.stop();
+    final effectiveTranscript = current.transcript.trim().isNotEmpty ? current.transcript : engineTranscript;
+
+    if (effectiveTranscript.trim().isEmpty) {
       state = state.copyWith(
         status: VoiceStatus.needsClarification,
         errorCode: 'noSpeech',
-        recordingPath: path ?? current.recordingPath,
-        diagnosticRawCallbackCount: _speech.totalResultCallbacks,
+        recordingPath: recordingPath ?? current.recordingPath,
       );
-      _speak(_clarificationSpeech('noSpeech', languageCode));
+      await _speak(_clarificationSpeech('noSpeech', _ref.read(voiceRecognitionLanguageProvider)));
+      state = state.copyWith(
+        status: current.bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
+        transcript: '',
+        clearError: true,
+      );
+      try {
+        await _engine.start();
+      } catch (_) {
+        state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+      }
       return;
     }
-    final draft = _ref.read(voiceCommandParserProvider).parse(current.transcript);
-    final account = _matchAccount(draft.accountName, current.transcript);
-    state = state.copyWith(draft: draft, account: account, recordingPath: path ?? current.recordingPath);
-    _advanceAfterParsing(draft: draft, account: account);
+
+    final draft = _ref.read(voiceCommandParserProvider).parse(effectiveTranscript);
+    final account = _matchAccount(draft.accountName, effectiveTranscript);
+    state = state.copyWith(
+      draft: draft,
+      account: account,
+      clearAccount: account == null,
+      recordingPath: recordingPath ?? current.recordingPath,
+    );
+    await _advanceAfterParsing(draft: draft, account: account);
   }
 
-  /// Amount → account → direction, in that order: an account can't be matched without at least
-  /// trying, and asking "له أم عليه؟" before we even know WHO the money is for/from would be a
-  /// confusing question to lead with. Each branch also speaks the matching question/summary
-  /// aloud (see the phrase-builder functions above).
-  void _advanceAfterParsing({required VoiceCommandDraft draft, required Account? account}) {
-    final languageCode = _ref.read(voiceRecognitionLanguageProvider);
-    if (draft.amount == null) {
-      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'amount');
-      _speak(_clarificationSpeech('amount', languageCode));
-    } else if (account == null) {
-      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'account');
-      _speak(_clarificationSpeech('account', languageCode));
-    } else if (draft.direction == null) {
-      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'direction');
-      _speak(_clarificationSpeech('direction', languageCode));
-    } else {
-      state = state.copyWith(status: VoiceStatus.awaitingConfirmation);
-      _speak(_confirmationSpeech(draft, account, languageCode));
+  /// A follow-up answer to ONE specific clarification question finished — merge just that field
+  /// into the EXISTING draft (never re-parse the whole thing from scratch, which would throw
+  /// away every other field already understood correctly).
+  Future<void> _finishClarificationListening() async {
+    final current = state;
+    final field = current.clarifyingField;
+    final draft = current.draft;
+    state = state.copyWith(status: VoiceStatus.processing);
+    final (engineTranscript, recordingPath) = await _engine.stop();
+    final effective = current.transcript.trim().isNotEmpty ? current.transcript : engineTranscript;
+
+    if (draft == null || field == null) {
+      state = state.copyWith(status: VoiceStatus.idle);
+      return;
     }
+
+    if (effective.trim().isEmpty) {
+      state = state.copyWith(recordingPath: recordingPath ?? current.recordingPath);
+      await _speak(_clarificationSpeech('noSpeech', _ref.read(voiceRecognitionLanguageProvider)));
+      state = state.copyWith(
+        status: current.bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
+        transcript: '',
+        clearError: true,
+      );
+      try {
+        await _engine.start();
+      } catch (_) {
+        state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+      }
+      return;
+    }
+
+    var updatedDraft = draft;
+    var updatedAccount = current.account;
+    switch (field) {
+      case 'amount':
+        final reparsed = _ref.read(voiceCommandParserProvider).parse(effective);
+        if (reparsed.amount != null) updatedDraft = draft.copyWith(amount: reparsed.amount);
+      case 'account':
+        final matched = _matchAccount(effective, effective);
+        if (matched != null) updatedAccount = matched;
+      case 'direction':
+        final lower = effective.toLowerCase();
+        if (['عليه', 'على', 'مدين', 'debit'].any(lower.contains)) {
+          updatedDraft = draft.copyWith(direction: AccountDirection.debit);
+        } else if (['له', 'دائن', 'credit'].any(lower.contains)) {
+          updatedDraft = draft.copyWith(direction: AccountDirection.credit);
+        }
+    }
+
+    state = state.copyWith(
+      draft: updatedDraft,
+      account: updatedAccount,
+      clearAccount: updatedAccount == null,
+      recordingPath: recordingPath ?? current.recordingPath,
+      clearClarifyingField: true,
+    );
+    await _advanceAfterParsing(draft: updatedDraft, account: updatedAccount);
+  }
+
+  /// Amount → account → direction, in that order — an account can't be matched without at least
+  /// trying, and asking "له أم عليه؟" before we even know WHO the money is for/from would be a
+  /// confusing question to lead with. Every branch now SPEAKS its question (or the confirmation
+  /// summary) and then immediately starts listening again on its own — the person never has to
+  /// touch anything to move the dialogue forward.
+  Future<void> _advanceAfterParsing({required VoiceCommandDraft draft, required Account? account}) async {
+    if (draft.amount == null) {
+      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'amount', clarifyingField: 'amount');
+      await _speakThenListenForClarification('amount');
+    } else if (account == null) {
+      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'account', clarifyingField: 'account');
+      await _speakThenListenForClarification('account');
+    } else if (draft.direction == null) {
+      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'direction', clarifyingField: 'direction');
+      await _speakThenListenForClarification('direction');
+    } else {
+      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, clearError: true, clearClarifyingField: true);
+      await _speakThenListenForConfirmation();
+    }
+  }
+
+  Future<void> _speakThenListenForClarification(String field) async {
+    await _speak(_clarificationSpeech(field, _ref.read(voiceRecognitionLanguageProvider)));
+    state = state.copyWith(
+      status: state.bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
+      clearError: true,
+      transcript: '',
+      recordingStartedAt: DateTime.now(),
+    );
+    try {
+      await _engine.start();
+    } catch (_) {
+      state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+    }
+  }
+
+  Future<void> _speakThenListenForConfirmation({bool editApplied = false}) async {
+    final draft = state.draft;
+    final account = state.account;
+    if (draft == null || account == null || draft.amount == null || draft.direction == null) return;
+    final languageCode = _ref.read(voiceRecognitionLanguageProvider);
+    await _speak(_confirmationSpeech(draft, account, languageCode, editApplied: editApplied));
+    state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
+    try {
+      await _engine.start();
+    } catch (_) {
+      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
+    }
+  }
+
+  /// Manual mic-tap fallback (see VoiceCommandSheet) — kept working even though the confirmation
+  /// question is now asked and listened for automatically; this covers the rare case where the
+  /// automatic listen failed to start (e.g. a transient permission hiccup) and the person wants
+  /// to retry it themselves without restarting the whole command.
+  Future<void> startVoiceConfirmation() async {
+    if (state.status != VoiceStatus.awaitingConfirmation) return;
+    await _speakThenListenForConfirmation();
+  }
+
+  // ───────────────────────── Confirmation: yes / cancel / edit ─────────────────────────
+
+  /// Handles whatever the person says in reply to the confirmation question. Tries, IN ORDER:
+  /// (1) a fully-specified edit ("عدّل المبلغ إلى 3500") — applied directly, no extra round trip;
+  /// (2) a plain yes → save; (3) a plain no/cancel → abort; (4) a bare "عدّل"/"تعديل" with no
+  /// specifics → ask what to change, then listen again; (5) anything else → say "لم أفهم" and
+  /// listen again. This ordering is what lets both of the scenario's edit paths work: the
+  /// one-step "عدل المبلغ الى 3500" AND the two-step "تعديل" → "من فضلك قل تعديلك" → "المبلغ 3500".
+  Future<void> _handleVoiceConfirmation(String spoken) async {
+    final draft = state.draft;
+    if (draft == null) return;
+
+    final edit = _tryParseEdit(spoken, draft);
+    if (edit != null && !edit.isEmpty) {
+      await _applyEditAndReconfirm(edit);
+      return;
+    }
+
+    final normalized = spoken.toLowerCase().replaceAll('أ', 'ا');
+    const yesWords = {'نعم', 'ايوه', 'ايوا', 'صحيح', 'احفظ', 'موافق', 'تمام', 'yes', 'correct', 'save', 'ok'};
+    const noWords = {'الغ', 'إلغاء', 'الغاء', 'لا', 'cancel', 'no'};
+    const editWords = {'تعديل', 'عدل', 'غير', 'edit', 'change'};
+
+    if (yesWords.any(normalized.contains)) {
+      await confirm();
+      return;
+    }
+    if (noWords.any(normalized.contains)) {
+      await _cancelWithSpeech();
+      return;
+    }
+    if (editWords.any(normalized.contains)) {
+      await _askWhatToEditThenListen();
+      return;
+    }
+    await _confirmationNotUnderstood();
+  }
+
+  Future<void> _applyEditAndReconfirm(_VoiceEditResult edit) async {
+    final draft = state.draft;
+    if (draft == null) return;
+    var updatedDraft = edit.draft ?? draft;
+    var updatedAccount = state.account;
+    if (edit.accountNameHint != null) {
+      final matched = _matchAccount(edit.accountNameHint, edit.accountNameHint!);
+      if (matched != null) updatedAccount = matched;
+    }
+    state = state.copyWith(draft: updatedDraft, account: updatedAccount, clearError: true);
+    await _speakThenListenForConfirmation(editApplied: true);
+  }
+
+  Future<void> _askWhatToEditThenListen() async {
+    await _speak(_askEditSpeech(_ref.read(voiceRecognitionLanguageProvider)));
+    state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
+    try {
+      await _engine.start();
+    } catch (_) {
+      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
+    }
+  }
+
+  Future<void> _confirmationNotUnderstood() async {
+    state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'confirmation');
+    await _speak(_notUnderstoodSpeech(_ref.read(voiceRecognitionLanguageProvider)));
+    state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
+    try {
+      await _engine.start();
+    } catch (_) {
+      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
+    }
+  }
+
+  Future<void> _cancelWithSpeech() async {
+    await _speak(_cancelledSpeech(_ref.read(voiceRecognitionLanguageProvider)));
+    state = const VoiceState();
+  }
+
+  /// Best-effort natural-language edit parser for the confirmation step. Deliberately
+  /// pattern/keyword based rather than a full NLU model — it recognizes the field being
+  /// mentioned (المبلغ / التفاصيل / الحساب / النوع) plus a new value near it. Returns `null` (not
+  /// an empty result) when [text] doesn't look like an edit at all, so the caller falls through
+  /// to yes/no/cancel handling instead of misfiring on an unrelated sentence.
+  _VoiceEditResult? _tryParseEdit(String text, VoiceCommandDraft draft) {
+    final normalized = text.trim();
+    if (normalized.isEmpty) return null;
+    final lower = normalized.toLowerCase();
+
+    if (normalized.contains('المبلغ') || normalized.contains('القيمة')) {
+      final amountMatch = RegExp(r'(\d+(?:[.,]\d+)?)').firstMatch(normalized);
+      if (amountMatch != null) {
+        final newAmount = double.tryParse(amountMatch.group(1)!.replaceAll(',', '.'));
+        if (newAmount != null) return _VoiceEditResult(draft: draft.copyWith(amount: newAmount));
+      }
+    }
+
+    final detailsMatch = RegExp(r'التفاصيل\s+(?:الى|إلى)?\s*(.+)').firstMatch(normalized);
+    if (detailsMatch != null) {
+      final newDetails = detailsMatch.group(1)?.trim();
+      if (newDetails != null && newDetails.isNotEmpty) {
+        return _VoiceEditResult(draft: draft.copyWith(details: newDetails));
+      }
+    }
+
+    final mentionsDirectionContext =
+        normalized.contains('النوع') || normalized.contains('اجعل') || normalized.contains('خلي') || normalized.contains('خله');
+    if (mentionsDirectionContext || lower.contains('debit') || lower.contains('credit')) {
+      if (normalized.contains('عليه') || lower.contains('debit')) {
+        return _VoiceEditResult(draft: draft.copyWith(direction: AccountDirection.debit));
+      }
+      if (normalized.contains('له') || lower.contains('credit')) {
+        return _VoiceEditResult(draft: draft.copyWith(direction: AccountDirection.credit));
+      }
+    }
+
+    final accountMatch = RegExp(r'الحساب\s+(?:الى|إلى)?\s*(.+)').firstMatch(normalized);
+    if (accountMatch != null) {
+      final name = accountMatch.group(1)?.trim();
+      if (name != null && name.isNotEmpty) return _VoiceEditResult(accountNameHint: name);
+    }
+
+    return null;
   }
 
   Account? _matchAccount(String? parsedName, String transcript) {
@@ -505,22 +637,27 @@ class VoiceController extends StateNotifier<VoiceState> {
     return null;
   }
 
-  /// After picking an account manually, the direction may STILL be unresolved (e.g. "أضف 3200
-  /// ريال دجاجة" has neither an account nor a له/عليه marker) — re-run the same advancement check
-  /// instead of assuming confirmation is next.
+  // ───────────────────────── Manual tap fallbacks (kept working) ─────────────────────────
+
+  /// Manual chip-tap fallback (see VoiceCommandSheet's _AccountChoices) — the voice-driven
+  /// clarification loop is the primary path now, but tapping still works if recognition fails
+  /// repeatedly for a particular name.
   void selectAccount(Account account) {
     final draft = state.draft;
     if (draft == null) return;
-    state = state.copyWith(account: account, clearError: true);
-    _advanceAfterParsing(draft: draft, account: account);
+    state = state.copyWith(account: account, clearError: true, clearClarifyingField: true);
+    unawaited(_advanceAfterParsing(draft: draft, account: account));
   }
 
   void selectDirection(AccountDirection direction) {
     final draft = state.draft;
     if (draft == null) return;
     final updated = draft.copyWith(direction: direction);
-    state = state.copyWith(draft: updated, status: VoiceStatus.awaitingConfirmation, clearError: true);
+    state = state.copyWith(draft: updated, clearError: true, clearClarifyingField: true);
+    unawaited(_advanceAfterParsing(draft: updated, account: state.account));
   }
+
+  // ───────────────────────────────── Saving ─────────────────────────────────
 
   Future<void> confirm() async {
     final draft = state.draft;
@@ -543,17 +680,13 @@ class VoiceController extends StateNotifier<VoiceState> {
           date: draft.date,
           details: draft.details,
           voiceRecording: recording,
-        ),
-    );
+        ));
+    // Mic stops here — state becomes `success` and nothing auto-starts listening again, matching
+    // "ثم يتوقف الميكروفون عن التشغيل" from the spec. [startAnother] is the only way back in.
     state = state.copyWith(status: VoiceStatus.success);
-    _speak(_successSpeech(_ref.read(voiceRecognitionLanguageProvider)));
+    await _speak(_successSpeech(_ref.read(voiceRecognitionLanguageProvider)));
   }
 
-  /// Short-press only: leaves the "saved" screen to start a brand new recording, WITHOUT the
-  /// Bluetooth flow's "waiting for the wake word" framing that would be wrong here — see
-  /// VoiceCommandSheet's success-state branch. Bluetooth mode's own success screen instead keeps
-  /// listening for the wake word again (genuinely correct for hands-free use), unaffected by
-  /// this method.
   void startAnother() {
     if (state.status != VoiceStatus.success || state.bluetoothMode) return;
     state = const VoiceState(bluetoothMode: false);
@@ -571,68 +704,16 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   Future<void> cancel() async {
     _bluetoothMonitor?.cancel();
-    await _speech.cancel();
-    await _voiceOutput.stop();
-    if (_rawRecordingEnabled) {
-      try {
-        await _recorder.cancel();
-      } catch (e, st) {
-        appLogger.e('Voice raw audio recorder failed to cancel', error: e, stackTrace: st);
-      }
-    }
+    await _engine.cancel();
     state = const VoiceState();
-  }
-
-  /// Classifies the recognizer's error string and decides whether it's even worth surfacing.
-  ///
-  /// `speech_to_text` reports errors using a small, documented set of codes (error_no_match,
-  /// error_speech_timeout, error_busy, error_network[_timeout], error_insufficient_permissions,
-  /// error_audio, error_server, error_client...). Previously EVERY one of these — including the
-  /// completely normal "I heard a brief silence" (`error_no_match`) that happens constantly
-  /// during natural speech — was mapped straight to a generic "microphone/permission" message and
-  /// tore down the whole listening session. That combination was the main reason real speech was
-  /// never actually understood: the very first pause in a sentence ended the session before the
-  /// sentence finished.
-  void _onSpeechError(String errorMsg) {
-    // Internal sentinel from `_onSpeechStatus`'s wake-word restart path — not a real
-    // speech_to_text error code, so it skips the message-based classification entirely.
-    if (errorMsg == 'connection') {
-      state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'connection');
-      return;
-    }
-    final code = errorMsg.toLowerCase();
-    final isTransient = code.contains('no_match') || code.contains('speech_timeout') || code.contains('busy');
-    final activelyListening = state.status == VoiceStatus.listening ||
-        state.status == VoiceStatus.bluetoothListeningCommand ||
-        state.status == VoiceStatus.bluetoothWaitingWakeWord ||
-        state.status == VoiceStatus.confirmationListening;
-    // A transient hiccup while a session is healthy and ongoing must not kill it — with
-    // cancelOnError now false (see SpeechRecognitionService), the native recognizer itself keeps
-    // listening through these; the app must not override that by jumping to an error screen on
-    // every single one.
-    if (isTransient && activelyListening) return;
-
-    final errorCode = code.contains('permission')
-        ? 'permission'
-        : code.contains('network')
-            ? 'network'
-            : 'recognition';
-    appLogger.w('Speech recognition error: $errorMsg (classified as $errorCode)');
-    if (state.bluetoothMode) {
-      state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: errorCode);
-    } else {
-      state = state.copyWith(status: VoiceStatus.error, errorCode: errorCode);
-    }
   }
 
   @override
   void dispose() {
     _bluetoothMonitor?.cancel();
-    _resultsSubscription.cancel();
-    _statusSubscription.cancel();
-    _speech.cancel();
-    _voiceOutput.stop();
-    if (_rawRecordingEnabled) _recorder.cancel();
+    _partialSubscription.cancel();
+    _finalSubscription.cancel();
+    unawaited(_engine.cancel());
     super.dispose();
   }
 }

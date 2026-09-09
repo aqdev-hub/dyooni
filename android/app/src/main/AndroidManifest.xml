@@ -1,24 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <!-- NEW this batch — see core/utils/contact_picker.dart. Even the "external pick" flow needs
-         this actually GRANTED on some devices/plugin versions to read back the picked contact's
-         name/phone; without it, selecting a contact was reproducing a hard native crash instead
-         of a catchable error. -->
-    <uses-permission android:name="android.permission.READ_CONTACTS" />
-     <!-- ===== النسخ الاحتياطي المحلي — بداية الإضافة =====
+     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- ===== النسخ الاحتياطي المحلي — بداية الإضافة =====
          مطلوب فقط لكتابة ملف .dyoonibackup مباشرة داخل Download/ديوني بدل نافذة اختيار مسار:
          - maxSdkVersion="28": النظام يتجاهل هذا الإذن تلقائيًا على أندرويد 10+ (لا حاجة لطلبه هناك).
          - requestLegacyExternalStorage أدناه على <application>: يُعيد سلوك التخزين القديم
            (كتابة مباشرة لأي مسار عام) لكن فقط على أندرويد 10 (API 29) بالتحديد — أندرويد 11+
            يتجاهل هذا الإعلان كليًا بحكم سياسة Scoped Storage من جوجل، وعندها يعتمد التطبيق على
-           fallback الكتابة داخل مساحته الخاصة (راجع local_backup_provider.dart).
-         تصحيح: كان هذا السطر سقط بالخطأ من التعديل السابق على هذا الملف — أعدته هنا. -->
+           fallback الكتابة داخل مساحته الخاصة (راجع local_backup_provider.dart). -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
     <!-- ===== النسخ الاحتياطي المحلي — نهاية الإضافة ===== -->
-    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="dyooni"
         android:name="${applicationName}"
@@ -28,13 +23,22 @@
         <!-- Camera-crash mitigation notes: `largeHeap` above raises this app's own memory
              ceiling, which reduces (but never fully guarantees against) Android killing this
              app's background process to free memory while the native camera app is in the
-             foreground — see core/... image_source_dialog.dart's picker call, which now also
-             caps the CAPTURED photo's resolution (maxWidth/maxHeight), addressing the actual
-             memory spike more directly than largeHeap alone did. A complete, unconditional fix
-             would still require wiring up Flutter's state-restoration APIs (RestorationMixin /
-             restorationScopeId) so an in-progress form can survive a process restart even on a
-             severely memory-constrained device — a larger, separate change to scope explicitly
-             if the two mitigations together aren't enough. -->
+             foreground — see view/screens/accounts/add_account_screen.dart's/
+             add_transaction_screen.dart's `_chooseImage()`, which now also saves a small
+             SharedPreferences draft of the form's typed fields right before opening the camera
+             (see core/utils/form_draft_storage.dart), so a process kill can no longer silently
+             erase what the person already typed — it's waiting for them next time they reopen
+             the same form. image_source_dialog.dart's picker call ALSO caps the captured photo's
+             resolution (maxWidth/maxHeight), addressing the actual memory spike more directly
+             than largeHeap alone.
+             A complete, unconditional fix — one where the exact SAME dialog reopens automatically
+             after a kill — would still require converting these `showDialog`-based forms into
+             genuine restorable GoRouter routes wired through Flutter's RestorationMixin, which is
+             a materially larger, separate architectural change than the draft-safety-net above;
+             left out of this batch on purpose rather than half-implemented. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableStateRestoration"
+            android:value="true" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -107,16 +111,5 @@
              (Android 11+ يتطلب هذا التصريح صراحة بسبب Package Visibility) -->
         <package android:name="com.facebook.katana" />
         <package android:name="com.facebook.orca" />
-        <!-- NEW this batch — same Package Visibility requirement (Android 11+), but for the
-             contact-picker intent used by core/utils/contact_picker.dart. Without this, launching
-             the system contact picker can silently fail or crash instead of just returning null. -->
-        <intent>
-            <action android:name="android.intent.action.PICK" />
-            <data android:mimeType="vnd.android.cursor.dir/contact" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.PICK" />
-            <data android:mimeType="vnd.android.cursor.dir/phone_v2" />
-        </intent>
     </queries>
 </manifest>

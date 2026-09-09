@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../core/utils/app_exception.dart';
 import '../../core/utils/backup_crypto.dart';
+import '../../core/utils/media_scanner.dart';
 import '../../data/models/backup_snapshot.dart';
 import '../../data/repositories/backup/backup_repository.dart';
 import '../backup/backup_provider.dart';
@@ -52,10 +53,10 @@ class LocalBackupController extends AsyncNotifier<LocalBackupInfo> {
     );
   }
 
-  /// Encrypts a fresh snapshot with [password] and writes it as a `.dyoonibackup` file — tries
-  /// the device's PUBLIC Downloads/ديوني folder first (so the person can find it without hunting
-  /// through the app's own private storage), and only falls back to the app's own documents
-  /// folder if that fails.
+  /// Writes a timestamped JSON snapshot into the app's own documents directory and returns its
+  /// path — the CALLER (LocalBackupScreen) is responsible for handing that path to the OS share
+  /// sheet, since "where the file ends up" (Drive, WhatsApp, Files app...) is a device/UI
+  /// concern, not something this controller or the data layer should assume.
   ///
   /// KNOWN, STATED LIMITATION: writing directly to the shared Downloads folder from app code
   /// (no picker, no share sheet) is NOT guaranteed on every Android version — Android 10 (API 29)
@@ -77,6 +78,11 @@ class LocalBackupController extends AsyncNotifier<LocalBackupInfo> {
           '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
       final file = File('${dir.path}/dyooni_backup_$stamp.dyoonibackup');
       await file.writeAsString(envelope);
+      // Makes the freshly-written file immediately visible to SAF-based pickers (the restore
+      // flow's file_picker, other apps' file browsers) — see MediaScanner's doc comment for why
+      // a raw `dart:io` write alone isn't enough on Android. Best-effort: a scan failure never
+      // fails the backup itself, since the file is safely on disk either way.
+      await MediaScanner.scanFile(file.path);
 
       final prefs = ref.read(sharedPreferencesProvider);
       await prefs.setString(_lastBackupAtKey, now.toIso8601String());

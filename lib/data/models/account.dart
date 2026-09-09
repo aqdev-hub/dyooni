@@ -19,6 +19,7 @@ class Account {
     this.details,
     this.phone,
     this.updatedAt,
+    this.ceiling,
   });
 
   final String id;
@@ -29,6 +30,12 @@ class Account {
   final String? phone;
   final DateTime? updatedAt;
 
+  /// سقف/حد الحساب الائتماني — اختياري، يُدخَل فقط عندما تكون
+  /// GeneralSettings.showAccountCeilingOnAdd مفعّلة (انظر
+  /// logic/settings/general_settings_provider.dart و view/screens/accounts/add_account_screen.dart).
+  /// لا يوجد بعد أي منطق تنبيه/تجاوز حد فعلي مبني على هذه القيمة — حقل مُخزَّن فقط في هذه الدفعة.
+  final double? ceiling;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -37,6 +44,7 @@ class Account {
         'details': details,
         'phone': phone,
         'updatedAt': updatedAt?.toIso8601String(),
+        'ceiling': ceiling,
       };
 
   factory Account.fromJson(Map<String, dynamic> json) => Account(
@@ -51,5 +59,6 @@ class Account {
         details: json['details'] as String?,
         phone: json['phone'] as String?,
         updatedAt: json['updatedAt'] is String ? DateTime.tryParse(json['updatedAt'] as String) : null,
+        ceiling: (json['ceiling'] as num?)?.toDouble(),
       );
 }

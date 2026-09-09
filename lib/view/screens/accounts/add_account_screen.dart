@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,10 +12,12 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/dyooni_picker_theme.dart';
 import '../../../core/utils/contact_picker.dart';
+import '../../../core/utils/form_draft_storage.dart';
 import '../../../core/utils/image_rotate.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/shared/amount_in_words.dart';
 import '../../widgets/shared/app_snackbar.dart';
@@ -64,6 +68,12 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   String? _nameError;
   String? _amountError;
 
+  /// Only meaningful while CREATING (never editing) — see the doc comment on
+  /// FormDraftStorage for the full story on why this exists at all.
+  static const _draftKey = 'draft_add_account';
+
+  FormDraftStorage get _draft => FormDraftStorage(ref.read(sharedPreferencesProvider), _draftKey);
+
   @override
   void initState() {
     super.initState();
@@ -75,7 +85,54 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       _date = existing.createdDate;
       _detailsController.text = existing.details ?? '';
       _phoneController.text = existing.phone ?? '';
+    } else {
+      _restoreDraftIfAny();
     }
+  }
+
+  void _restoreDraftIfAny() {
+    final saved = _draft.read();
+    if (saved == null) return;
+    _nameController.text = saved['name'] as String? ?? '';
+    _amountController.text = saved['amount'] as String? ?? '';
+    _detailsController.text = saved['details'] as String? ?? '';
+    _phoneController.text = saved['phone'] as String? ?? '';
+    _currencyCode = saved['currencyCode'] as String? ?? currencies.first.code;
+    final savedDate = DateTime.tryParse(saved['date'] as String? ?? '');
+    if (savedDate != null) _date = savedDate;
+    final savedDirection = saved['direction'] as String?;
+    if (savedDirection != null) _direction = AccountDirection.values.byName(savedDirection);
+    final savedCategory = saved['category'] as String?;
+    if (savedCategory != null) _category = AccountCategory.values.byName(savedCategory);
+    _attachmentPath = saved['attachmentPath'] as String?;
+  }
+
+  /// Called right before handing off to the camera/gallery — the single riskiest moment for a
+  /// background process kill (see AndroidManifest.xml's "Camera-crash mitigation notes"). A
+  /// no-op while editing an existing account, matching FormDraftStorage's stated scope.
+  Future<void> _saveDraft() async {
+    if (widget.isEditing) return;
+    await _draft.save({
+      'name': _nameController.text,
+      'amount': _amountController.text,
+      'details': _detailsController.text,
+      'phone': _phoneController.text,
+      'currencyCode': _currencyCode,
+      'date': _date.toIso8601String(),
+      'direction': _direction.name,
+      'category': _category.name,
+      'attachmentPath': _attachmentPath,
+    });
+  }
+
+  Future<void> _clearDraft() async {
+    if (widget.isEditing) return;
+    await _draft.clear();
+  }
+
+  void _close() {
+    unawaited(_clearDraft()); // explicit close = discard, not "save for later"
+    context.pop();
   }
 
   @override
@@ -111,6 +168,10 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   }
 
   Future<void> _chooseImage() async {
+    // Safety net for the exact scenario reported: opening the camera can cause Android to kill
+    // this app's process to free memory (see AndroidManifest.xml) — saving the draft NOW, right
+    // before that risky handoff, is what lets the person's typed data survive it.
+    await _saveDraft();
     final image = await showImageSourceDialog(context);
     if (image != null && mounted) setState(() => _attachmentPath = image.path);
   }
@@ -255,6 +316,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     try {
       await ref.read(accountsProvider.notifier).addAccount(account);
       await ref.read(transactionsProvider.notifier).addTransaction(firstTransaction);
+      await _clearDraft(); // the safety-net draft has served its purpose — never resurrect it
       if (!mounted) return;
       AppSnackBar.showSuccess(context, l10n.accountSavedSuccessMessage);
       context.pop();
@@ -281,7 +343,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
             children: [
               ModalHeaderBar(
                 title: widget.isEditing ? l10n.editAccountTitle : l10n.addAccountTitle,
-                onClose: () => context.pop(),
+                onClose: _close,
               ),
               const SizedBox(height: 8),
               ValidatedField(

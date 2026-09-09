@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../logic/settings/direction_labels.dart';
+import '../../../logic/settings/general_settings_provider.dart';
 
 /// Reused by Home (accounts totals, with the "add" button) and Account Details (one account's
 /// totals, with its own "add transaction" button) — same visual contract, different numbers and
 /// optional add-action feeding it.
+///
+/// Now a [ConsumerWidget] (was `StatelessWidget`) so it can read the person's customized
+/// credit/debit labels from general_settings_provider.dart — the same عبارات مخصّصة apply here
+/// as everywhere else in the app (see logic/settings/direction_labels.dart).
 ///
 /// The debit/credit pair inside the accent box is wrapped in `Expanded` — it used to be a plain
 /// `Row` with `spaceBetween` and no `Expanded`/`Flexible` anywhere, which is exactly what
 /// overflowed in English ("Credit"/"Debit" plus their numbers run wider than the Arabic
 /// equivalents on some screens, with nothing flexible to shrink). Wrapping each stat in
 /// `Expanded` fixes that without changing anything else about the layout or its public API.
-class BottomSummaryBar extends StatelessWidget {
+class BottomSummaryBar extends ConsumerWidget {
   const BottomSummaryBar({
     required this.totalCredit,
     required this.totalDebit,
@@ -28,12 +35,15 @@ class BottomSummaryBar extends StatelessWidget {
   final String? addTooltip;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
+    final settings = ref.watch(generalSettingsProvider).value;
+    final creditLabel = resolveCreditLabel(l10n, settings);
+    final debitLabel = resolveDebitLabel(l10n, settings);
     final net = totalCredit - totalDebit;
     final netIsDebit = net < 0;
-    final netLabel = netIsDebit ? l10n.directionDebit : l10n.directionCredit;
+    final netLabel = netIsDebit ? debitLabel : creditLabel;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -56,14 +66,14 @@ class BottomSummaryBar extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _Stat(
-                          label: l10n.directionDebit,
+                          label: debitLabel,
                           valueText: totalDebit.toStringAsFixed(0),
                           color: AppColors.debit,
                         ),
                       ),
                       Expanded(
                         child: _Stat(
-                          label: l10n.directionCredit,
+                          label: creditLabel,
                           valueText: totalCredit.toStringAsFixed(0),
                           color: AppColors.credit,
                           alignEnd: true,

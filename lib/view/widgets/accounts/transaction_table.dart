@@ -7,6 +7,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/transaction.dart';
+import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../shared/app_snackbar.dart';
 import '../shared/entity_actions_sheet.dart';
@@ -18,6 +19,8 @@ import '../voice/voice_recording_player.dart';
 ///   AccountDetailsScreen also watches to swap its header for the "N selected" toolbar.
 /// - While selection mode is active, each row shows a leading checkbox and taps toggle selection
 ///   instead of opening the editor.
+/// - The DATE column can be shown/hidden per general_settings_provider.dart's
+///   `showTimeInOperations` — the person's own choice under "الإعدادات العامة".
 class TransactionTable extends ConsumerWidget {
   const TransactionTable({
     required this.transactions,
@@ -52,6 +55,7 @@ class TransactionTable extends ConsumerWidget {
     final shell = context.shellColors;
     final selectionMode = ref.watch(transactionSelectionModeProvider);
     final selectedIds = ref.watch(selectedTransactionIdsProvider);
+    final showTime = ref.watch(generalSettingsProvider).value?.showTimeInOperations ?? true;
     final chronological = [...transactions]..sort((a, b) => a.date.compareTo(b.date));
     var runningBalance = 0.0;
     final rows = <(Transaction, double)>[];
@@ -101,7 +105,7 @@ class TransactionTable extends ConsumerWidget {
               child: Row(
                 children: [
                   if (selectionMode) const SizedBox(width: 28),
-                  _HeaderCell(l10n.dateLabel),
+                  if (showTime) _HeaderCell(l10n.dateLabel),
                   _HeaderCell(l10n.amountLabel),
                   _HeaderCell(l10n.detailsLabel),
                   _HeaderCell(l10n.reportBalanceHeader),
@@ -124,6 +128,7 @@ class TransactionTable extends ConsumerWidget {
                 runningBalance: row.$2,
                 selectionMode: selectionMode,
                 selected: selectedIds.contains(row.$1.id),
+                showTime: showTime,
                 onTap: () => handleTap(row.$1),
                 onLongPress: () => handleLongPress(row.$1),
               ),
@@ -149,6 +154,7 @@ class _DataRow extends StatelessWidget {
     required this.runningBalance,
     required this.selectionMode,
     required this.selected,
+    required this.showTime,
     required this.onTap,
     required this.onLongPress,
   });
@@ -156,6 +162,7 @@ class _DataRow extends StatelessWidget {
   final double runningBalance;
   final bool selectionMode;
   final bool selected;
+  final bool showTime;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
@@ -188,7 +195,7 @@ class _DataRow extends StatelessWidget {
                   color: selected ? shell.accent : shell.textSecondary,
                 ),
               ),
-            _TextCell(date, color: shell.textSecondary, fontSize: 10),
+            if (showTime) _TextCell(date, color: shell.textSecondary, fontSize: 10),
             _TintedCell(transaction.amount.toStringAsFixed(0), background: amountCell, foreground: amountColor),
             _DetailsCell(transaction: transaction, color: shell.textPrimary),
             _TintedCell(runningBalance.abs().toStringAsFixed(0), background: balanceCell, foreground: balanceColor),

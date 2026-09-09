@@ -9,6 +9,8 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/settings/direction_labels.dart';
+import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/voice/voice_provider.dart';
 import '../shared/direction_choice.dart';
 
@@ -85,6 +87,9 @@ class VoiceCommandSheet extends ConsumerWidget {
     final shell = context.shellColors;
     final state = ref.watch(voiceProvider);
     final controller = ref.read(voiceProvider.notifier);
+    final settings = ref.watch(generalSettingsProvider).value;
+    final creditLabel = resolveCreditLabel(l10n, settings);
+    final debitLabel = resolveDebitLabel(l10n, settings);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
@@ -113,9 +118,9 @@ class VoiceCommandSheet extends ConsumerWidget {
           ] else if (state.status == VoiceStatus.saving) ...[
             _WorkingIndicator(icon: Icons.cloud_upload_outlined, label: l10n.voiceSavingHint),
           ] else if (state.status == VoiceStatus.needsClarification) ...[
-            _ClarificationCard(state: state, controller: controller),
+            _ClarificationCard(state: state, controller: controller, creditLabel: creditLabel, debitLabel: debitLabel),
           ] else if (state.status == VoiceStatus.awaitingConfirmation || state.status == VoiceStatus.confirmationListening) ...[
-            _ConfirmationCard(state: state, controller: controller),
+            _ConfirmationCard(state: state, controller: controller, creditLabel: creditLabel, debitLabel: debitLabel),
           ] else if (state.status == VoiceStatus.success) ...[
             _SuccessCard(state: state, controller: controller),
           ] else if (state.status == VoiceStatus.error || state.status == VoiceStatus.bluetoothDisconnected) ...[
@@ -401,9 +406,11 @@ class _TranscriptCard extends StatelessWidget {
 /// Reference state 7 — a question-mark badge, the clarification question, and (for account/
 /// direction ambiguity) the actual choices to resolve it, all inside one bordered card.
 class _ClarificationCard extends StatelessWidget {
-  const _ClarificationCard({required this.state, required this.controller});
+  const _ClarificationCard({required this.state, required this.controller, required this.creditLabel, required this.debitLabel});
   final VoiceState state;
   final VoiceController controller;
+  final String creditLabel;
+  final String debitLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -443,7 +450,7 @@ class _ClarificationCard extends StatelessWidget {
           ],
           if (state.errorCode == 'direction') ...[
             const SizedBox(height: 10),
-            _DirectionChoices(onSelected: controller.selectDirection),
+            _DirectionChoices(onSelected: controller.selectDirection, creditLabel: creditLabel, debitLabel: debitLabel),
           ],
           const SizedBox(height: 12),
           OutlinedButton.icon(onPressed: controller.retry, icon: const Icon(Icons.refresh_rounded), label: Text(l10n.voiceRetry)),
@@ -467,20 +474,22 @@ class _AccountChoices extends ConsumerWidget {
 }
 
 /// Reuses the same ring-toggle used on Add Transaction/Add Account so this doesn't introduce a
-/// third visual style for the same له/عليه choice.
+/// third visual style for the same دائن/مدين choice. Labels are the person's own customized
+/// عبارات (see logic/settings/direction_labels.dart) — never the raw l10n default here.
 class _DirectionChoices extends StatelessWidget {
-  const _DirectionChoices({required this.onSelected});
+  const _DirectionChoices({required this.onSelected, required this.creditLabel, required this.debitLabel});
   final ValueChanged<AccountDirection> onSelected;
+  final String creditLabel;
+  final String debitLabel;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        DirectionChoice(label: l10n.directionCredit, color: AppColors.credit, selected: false, onTap: () => onSelected(AccountDirection.credit)),
+        DirectionChoice(label: creditLabel, color: AppColors.credit, selected: false, onTap: () => onSelected(AccountDirection.credit)),
         const SizedBox(width: 24),
-        DirectionChoice(label: l10n.directionDebit, color: AppColors.debit, selected: false, onTap: () => onSelected(AccountDirection.debit)),
+        DirectionChoice(label: debitLabel, color: AppColors.debit, selected: false, onTap: () => onSelected(AccountDirection.debit)),
       ],
     );
   }
@@ -490,9 +499,11 @@ class _DirectionChoices extends StatelessWidget {
 /// order shown there (name, amount, type, details, date), then the yes/edit actions plus an
 /// optional voice-confirmation mic.
 class _ConfirmationCard extends StatelessWidget {
-  const _ConfirmationCard({required this.state, required this.controller});
+  const _ConfirmationCard({required this.state, required this.controller, required this.creditLabel, required this.debitLabel});
   final VoiceState state;
   final VoiceController controller;
+  final String creditLabel;
+  final String debitLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -502,7 +513,7 @@ class _ConfirmationCard extends StatelessWidget {
     // Safe by construction: this card only renders in awaitingConfirmation/confirmationListening,
     // and the controller never reaches either status while draft.direction is still null (see
     // VoiceController._advanceAfterParsing / selectDirection).
-    final direction = draft.direction! == AccountDirection.credit ? l10n.directionCredit : l10n.directionDebit;
+    final direction = draft.direction! == AccountDirection.credit ? creditLabel : debitLabel;
     final isListeningForConfirmation = state.status == VoiceStatus.confirmationListening;
 
     return Column(

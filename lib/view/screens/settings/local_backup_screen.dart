@@ -61,10 +61,15 @@ class _LocalBackupScreenState extends ConsumerState<LocalBackupScreen> {
   Future<void> _restore() async {
     final l10n = AppLocalizations.of(context)!;
 
-    final picked = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['dyoonibackup'],
-    );
+    // Deliberately NOT filtered to a custom extension (was `allowedExtensions: ['dyoonibackup']`
+    // via `FileType.custom`) — on some Android versions/OEM file pickers, an extension the
+    // system can't resolve to a known MIME type gets silently hidden from the SAF document
+    // picker rather than shown as "unknown type", which was reproducing exactly the reported
+    // "the file is there but I can't find it from inside the app" symptom. The picked file's
+    // actual validity is already checked structurally right after selection (decrypt + JSON
+    // parse in restoreFromFile), so accepting any file here and validating afterward is both
+    // safer and more forgiving than relying on extension-based filtering up front.
+    final picked = await FilePicker.platform.pickFiles();
     final pickedPath = picked?.files.single.path;
     if (pickedPath == null || !mounted) return; // person backed out of the picker
 

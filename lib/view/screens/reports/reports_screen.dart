@@ -17,6 +17,8 @@ import '../../../data/models/report_options.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/reports/pdf_report_service.dart';
 import '../../../logic/reports/report_export_provider.dart';
+import '../../../logic/settings/direction_labels.dart';
+import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/home/summary_card.dart';
@@ -83,6 +85,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   Future<Uint8List> _generateSummaryPdf(AppLocalizations l10n, List<ReportRow> rows) {
     final personalData = ref.read(personalDataProvider).value ?? PersonalData.dyooniDefault;
+    final settings = ref.read(generalSettingsProvider).value;
     return ref.read(pdfReportServiceProvider).buildSummaryTotals(
           personalData: personalData,
           appName: l10n.appName,
@@ -91,14 +94,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           directionHeader: l10n.reportStatusHeader,
           balanceHeader: l10n.reportBalanceHeader,
           accountNameHeader: l10n.accountNameLabel,
-          creditLabel: l10n.directionCredit,
-          debitLabel: l10n.directionDebit,
+          creditLabel: resolveCreditLabel(l10n, settings),
+          debitLabel: resolveDebitLabel(l10n, settings),
           totalRowLabel: l10n.homeTotalBalance,
           rows: rows,
         );
   }
 
   Uint8List _generateSummaryXlsx(AppLocalizations l10n, List<ReportRow> rows) {
+    final settings = ref.read(generalSettingsProvider).value;
     return ref.read(xlsxReportServiceProvider).build(
           reportTitle: '${l10n.reportTypeTotalAmounts} - ${_categoryLabel(l10n)}',
           accountNameHeader: l10n.accountNameLabel,
@@ -106,8 +110,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           balanceHeader: l10n.reportBalanceHeader,
           directionHeader: l10n.reportStatusHeader,
           entriesHeader: l10n.reportEntriesHeader,
-          creditLabel: l10n.directionCredit,
-          debitLabel: l10n.directionDebit,
+          creditLabel: resolveCreditLabel(l10n, settings),
+          debitLabel: resolveDebitLabel(l10n, settings),
           clientLabel: l10n.categoryClient,
           supplierLabel: l10n.categorySupplier,
           rows: rows,

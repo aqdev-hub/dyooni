@@ -19,6 +19,8 @@ import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/reports/pdf_report_service.dart';
 import '../../../logic/reports/report_export_provider.dart';
+import '../../../logic/settings/direction_labels.dart';
+import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/accounts/account_action_icon_row.dart';
@@ -234,14 +236,15 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
 
   Future<Uint8List> _generateStatementPdf(WidgetRef ref, AppLocalizations l10n, List<StatementRow> rows) {
     final personalData = ref.read(personalDataProvider).value ?? PersonalData.dyooniDefault;
+    final settings = ref.read(generalSettingsProvider).value;
     return ref.read(pdfReportServiceProvider).buildAccountStatement(
           personalData: personalData,
           appName: l10n.appName,
           reportTitle: '${l10n.reportTypeStatement} - ${account.name}',
           dateHeader: l10n.dateLabel,
           detailsHeader: l10n.detailsLabel,
-          debitHeader: l10n.directionDebit,
-          creditHeader: l10n.directionCredit,
+          debitHeader: resolveDebitLabel(l10n, settings),
+          creditHeader: resolveCreditLabel(l10n, settings),
           balanceHeader: l10n.reportBalanceHeader,
           totalRowLabel: l10n.homeTotalBalance,
           rows: rows,
@@ -249,12 +252,13 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
   }
 
   Uint8List _generateStatementXlsx(WidgetRef ref, AppLocalizations l10n, List<StatementRow> rows) {
+    final settings = ref.read(generalSettingsProvider).value;
     return ref.read(xlsxReportServiceProvider).buildAccountStatement(
           reportTitle: '${l10n.reportTypeStatement} - ${account.name}',
           dateHeader: l10n.dateLabel,
           detailsHeader: l10n.detailsLabel,
-          debitHeader: l10n.directionDebit,
-          creditHeader: l10n.directionCredit,
+          debitHeader: resolveDebitLabel(l10n, settings),
+          creditHeader: resolveCreditLabel(l10n, settings),
           balanceHeader: l10n.reportBalanceHeader,
           totalRowLabel: l10n.homeTotalBalance,
           attachmentPresentLabel: l10n.attachmentPresentLabel,

@@ -214,12 +214,21 @@ class VoiceCommandDraft {
   final DateTime date;
   final String type;
 
-  VoiceCommandDraft copyWith({AccountDirection? direction}) => VoiceCommandDraft(
+  /// Extended to cover every field the voice-confirmation "قل تعديلك" flow can change — see
+  /// VoiceController._tryParseEdit, which builds a new draft via this constructor when the
+  /// person edits a field by voice instead of confirming or cancelling outright.
+  VoiceCommandDraft copyWith({
+    AccountDirection? direction,
+    double? amount,
+    String? details,
+    String? accountName,
+  }) =>
+      VoiceCommandDraft(
         transcript: transcript,
-        accountName: accountName,
-        amount: amount,
+        accountName: accountName ?? this.accountName,
+        amount: amount ?? this.amount,
         currency: currency,
-        details: details,
+        details: details ?? this.details,
         direction: direction ?? this.direction,
         date: date,
         type: type,
