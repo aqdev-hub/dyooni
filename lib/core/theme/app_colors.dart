@@ -1,0 +1,60 @@
+import 'package:flutter/material.dart';
+
+/// Single source of truth for every color used in `view/`.
+/// Never hardcode a `Color(0x...)` inside a screen or widget file — add a role here instead.
+///
+/// Palette v3.2 — `backgroundTop` is now the EXACT, explicitly confirmed brand navy (`#001034`)
+/// sampled from the real app icon/logo, replacing the earlier v3.1 approximation (`#091524`).
+/// `backgroundBottom` was re-derived by applying the SAME relative gradient step the old pair
+/// used (+6R/+11G/+20B) on top of the new base, so the onboarding/auth gradient keeps its exact
+/// original depth/feel — only the anchor color itself changed to match the logo precisely.
+/// No light-mode variant exists by design: onboarding/auth are always this dark navy+gold
+/// identity regardless of system theme (see main.dart).
+abstract class AppColors {
+  // Background — deep navy gradient, now pixel-matched to the real logo's navy (#001034).
+  static const backgroundTop = Color(0xFF001034);
+  static const backgroundBottom = Color(0xFF061B48);
+
+  // Brand
+  static const gold = Color(0xFFD9AF62); // logo ring, gold-accented CTA border/fill, active dot
+  static const white = Color(0xFFFFFFFF); // secondary ("Previous") button accent
+
+  // Surfaces (cards, input fields, buttons' base fill) — deliberately close to the background so
+  // buttons/cards read as "cut into" the navy, not as a lighter gray box floating on top of it.
+  static const surface = Color(0xFF122744);
+  static const surfaceBorder = Color(0xFF2E4058);
+
+  // Text
+  static const textPrimary = Color(0xFFF5F7FA);
+  static const textSecondary = Color(0xFFB8C2D2);
+
+  // Semantic — feedback (SnackBars, field errors)
+  static const success = Color(0xFF3FA76B);
+  static const error = Color(0xFFE0654F);
+
+  // Semantic — debt direction
+  static const credit = Color(0xFF3FA76B); // "له" — owed to the user
+  static const debit = Color(0xFFE0654F); // "عليه" — owed by the user
+
+  // Soft cell-background tints for the transaction table's amount column — matches the
+  // reference's colored amount cells (not just colored text).
+  static const creditCell = Color(0xFFDCEFE0);
+  static const debitCell = Color(0xFFF6D9D2);
+
+  // Row expand/collapse badge on the accounts list — gold when collapsed, navy when expanded.
+  static const chevronCollapsed = gold;
+  static const chevronExpanded = backgroundTop;
+
+  // Onboarding page indicator — active dot is gold, inactive is dim.
+  static const indicatorActive = gold;
+  static const indicatorInactive = Color(0xFF33455F);
+
+  // Voice assistant recording-state ring — fixed literals rather than shell-derived, same
+  // treatment as credit/debit/success/error above: the MEANING of "recording/paused/working" has
+  // to read the same in both light and dark shells, not shift with the theme. Matches the
+  // approved voice-screen reference exactly (see voice_command_sheet.dart):
+  static const voiceIdle = surface; // idle mic circle fill (dark navy)
+  static const voiceListening = Color(0xFFE84C3D); // actively recording — red
+  static const voicePaused = Color(0xFFF5A623); // paused mid-recording — orange
+  static const voiceProcessing = gold; // transcribing/understanding/saving — gold ring + icon
+}
