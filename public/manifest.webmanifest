@@ -1,0 +1,15 @@
+{
+  "name": "ديوني — Dyooni",
+  "short_name": "ديوني",
+  "description": "تطبيق عربي لإدارة الديون والحسابات — تسجيل نصي أو صوتي، تقارير PDF/Excel، ونسخ احتياطي مشفّر.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#001035",
+  "theme_color": "#001035",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/assets/img/logo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/img/logo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

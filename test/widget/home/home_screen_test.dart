@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dyooni/core/l10n/generated/app_localizations.dart';
 import 'package:dyooni/data/models/account.dart';
@@ -12,6 +13,7 @@ import 'package:dyooni/data/repositories/auth/auth_repository.dart';
 import 'package:dyooni/data/repositories/transactions/transactions_repository.dart';
 import 'package:dyooni/logic/accounts/accounts_provider.dart';
 import 'package:dyooni/logic/auth/auth_provider.dart';
+import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 import 'package:dyooni/view/screens/home/home_screen.dart';
 
@@ -24,13 +26,29 @@ class MockAuthRepository extends Mock implements AuthRepository {}
 final _client = Account(id: '1', name: 'أحمد محمد', category: AccountCategory.client, createdDate: DateTime(2026, 1, 1));
 final _supplier = Account(id: '2', name: 'سالم علي', category: AccountCategory.supplier, createdDate: DateTime(2026, 1, 2));
 
-List<Override> _overrides(MockAccountsRepository accountsRepo, MockTransactionsRepository txRepo, MockAuthRepository authRepo) => [
+List<Override> _overrides(
+  MockAccountsRepository accountsRepo,
+  MockTransactionsRepository txRepo,
+  MockAuthRepository authRepo,
+  SharedPreferences prefs,
+) =>
+    [
       accountsRepositoryProvider.overrideWithValue(accountsRepo),
       transactionsRepositoryProvider.overrideWithValue(txRepo),
       authRepositoryProvider.overrideWithValue(authRepo),
+      // NEW — HomeScreen/BottomSummaryBar now read generalSettingsProvider (search pinning,
+      // custom credit/debit labels — see logic/settings/general_settings_provider.dart), which
+      // ultimately depends on sharedPreferencesProvider. Without this override the provider
+      // throws UnimplementedError, exactly as documented on sharedPreferencesProvider itself.
+      sharedPreferencesProvider.overrideWithValue(prefs),
     ];
 
-Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txRepo, MockAuthRepository authRepo) {
+Widget _wrap(
+  MockAccountsRepository accountsRepo,
+  MockTransactionsRepository txRepo,
+  MockAuthRepository authRepo,
+  SharedPreferences prefs,
+) {
   final router = GoRouter(
     initialLocation: '/home',
     routes: [
@@ -42,7 +60,7 @@ Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txR
   );
 
   return ProviderScope(
-    overrides: _overrides(accountsRepo, txRepo, authRepo),
+    overrides: _overrides(accountsRepo, txRepo, authRepo, prefs),
     child: MaterialApp.router(
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar'), Locale('en')],
@@ -56,18 +74,21 @@ void main() {
   late MockAccountsRepository accountsRepo;
   late MockTransactionsRepository txRepo;
   late MockAuthRepository authRepo;
+  late SharedPreferences prefs;
 
-  setUp(() {
+  setUp(() async {
     accountsRepo = MockAccountsRepository();
     txRepo = MockTransactionsRepository();
     authRepo = MockAuthRepository();
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
     when(() => txRepo.getTransactions()).thenAnswer((_) async => []);
   });
 
   testWidgets('shows the empty state when there are no accounts yet', (tester) async {
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => []);
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo, prefs));
     await tester.pumpAndSettle();
 
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
@@ -82,7 +103,7 @@ void main() {
       ],
     );
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo, prefs));
     await tester.pumpAndSettle();
 
     expect(find.text('أحمد محمد'), findsOneWidget);
@@ -92,7 +113,7 @@ void main() {
   testWidgets('tapping the FAB navigates to add-account', (tester) async {
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => []);
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo, prefs));
     await tester.pumpAndSettle();
 
     // The FAB is icon-only now (tooltip carries the label, matching the reference's compact
@@ -108,7 +129,7 @@ void main() {
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => []);
     when(() => authRepo.signOut()).thenAnswer((_) async {});
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -131,7 +152,7 @@ void main() {
     // sign-out when that specific provider was never actually used for this session.
     when(() => authRepo.signOut()).thenThrow(Exception('provider had no active session'));
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -149,7 +170,7 @@ void main() {
   testWidgets('switching to the "موردين" tab filters the list to suppliers only', (tester) async {
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => [_client, _supplier]);
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -166,7 +187,7 @@ void main() {
   testWidgets('tapping an account row navigates to account details', (tester) async {
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => [_client]);
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo, prefs));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('أحمد محمد'));
@@ -187,7 +208,7 @@ void main() {
     );
     await tester.pumpWidget(
       ProviderScope(
-        overrides: _overrides(accountsRepo, txRepo, authRepo),
+        overrides: _overrides(accountsRepo, txRepo, authRepo, prefs),
         child: MaterialApp.router(
           locale: const Locale('ar'),
           supportedLocales: const [Locale('ar'), Locale('en')],
@@ -202,5 +223,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('reports'), findsOneWidget);
+  });
+
+  testWidgets(
+      'searching pins matching accounts to the top instead of hiding the rest, per the '
+      'pinMatchingAccountsOnSearch default (true)', (tester) async {
+    when(() => accountsRepo.getAccounts()).thenAnswer((_) async => [_client, _supplier]);
+
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo, prefs));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'أحمد');
+    await tester.pumpAndSettle();
+
+    // Both accounts stay visible (pinned, not filtered out) — only their ORDER changes.
+    expect(find.text('أحمد محمد'), findsOneWidget);
+    expect(find.text('سالم علي'), findsOneWidget);
   });
 }

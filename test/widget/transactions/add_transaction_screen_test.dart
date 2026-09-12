@@ -3,17 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dyooni/core/l10n/generated/app_localizations.dart';
 import 'package:dyooni/data/models/account.dart';
 import 'package:dyooni/data/models/transaction.dart';
 import 'package:dyooni/data/repositories/transactions/transactions_repository.dart';
+import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 import 'package:dyooni/view/screens/transactions/add_transaction_screen.dart';
 
 class MockTransactionsRepository extends Mock implements TransactionsRepository {}
 
-Widget _wrap(MockTransactionsRepository repository) {
+Widget _wrap(MockTransactionsRepository repository, SharedPreferences prefs) {
   final router = GoRouter(
     initialLocation: '/add-transaction',
     routes: [
@@ -23,7 +25,13 @@ Widget _wrap(MockTransactionsRepository repository) {
   );
 
   return ProviderScope(
-    overrides: [transactionsRepositoryProvider.overrideWithValue(repository)],
+    overrides: [
+      transactionsRepositoryProvider.overrideWithValue(repository),
+      // NEW — AddTransactionScreen now reads generalSettingsProvider (default direction,
+      // show-amount-in-words, custom credit/debit labels — see
+      // logic/settings/general_settings_provider.dart), which depends on sharedPreferencesProvider.
+      sharedPreferencesProvider.overrideWithValue(prefs),
+    ],
     child: MaterialApp.router(
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar'), Locale('en')],
@@ -35,14 +43,17 @@ Widget _wrap(MockTransactionsRepository repository) {
 
 void main() {
   late MockTransactionsRepository repository;
+  late SharedPreferences prefs;
 
-  setUp(() {
+  setUp(() async {
     repository = MockTransactionsRepository();
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
     when(() => repository.getTransactions()).thenAnswer((_) async => []);
   });
 
   testWidgets('rejects submission with an invalid amount (via either save button)', (tester) async {
-    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpWidget(_wrap(repository, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -59,7 +70,7 @@ void main() {
       captured = invocation.positionalArguments.first as Transaction;
     });
 
-    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpWidget(_wrap(repository, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -79,7 +90,7 @@ void main() {
       (tester) async {
     when(() => repository.addTransaction(any())).thenAnswer((_) async {});
 
-    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpWidget(_wrap(repository, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 

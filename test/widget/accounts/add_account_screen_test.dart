@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dyooni/core/l10n/generated/app_localizations.dart';
 import 'package:dyooni/data/models/account.dart';
@@ -10,6 +11,7 @@ import 'package:dyooni/data/models/transaction.dart';
 import 'package:dyooni/data/repositories/accounts/accounts_repository.dart';
 import 'package:dyooni/data/repositories/transactions/transactions_repository.dart';
 import 'package:dyooni/logic/accounts/accounts_provider.dart';
+import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 import 'package:dyooni/view/screens/accounts/add_account_screen.dart';
 
@@ -17,7 +19,7 @@ class MockAccountsRepository extends Mock implements AccountsRepository {}
 
 class MockTransactionsRepository extends Mock implements TransactionsRepository {}
 
-Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txRepo) {
+Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txRepo, SharedPreferences prefs) {
   final router = GoRouter(
     initialLocation: '/add-account',
     routes: [GoRoute(path: '/add-account', builder: (_, __) => const AddAccountScreen())],
@@ -27,6 +29,10 @@ Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txR
     overrides: [
       accountsRepositoryProvider.overrideWithValue(accountsRepo),
       transactionsRepositoryProvider.overrideWithValue(txRepo),
+      // NEW — AddAccountScreen now reads generalSettingsProvider (default direction,
+      // show-amount-in-words, show-account-ceiling, custom credit/debit labels — see
+      // logic/settings/general_settings_provider.dart), which depends on sharedPreferencesProvider.
+      sharedPreferencesProvider.overrideWithValue(prefs),
     ],
     child: MaterialApp.router(
       locale: const Locale('ar'),
@@ -40,16 +46,19 @@ Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txR
 void main() {
   late MockAccountsRepository accountsRepo;
   late MockTransactionsRepository txRepo;
+  late SharedPreferences prefs;
 
-  setUp(() {
+  setUp(() async {
     accountsRepo = MockAccountsRepository();
     txRepo = MockTransactionsRepository();
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => []);
     when(() => txRepo.getTransactions()).thenAnswer((_) async => []);
   });
 
   testWidgets('rejects submission with an empty name and an invalid amount', (tester) async {
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -67,7 +76,7 @@ void main() {
     when(() => accountsRepo.addAccount(any())).thenAnswer((_) async {});
     when(() => txRepo.addTransaction(any())).thenAnswer((_) async {});
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -91,7 +100,7 @@ void main() {
       captured = invocation.positionalArguments.first as Transaction;
     });
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -103,7 +112,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(captured?.amount, 750);
-    expect(captured?.direction, AccountDirection.debit); // matches the reference's default
+    // Default direction now comes from GeneralSettings.defaultDirection, whose own default is
+    // DefaultDirectionOption.keepLast (see data/models/general_settings.dart) — with a fresh,
+    // never-used SharedPreferences instance (no persisted `lastUsedDirectionIsCredit`), that
+    // resolves to debit, matching the original hardcoded default this test asserted before.
+    expect(captured?.direction, AccountDirection.debit);
   });
 
   testWidgets('saving with the "supplier" category selected persists that category on the account',
@@ -114,7 +127,7 @@ void main() {
     });
     when(() => txRepo.addTransaction(any())).thenAnswer((_) async {});
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 

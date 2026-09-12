@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dyooni/core/l10n/generated/app_localizations.dart';
 import 'package:dyooni/data/models/account.dart';
@@ -10,6 +11,7 @@ import 'package:dyooni/data/models/transaction.dart';
 import 'package:dyooni/data/repositories/accounts/accounts_repository.dart';
 import 'package:dyooni/data/repositories/transactions/transactions_repository.dart';
 import 'package:dyooni/logic/accounts/accounts_provider.dart';
+import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 import 'package:dyooni/view/screens/accounts/account_details_screen.dart';
 
@@ -25,7 +27,7 @@ final _account = Account(
   phone: '0500000000',
 );
 
-Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txRepo) {
+Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txRepo, SharedPreferences prefs) {
   final router = GoRouter(
     initialLocation: '/account-details',
     routes: [
@@ -39,6 +41,10 @@ Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txR
     overrides: [
       accountsRepositoryProvider.overrideWithValue(accountsRepo),
       transactionsRepositoryProvider.overrideWithValue(txRepo),
+      // NEW — AccountDetailsScreen (via BottomSummaryBar and TransactionTable) now reads
+      // generalSettingsProvider (custom credit/debit labels, show-time toggle — see
+      // logic/settings/general_settings_provider.dart), which depends on sharedPreferencesProvider.
+      sharedPreferencesProvider.overrideWithValue(prefs),
     ],
     child: MaterialApp.router(
       locale: const Locale('ar'),
@@ -52,17 +58,20 @@ Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txR
 void main() {
   late MockAccountsRepository accountsRepo;
   late MockTransactionsRepository txRepo;
+  late SharedPreferences prefs;
 
-  setUp(() {
+  setUp(() async {
     accountsRepo = MockAccountsRepository();
     txRepo = MockTransactionsRepository();
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => [_account]);
   });
 
   testWidgets('shows the account name in the header', (tester) async {
     when(() => txRepo.getTransactions()).thenAnswer((_) async => []);
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, prefs));
     await tester.pumpAndSettle();
 
     expect(find.text('أحمد محمد'), findsOneWidget);
@@ -72,7 +81,7 @@ void main() {
       (tester) async {
     when(() => txRepo.getTransactions()).thenAnswer((_) async => []);
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -87,7 +96,7 @@ void main() {
       ],
     );
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, prefs));
     await tester.pumpAndSettle();
 
     expect(find.text('دفعة أولى'), findsOneWidget);
@@ -98,7 +107,7 @@ void main() {
       (tester) async {
     when(() => txRepo.getTransactions()).thenAnswer((_) async => []);
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, prefs));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.note_add_rounded));
@@ -112,7 +121,7 @@ void main() {
       (tester) async {
     when(() => txRepo.getTransactions()).thenAnswer((_) async => []);
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -134,7 +143,7 @@ void main() {
     when(() => accountsRepo.deleteAccount('1')).thenAnswer((_) async {});
     when(() => txRepo.deleteTransactionsForAccount('1')).thenAnswer((_) async {});
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 

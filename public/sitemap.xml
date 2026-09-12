@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://dyooni-ea39a.web.app/</loc>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://dyooni-ea39a.web.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://dyooni-ea39a.web.app/index-en.html"/>
+    <image:image><image:loc>https://dyooni-ea39a.web.app/assets/img/og-image.jpg</image:loc></image:image>
+    <lastmod>2026-09-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://dyooni-ea39a.web.app/index-en.html</loc>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://dyooni-ea39a.web.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://dyooni-ea39a.web.app/index-en.html"/>
+    <image:image><image:loc>https://dyooni-ea39a.web.app/assets/img/og-image.jpg</image:loc></image:image>
+    <lastmod>2026-09-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://dyooni-ea39a.web.app/privacy.html</loc>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://dyooni-ea39a.web.app/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://dyooni-ea39a.web.app/privacy-en.html"/>
+    <lastmod>2026-09-04</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://dyooni-ea39a.web.app/privacy-en.html</loc>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://dyooni-ea39a.web.app/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://dyooni-ea39a.web.app/privacy-en.html"/>
+    <lastmod>2026-09-04</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://dyooni-ea39a.web.app/terms.html</loc>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://dyooni-ea39a.web.app/terms.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://dyooni-ea39a.web.app/terms-en.html"/>
+    <lastmod>2026-09-04</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://dyooni-ea39a.web.app/terms-en.html</loc>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://dyooni-ea39a.web.app/terms.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://dyooni-ea39a.web.app/terms-en.html"/>
+    <lastmod>2026-09-04</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://dyooni-ea39a.web.app/data-deletion.html</loc>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://dyooni-ea39a.web.app/data-deletion.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://dyooni-ea39a.web.app/data-deletion-en.html"/>
+    <lastmod>2026-09-04</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://dyooni-ea39a.web.app/data-deletion-en.html</loc>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://dyooni-ea39a.web.app/data-deletion.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://dyooni-ea39a.web.app/data-deletion-en.html"/>
+    <lastmod>2026-09-04</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>
+

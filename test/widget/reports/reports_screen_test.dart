@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dyooni/core/l10n/generated/app_localizations.dart';
 import 'package:dyooni/data/models/account.dart';
@@ -12,6 +13,7 @@ import 'package:dyooni/data/repositories/settings/personal_data_repository.dart'
 import 'package:dyooni/data/repositories/transactions/transactions_repository.dart';
 import 'package:dyooni/data/models/personal_data.dart';
 import 'package:dyooni/logic/accounts/accounts_provider.dart';
+import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import 'package:dyooni/logic/settings/personal_data_provider.dart';
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 import 'package:dyooni/view/screens/reports/reports_screen.dart';
@@ -25,7 +27,12 @@ class MockPersonalDataRepository extends Mock implements PersonalDataRepository 
 final _client = Account(id: '1', name: 'أحمد محمد', category: AccountCategory.client, createdDate: DateTime(2026, 1, 1));
 final _supplier = Account(id: '2', name: 'سالم علي', category: AccountCategory.supplier, createdDate: DateTime(2026, 1, 2));
 
-Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txRepo, MockPersonalDataRepository personalDataRepo) {
+Widget _wrap(
+  MockAccountsRepository accountsRepo,
+  MockTransactionsRepository txRepo,
+  MockPersonalDataRepository personalDataRepo,
+  SharedPreferences prefs,
+) {
   final router = GoRouter(
     initialLocation: '/reports',
     routes: [GoRoute(path: '/reports', builder: (_, __) => const ReportsScreen())],
@@ -36,6 +43,10 @@ Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txR
       accountsRepositoryProvider.overrideWithValue(accountsRepo),
       transactionsRepositoryProvider.overrideWithValue(txRepo),
       personalDataRepositoryProvider.overrideWithValue(personalDataRepo),
+      // NEW — export generation reads generalSettingsProvider for custom credit/debit labels
+      // (see logic/settings/general_settings_provider.dart), which depends on
+      // sharedPreferencesProvider.
+      sharedPreferencesProvider.overrideWithValue(prefs),
     ],
     child: MaterialApp.router(
       locale: const Locale('ar'),
@@ -50,11 +61,14 @@ void main() {
   late MockAccountsRepository accountsRepo;
   late MockTransactionsRepository txRepo;
   late MockPersonalDataRepository personalDataRepo;
+  late SharedPreferences prefs;
 
-  setUp(() {
+  setUp(() async {
     accountsRepo = MockAccountsRepository();
     txRepo = MockTransactionsRepository();
     personalDataRepo = MockPersonalDataRepository();
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
     when(() => personalDataRepo.getPersonalData()).thenAnswer((_) async => PersonalData.dyooniDefault);
   });
 
@@ -67,7 +81,7 @@ void main() {
       ],
     );
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo, personalDataRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, personalDataRepo, prefs));
     await tester.pumpAndSettle();
 
     expect(find.text('500'), findsWidgets);
@@ -80,7 +94,7 @@ void main() {
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => [_client, _supplier]);
     when(() => txRepo.getTransactions()).thenAnswer((_) async => []);
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo, personalDataRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, personalDataRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -95,7 +109,7 @@ void main() {
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => []);
     when(() => txRepo.getTransactions()).thenAnswer((_) async => []);
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo, personalDataRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, personalDataRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -107,7 +121,7 @@ void main() {
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => []);
     when(() => txRepo.getTransactions()).thenAnswer((_) async => []);
 
-    await tester.pumpWidget(_wrap(accountsRepo, txRepo, personalDataRepo));
+    await tester.pumpWidget(_wrap(accountsRepo, txRepo, personalDataRepo, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dyooni-ea39a.web.app/sitemap.xml

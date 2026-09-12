@@ -61,15 +61,30 @@ dependencies:
 
   # NEW this batch, added at your explicit request/acceptance of the version-verification risk:
   # produces a real `.xlsx` workbook (colored header/totals rows, centered cells, a merged title
-  # row) — something plain CSV genuinely cannot do. This is the ONE package in this batch I
-  # cannot verify against a live pub.dev listing from this sandbox (no network access to pub.dev
-  # here), same situation as arabic_reshaper/file_picker below. Written against the typed
-  # `CellValue`/`ExcelColor` API used by the package's 4.x line — see
-  # lib/logic/reports/xlsx_report_service.dart's doc comment. Please run `flutter pub get`
-  # immediately and tell me right away if it fails to resolve, or if `flutter analyze` reports
-  # type errors in that file, so I can pin a different version or adjust the API calls to match
-  # whatever actually resolves.
-  excel: ^4.0.6
+  # row) — something plain CSV genuinely cannot do.
+  #
+  # ⚠️ REPLACED with excel_plus — the original `excel: ^4.0.6` package pins to `archive: ^3.6.1`
+  # forever, which conflicts permanently with `vosk_flutter_service` (needs `archive: ^4.x`, see
+  # the voice engine note below). `excel_plus` is documented as a 100% drop-in replacement (same
+  # classes/functions: Excel, Sheet, CellIndex, TextCellValue, CellStyle, ExcelColor...) on
+  # `archive: ^4.0.9`. Only code change needed: in lib/logic/reports/xlsx_report_service.dart,
+  # change `import 'package:excel/excel.dart';` to `import 'package:excel_plus/excel_plus.dart';`
+  #
+  # ACTION NEEDED (could not run this from this sandbox — no network/Flutter SDK access here):
+  #   flutter pub remove excel
+  #   flutter pub add excel_plus
+
+  # Voice input — OFFLINE engine (Vosk), replacing the previous cloud/native speech_to_text +
+  # record combo, which caused the reported "لم يتم رصد أي كلام" bug (two competing mic
+  # consumers). See lib/core/voice/offline_speech_engine.dart / vosk_model_provider.dart.
+  # ACTION NEEDED (could not run this from this sandbox):
+  #   flutter pub remove speech_to_text
+  #   flutter pub add vosk_flutter_service
+  #   flutter pub add http
+  #   flutter pub add archive
+  flutter_tts: ^4.2.2
+  record: ^6.0.0
+  just_audio: ^0.9.46
 
   # Lets the person pick an existing file from their device (the local backup screen's
   # "استعادة من ملف" / restore-from-file flow, to choose a previously exported .dyoonibackup
@@ -85,12 +100,11 @@ dependencies:
   # as file_picker/arabic_reshaper above applies (no live pub.dev access from this sandbox).
   encrypt: ^5.0.3
 
-  # Voice input: native STT for short commands, original local recordings,
-  # and their in-app playback. Versions are constrained to the app's Dart 3.4 SDK.
-  speech_to_text: ^7.4.0
-  flutter_tts: ^4.2.2
-  record: ^6.0.0
-  just_audio: ^0.9.46
+  # NEW this batch — الحماية بالبصمة في general_settings_screen.dart / app_lock_screen.dart.
+  # يتطلب MainActivity من نوع FlutterFragmentActivity على أندرويد (انظر
+  # android/app/src/main/kotlin/.../MainActivity.kt) و NSFaceIDUsageDescription على iOS (انظر
+  # ios/Runner/Info.plist).
+  local_auth: ^2.3.0
 
   # Arabic letter shaping for the PDF — the `pdf` package has no text-shaping engine of its own,
   # so Arabic names/labels would render as disconnected letters without this. This is the one
@@ -125,6 +139,10 @@ dependencies:
   image: ^4.2.0
 
   cupertino_icons: ^1.0.8
+  excel_plus: ^2.20.0
+  vosk_flutter_service: ^0.1.2
+  http: ^1.6.0
+  archive: ^4.0.9
 
 dev_dependencies:
   flutter_test:
