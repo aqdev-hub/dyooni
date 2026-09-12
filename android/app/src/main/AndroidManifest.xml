@@ -3,7 +3,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <!-- ===== النسخ الاحتياطي المحلي — بداية الإضافة =====
          مطلوب فقط لكتابة ملف .dyoonibackup مباشرة داخل Download/ديوني بدل نافذة اختيار مسار:
          - maxSdkVersion="28": النظام يتجاهل هذا الإذن تلقائيًا على أندرويد 10+ (لا حاجة لطلبه هناك).

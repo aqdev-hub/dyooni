@@ -34,6 +34,10 @@
 	<string>يحتاج ديوني إلى الكاميرا لإرفاق صورة بالعملية. Dyooni needs camera access to attach an image to an entry.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>يحتاج ديوني إلى التعرف على الكلام لفهم أوامرك الصوتية. Dyooni needs speech recognition to understand voice commands.</string>
+	<!-- NEW this batch — required by local_auth for Face ID on iOS (Touch ID needs no plist key).
+	     Used by general_settings_screen.dart's biometric toggle and app_lock_screen.dart. -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>يستخدم ديوني بصمة الوجه/الإصبع لحماية دخولك إلى التطبيق. Dyooni uses Face ID/Touch ID to protect access to the app.</string>
 
 	<!-- ===== Facebook Login SDK — بداية الإضافة =====
 	     استبدل YOUR_FACEBOOK_APP_ID و YOUR_FACEBOOK_CLIENT_TOKEN بالقيم الحقيقية من
