@@ -167,6 +167,8 @@
   "voiceNeedAccount": "لم أتعرف على اسم حساب مطابق. اختر حسابًا أو أعد المحاولة.",
   "voiceNeedAmount": "لم أتعرف على مبلغ صحيح. قل المبلغ ثم أعد المحاولة.",
   "voiceNeedDirection": "لم أتعرف على نوع العملية. اختر \"له\" أو \"عليه\".",
+  "voiceNeedFullAccountName": "يجب أن يتكون اسم الحساب من اسمين على الأقل (الاسم الأول واسم العائلة). من فضلك قل اسم الحساب بوضوح.",
+  "voiceCurrencyUnsupported": "هذه العملة غير مدعومة حاليًا. من فضلك قل عملة مدعومة (مثل ريال يمني، سعودي، دولار، درهم، جنيه، أو دينار) ثم أعد المحاولة.",
   "voiceNoSpeechCaptured": "لم ألتقط أي صوت. تحدث بوضوح بالقرب من الميكروفون ثم أعد المحاولة.",
   "voiceTranscriptLabel": "ما تم سماعه",
   "voiceBluetoothConnecting": "جاري الاتصال بسماعة البلوتوث…",
@@ -182,6 +184,7 @@
   "voiceAudioUnavailable": "ملف التسجيل غير متوفر على هذا الجهاز",
   "voiceDirectionLabel": "النوع",
   "voiceAccountLabel": "الحساب",
+  "voiceAccountWillBeCreated": "سيتم إنشاء حساب جديد بهذا الاسم",
   "voiceRecordingDuration": "مدة التسجيل: {seconds} ث",
   "@voiceRecordingDuration": {
     "placeholders": {

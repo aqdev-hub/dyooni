@@ -495,6 +495,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'لم أتعرف على نوع العملية. اختر \"له\" أو \"عليه\".';
 
   @override
+  String get voiceNeedFullAccountName =>
+      'يجب أن يتكون اسم الحساب من اسمين على الأقل (الاسم الأول واسم العائلة). من فضلك قل اسم الحساب بوضوح.';
+
+  @override
+  String get voiceCurrencyUnsupported =>
+      'هذه العملة غير مدعومة حاليًا. من فضلك قل عملة مدعومة (مثل ريال يمني، سعودي، دولار، درهم، جنيه، أو دينار) ثم أعد المحاولة.';
+
+  @override
   String get voiceNoSpeechCaptured =>
       'لم ألتقط أي صوت. تحدث بوضوح بالقرب من الميكروفون ثم أعد المحاولة.';
 
@@ -542,6 +550,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get voiceAccountLabel => 'الحساب';
+
+  @override
+  String get voiceAccountWillBeCreated => 'سيتم إنشاء حساب جديد بهذا الاسم';
 
   @override
   String voiceRecordingDuration(int seconds) {

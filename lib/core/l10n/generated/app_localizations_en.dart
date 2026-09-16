@@ -497,6 +497,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'I couldn\'t tell if this is credit or debit. Choose one.';
 
   @override
+  String get voiceNeedFullAccountName =>
+      'The account name needs at least two words (first and last name). Please say the account name clearly.';
+
+  @override
+  String get voiceCurrencyUnsupported =>
+      'This currency isn\'t supported yet. Please say a supported currency (e.g. Yemeni Rial, Saudi, US Dollar, Dirham, Pound, or Dinar) and try again.';
+
+  @override
   String get voiceNoSpeechCaptured =>
       'I didn\'t capture any speech. Speak clearly near the microphone and try again.';
 
@@ -546,6 +554,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceAccountLabel => 'Account';
+
+  @override
+  String get voiceAccountWillBeCreated => 'A new account will be created with this name';
 
   @override
   String voiceRecordingDuration(int seconds) {

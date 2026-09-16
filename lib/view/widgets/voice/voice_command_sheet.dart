@@ -404,7 +404,9 @@ class _TranscriptCard extends StatelessWidget {
 }
 
 /// Reference state 7 — a question-mark badge, the clarification question, and (for account/
-/// direction ambiguity) the actual choices to resolve it, all inside one bordered card.
+/// direction ambiguity) the actual choices to resolve it, all inside one bordered card. Now also
+/// covers the 'accountName' (name needs a first AND last word) and 'currency' (unsupported
+/// currency named) clarification codes — both are plain retry prompts, no extra chips needed.
 class _ClarificationCard extends StatelessWidget {
   const _ClarificationCard({required this.state, required this.controller, required this.creditLabel, required this.debitLabel});
   final VoiceState state;
@@ -420,6 +422,8 @@ class _ClarificationCard extends StatelessWidget {
       'amount' => l10n.voiceNeedAmount,
       'direction' => l10n.voiceNeedDirection,
       'noSpeech' => l10n.voiceNoSpeechCaptured,
+      'accountName' => l10n.voiceNeedFullAccountName,
+      'currency' => l10n.voiceCurrencyUnsupported,
       _ => l10n.voiceNeedAccount,
     };
     return Container(
@@ -493,7 +497,10 @@ class _DirectionChoices extends StatelessWidget {
 
 /// Reference state 8 — a warm gold-tinted card listing what was understood in the exact field
 /// order shown there (name, amount, type, details, date), then the yes/edit actions plus an
-/// optional voice-confirmation mic.
+/// optional voice-confirmation mic. The account line now falls back to the SPOKEN name
+/// (`draft.accountName`) whenever no existing account was matched — see [VoiceState.account]'s
+/// doc comment — and an extra note makes it explicit that confirming will create a new account,
+/// rather than silently doing so with no indication anything unusual happened.
 class _ConfirmationCard extends StatelessWidget {
   const _ConfirmationCard({required this.state, required this.controller, required this.creditLabel, required this.debitLabel});
   final VoiceState state;
@@ -511,6 +518,9 @@ class _ConfirmationCard extends StatelessWidget {
     // VoiceController._advanceAfterParsing / selectDirection).
     final direction = draft.direction! == AccountDirection.credit ? creditLabel : debitLabel;
     final isListeningForConfirmation = state.status == VoiceStatus.confirmationListening;
+    final matchedAccount = state.account;
+    final accountName = matchedAccount?.name ?? draft.accountName!;
+    final isNewAccount = matchedAccount == null;
 
     return Column(
       children: [
@@ -525,7 +535,15 @@ class _ConfirmationCard extends StatelessWidget {
           child: Column(children: [
             Text(l10n.voiceConfirmTitle, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
-            _Line(l10n.voiceAccountLabel, state.account!.name),
+            _Line(l10n.voiceAccountLabel, accountName),
+            if (isNewAccount) ...[
+              const SizedBox(height: 2),
+              Text(
+                l10n.voiceAccountWillBeCreated,
+                textAlign: TextAlign.end,
+                style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 11, fontStyle: FontStyle.italic),
+              ),
+            ],
             _Line(l10n.amountLabel, '${draft.amount!.toStringAsFixed(0)} ${draft.currency}'),
             _Line(l10n.voiceDirectionLabel, direction),
             if (draft.details != null) _Line(l10n.detailsLabel, draft.details!),

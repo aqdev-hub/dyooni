@@ -94,6 +94,13 @@ class VoiceState {
   final String committedTranscript;
 
   final VoiceCommandDraft? draft;
+
+  /// The matched EXISTING account, if any. `null` has two different meanings depending on
+  /// [status]: while still gathering fields it means "not resolved yet"; once the dialogue has
+  /// reached [VoiceStatus.awaitingConfirmation]/[VoiceStatus.confirmationListening] it means
+  /// "no existing account matched this name — a brand-new one will be created with
+  /// [VoiceCommandDraft.accountName] the moment the person confirms" (see
+  /// VoiceController.confirm and _ConfirmationCard in voice_command_sheet.dart).
   final Account? account;
   final String? recordingPath;
   final DateTime? recordingStartedAt;
@@ -102,12 +109,12 @@ class VoiceState {
   final bool bluetoothMode;
 
   /// Which single field a `listening`/`bluetoothListeningCommand` session is currently gathering
-  /// a spoken ANSWER for — `'amount'`, `'account'`, `'direction'`, or `null` when this is an
-  /// ordinary fresh command (not a follow-up clarification). This is what lets
-  /// [VoiceController._onFinal] tell "the person just spoke a whole new command" apart from "the
-  /// person just answered the one specific question I asked them a moment ago" — the two need
-  /// completely different handling (re-parse everything vs. merge one field into the existing
-  /// draft) even though both arrive through the exact same `listening` status.
+  /// a spoken ANSWER for — `'amount'`, `'account'`, `'accountName'`, `'currency'`, `'direction'`,
+  /// or `null` when this is an ordinary fresh command (not a follow-up clarification). This is
+  /// what lets [VoiceController._onFinal] tell "the person just spoke a whole new command" apart
+  /// from "the person just answered the one specific question I asked them a moment ago" — the
+  /// two need completely different handling (re-parse everything vs. merge one field into the
+  /// existing draft) even though both arrive through the exact same `listening` status.
   final String? clarifyingField;
 
   VoiceState copyWith({
@@ -169,18 +176,21 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   // ─────────────────────────── Phrase builders (all spoken aloud) ───────────────────────────
 
-  String _confirmationSpeech(VoiceCommandDraft draft, Account account, String languageCode, {bool editApplied = false}) {
+  /// [accountName] is a plain string rather than an [Account] — by the time this is spoken,
+  /// there may not be a real matched account yet at all (see [VoiceState.account]'s doc comment
+  /// on what a `null` match means once confirmation is reached: a new account will be created).
+  String _confirmationSpeech(VoiceCommandDraft draft, String accountName, String languageCode, {bool editApplied = false}) {
     final amountText = draft.amount!.toStringAsFixed(0);
     if (languageCode == 'en') {
       final prefix = editApplied ? 'Updated. ' : '';
       final directionWord = draft.direction == AccountDirection.debit ? 'as a debit for' : 'as a credit for';
       final details = draft.details != null ? ', details ${draft.details}' : '';
-      return "${prefix}I'll add $amountText ${draft.currency} $directionWord ${account.name}$details. Should I save it?";
+      return "${prefix}I'll add $amountText ${draft.currency} $directionWord $accountName$details. Should I save it?";
     }
     final prefix = editApplied ? 'تم التعديل. ' : '';
     final directionWord = draft.direction == AccountDirection.debit ? 'على' : 'لـ';
     final details = draft.details != null ? '، التفاصيل ${draft.details}' : '';
-    return '$prefixسأضيف $directionWord ${account.name} مبلغ $amountText ${draft.currency}$details. هل تريد الحفظ؟';
+    return '$prefixسأضيف $directionWord $accountName مبلغ $amountText ${draft.currency}$details. هل تريد الحفظ؟';
   }
 
   String _clarificationSpeech(String field, String languageCode) {
@@ -188,6 +198,11 @@ class VoiceController extends StateNotifier<VoiceState> {
       return switch (field) {
         'amount' => "I couldn't understand the amount. Please say the amount clearly.",
         'account' => "I couldn't match an account. Please say the account name clearly.",
+        'accountName' =>
+          "The account name needs a first and last name. Please say the full account name.",
+        'currency' =>
+          "That currency isn't supported. Please say a supported one — Yemeni Rial, Saudi Riyal, "
+              "US Dollar, Dirham, Pound, or Dinar.",
         'direction' => 'Is this credit or debit? Please say credit or debit.',
         _ => "I didn't hear anything. Please try speaking clearly.",
       };
@@ -195,6 +210,8 @@ class VoiceController extends StateNotifier<VoiceState> {
     return switch (field) {
       'amount' => 'لم أتعرف على المبلغ. من فضلك قل المبلغ بوضوح.',
       'account' => 'لم أتعرف على اسم الحساب. من فضلك قل اسم الحساب بوضوح.',
+      'accountName' => 'اسم الحساب يجب أن يتكون من اسمين على الأقل. من فضلك قل الاسم الكامل.',
+      'currency' => 'هذه العملة غير مدعومة. من فضلك قل عملة مدعومة، مثل ريال يمني أو سعودي أو دولار أو درهم أو جنيه أو دينار.',
       'direction' => 'لم أفهم هل هذا الدين له أم عليه. من فضلك قل له أو عليه.',
       _ => 'لم ألتقط أي صوت. من فضلك حاول التحدث بوضوح.',
     };
@@ -425,13 +442,30 @@ class VoiceController extends StateNotifier<VoiceState> {
         final reparsed = _ref.read(voiceCommandParserProvider).parse(effective);
         if (reparsed.amount != null) updatedDraft = draft.copyWith(amount: reparsed.amount);
       case 'account':
+        // The person restated the whole account name — try matching it against an existing
+        // account first; if none matches, keep the freshly-spoken name as-is (a brand-new
+        // account will be created from it once it passes the full-name check below).
         final matched = _matchAccount(effective, effective);
-        if (matched != null) updatedAccount = matched;
+        updatedAccount = matched;
+        updatedDraft = draft.copyWith(accountName: matched?.name ?? effective.trim());
+      case 'accountName':
+        // The person is only adding the missing last name — merge it the same way as 'account'
+        // above rather than treating it as a brand-new, unrelated command.
+        final matched = _matchAccount(effective, effective);
+        updatedAccount = matched;
+        updatedDraft = draft.copyWith(accountName: matched?.name ?? effective.trim());
+      case 'currency':
+        final reparsedCurrency = _ref.read(voiceCommandParserProvider).parse(effective);
+        if (!reparsedCurrency.currencyUnsupported) {
+          updatedDraft = draft.copyWith(currency: reparsedCurrency.currency, currencyUnsupported: false);
+        }
+        // If still unsupported, currencyUnsupported stays true on `draft` unchanged, and
+        // _advanceAfterParsing below will simply ask again.
       case 'direction':
         final lower = effective.toLowerCase();
-        if (['عليه', 'على', 'مدين', 'debit'].any(lower.contains)) {
+        if (['عليه', 'على', 'مدين', 'دين', 'عنده', 'تسلف', 'استلف', 'مديون', 'debit'].any(lower.contains)) {
           updatedDraft = draft.copyWith(direction: AccountDirection.debit);
-        } else if (['له', 'دائن', 'credit'].any(lower.contains)) {
+        } else if (['له', 'دائن', 'سدد', 'سلم', 'سلّم', 'وصل', 'رجع', 'ارجع', 'credit'].any(lower.contains)) {
           updatedDraft = draft.copyWith(direction: AccountDirection.credit);
         }
     }
@@ -446,18 +480,28 @@ class VoiceController extends StateNotifier<VoiceState> {
     await _advanceAfterParsing(draft: updatedDraft, account: updatedAccount);
   }
 
-  /// Amount → account → direction, in that order — an account can't be matched without at least
-  /// trying, and asking "له أم عليه؟" before we even know WHO the money is for/from would be a
-  /// confusing question to lead with. Every branch now SPEAKS its question (or the confirmation
-  /// summary) and then immediately starts listening again on its own — the person never has to
-  /// touch anything to move the dialogue forward.
+  /// Amount → currency → account name → full-name check → direction, in that order. Every
+  /// branch SPEAKS its question (or the confirmation summary) and then immediately starts
+  /// listening again on its own — the person never has to touch anything to move the dialogue
+  /// forward. Reaching the final `else` no longer requires an EXISTING account match — see
+  /// [VoiceState.account]'s doc comment: a `null` match at this point simply means a brand-new
+  /// account will be created from [VoiceCommandDraft.accountName] once the person confirms.
   Future<void> _advanceAfterParsing({required VoiceCommandDraft draft, required Account? account}) async {
+    final accountName = draft.accountName;
     if (draft.amount == null) {
       state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'amount', clarifyingField: 'amount');
       await _speakThenListenForClarification('amount');
-    } else if (account == null) {
+    } else if (draft.currencyUnsupported) {
+      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'currency', clarifyingField: 'currency');
+      await _speakThenListenForClarification('currency');
+    } else if (accountName == null) {
       state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'account', clarifyingField: 'account');
       await _speakThenListenForClarification('account');
+    } else if (!VoiceCommandParser.hasFullName(accountName)) {
+      // A name was heard, but it's only a single word (e.g. just "عبدالقدوس") — per the same
+      // rule the manual Add Account form enforces, an account needs a first AND a last name.
+      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'accountName', clarifyingField: 'accountName');
+      await _speakThenListenForClarification('accountName');
     } else if (draft.direction == null) {
       state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'direction', clarifyingField: 'direction');
       await _speakThenListenForClarification('direction');
@@ -484,10 +528,10 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   Future<void> _speakThenListenForConfirmation({bool editApplied = false}) async {
     final draft = state.draft;
-    final account = state.account;
-    if (draft == null || account == null || draft.amount == null || draft.direction == null) return;
+    final accountName = state.account?.name ?? draft?.accountName;
+    if (draft == null || accountName == null || draft.amount == null || draft.direction == null) return;
     final languageCode = _ref.read(voiceRecognitionLanguageProvider);
-    await _speak(_confirmationSpeech(draft, account, languageCode, editApplied: editApplied));
+    await _speak(_confirmationSpeech(draft, accountName, languageCode, editApplied: editApplied));
     state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
     try {
       await _engine.start();
@@ -550,9 +594,10 @@ class VoiceController extends StateNotifier<VoiceState> {
     var updatedAccount = state.account;
     if (edit.accountNameHint != null) {
       final matched = _matchAccount(edit.accountNameHint, edit.accountNameHint!);
-      if (matched != null) updatedAccount = matched;
+      updatedAccount = matched;
+      updatedDraft = updatedDraft.copyWith(accountName: matched?.name ?? edit.accountNameHint);
     }
-    state = state.copyWith(draft: updatedDraft, account: updatedAccount, clearError: true);
+    state = state.copyWith(draft: updatedDraft, account: updatedAccount, clearAccount: updatedAccount == null, clearError: true);
     await _speakThenListenForConfirmation(editApplied: true);
   }
 
@@ -628,11 +673,25 @@ class VoiceController extends StateNotifier<VoiceState> {
     return null;
   }
 
+  /// Tries to match [parsedName] (falling back to the whole [transcript]) against an existing
+  /// account. Prefers an EXACT match (trimmed, case-insensitive) first — that's what "the
+  /// account already exists" really means, not just a name that happens to share a substring.
+  /// Falls back to a substring match only when the STORED name itself looks like a real full
+  /// name (2+ words), so a short, generic first name can never accidentally match an unrelated
+  /// account and silently add the entry to the wrong person.
   Account? _matchAccount(String? parsedName, String transcript) {
     final accounts = _ref.read(accountsProvider).value ?? const <Account>[];
-    final candidate = (parsedName ?? transcript).toLowerCase();
+    final candidateRaw = (parsedName ?? transcript).trim();
+    if (candidateRaw.isEmpty) return null;
+    final candidate = candidateRaw.toLowerCase();
+
     for (final account in accounts) {
-      if (candidate.contains(account.name.toLowerCase())) return account;
+      if (account.name.trim().toLowerCase() == candidate) return account;
+    }
+    for (final account in accounts) {
+      final storedName = account.name.trim().toLowerCase();
+      final looksLikeFullName = storedName.split(RegExp(r'\s+')).length >= 2;
+      if (looksLikeFullName && candidate.contains(storedName)) return account;
     }
     return null;
   }
@@ -645,8 +704,9 @@ class VoiceController extends StateNotifier<VoiceState> {
   void selectAccount(Account account) {
     final draft = state.draft;
     if (draft == null) return;
-    state = state.copyWith(account: account, clearError: true, clearClarifyingField: true);
-    unawaited(_advanceAfterParsing(draft: draft, account: account));
+    final updated = draft.copyWith(accountName: account.name);
+    state = state.copyWith(draft: updated, account: account, clearError: true, clearClarifyingField: true);
+    unawaited(_advanceAfterParsing(draft: updated, account: account));
   }
 
   void selectDirection(AccountDirection direction) {
@@ -659,11 +719,35 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   // ───────────────────────────────── Saving ─────────────────────────────────
 
+  /// Saves the confirmed draft. If no existing account was matched, a brand-new [Account] is
+  /// created FIRST, using exactly the full name the person spoke (already guaranteed to be 2+
+  /// words by [_advanceAfterParsing]'s check before confirmation was ever reached) — the
+  /// transaction is then attached to that new account, never a mismatched or placeholder one.
+  ///
+  /// DISCLOSED SIMPLIFICATION: a voice command never states whether the person is a "عميل" or
+  /// "مورد" — a newly-created account defaults to [AccountCategory.client], the same default the
+  /// manual Add Account form starts on. The person can reclassify it afterwards from that
+  /// account's own edit screen if it should actually be a supplier.
   Future<void> confirm() async {
     final draft = state.draft;
-    final account = state.account;
-    if (draft == null || account == null || draft.amount == null || draft.direction == null) return;
+    var account = state.account;
+    if (draft == null || draft.amount == null || draft.direction == null) return;
+    final accountName = account?.name ?? draft.accountName;
+    if (accountName == null) return;
+
     state = state.copyWith(status: VoiceStatus.saving);
+
+    if (account == null) {
+      account = Account(
+        id: _uuid.v4(),
+        name: accountName,
+        category: AccountCategory.client,
+        createdDate: draft.date,
+      );
+      await _ref.read(accountsProvider.notifier).addAccount(account);
+      state = state.copyWith(account: account);
+    }
+
     final id = _uuid.v4();
     final duration = state.recordingStartedAt == null
         ? state.elapsedBeforePause.inMilliseconds

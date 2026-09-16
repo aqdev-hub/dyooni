@@ -1040,6 +1040,18 @@ abstract class AppLocalizations {
   /// **'لم أتعرف على نوع العملية. اختر \"له\" أو \"عليه\".'**
   String get voiceNeedDirection;
 
+  /// No description provided for @voiceNeedFullAccountName.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجب أن يتكون اسم الحساب من اسمين على الأقل (الاسم الأول واسم العائلة). من فضلك قل اسم الحساب بوضوح.'**
+  String get voiceNeedFullAccountName;
+
+  /// No description provided for @voiceCurrencyUnsupported.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه العملة غير مدعومة حاليًا. من فضلك قل عملة مدعومة (مثل ريال يمني، سعودي، دولار، درهم، جنيه، أو دينار) ثم أعد المحاولة.'**
+  String get voiceCurrencyUnsupported;
+
   /// No description provided for @voiceNoSpeechCaptured.
   ///
   /// In ar, this message translates to:
@@ -1129,6 +1141,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الحساب'**
   String get voiceAccountLabel;
+
+  /// No description provided for @voiceAccountWillBeCreated.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتم إنشاء حساب جديد بهذا الاسم'**
+  String get voiceAccountWillBeCreated;
 
   /// No description provided for @voiceRecordingDuration.
   ///
