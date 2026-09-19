@@ -32,13 +32,19 @@ class _ImageSourceDialogState extends State<_ImageSourceDialog> {
       // concrete trigger for Android killing this app's background process to reclaim memory
       // (see AndroidManifest.xml's `largeHeap` comment for the fuller story on that crash; that
       // mitigation alone wasn't enough, this addresses the actual memory spike more directly).
-      // 1600px is comfortably more resolution than a receipt/document photo or an attachment
-      // thumbnail ever needs, and this doesn't crop — the full frame is still kept, just capped.
+      //
+      // Tightened further as part of the camera-crash hardening pass (1600px/85 → 1280px/78) —
+      // a receipt/document photo or attachment thumbnail never needed the extra resolution, and
+      // every additional MB held in memory here is additional risk of Android deciding to
+      // reclaim this app's process while the camera Activity is in the foreground. This alone
+      // can never fully eliminate that risk — see AttachmentStorage's doc comment for the other,
+      // more direct half of this fix (persisting the result to permanent storage immediately
+      // once it comes back) — but it does reduce how often the OS is forced to make that call.
       final image = await ImagePicker().pickImage(
         source: _source,
-        imageQuality: 85,
-        maxWidth: 1600,
-        maxHeight: 1600,
+        imageQuality: 78,
+        maxWidth: 1280,
+        maxHeight: 1280,
       );
       if (mounted) Navigator.of(context).pop(image);
     } finally {

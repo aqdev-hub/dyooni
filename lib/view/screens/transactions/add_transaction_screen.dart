@@ -1,4 +1,5 @@
 import 'dart:async' show unawaited;
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/dyooni_picker_theme.dart';
+import '../../../core/utils/attachment_storage.dart';
 import '../../../core/utils/form_draft_storage.dart';
 import '../../../core/utils/image_rotate.dart';
 import '../../../data/models/account.dart';
@@ -103,10 +105,17 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (savedDate != null) _date = savedDate;
     final savedDirection = saved['direction'] as String?;
     if (savedDirection != null) _direction = AccountDirection.values.byName(savedDirection);
-    _attachmentPath = saved['attachmentPath'] as String?;
+    // FIX for the reported camera black-screen/crash bug: a restored draft's attachment path can
+    // point to a file the OS has since cleared — silently restoring and later trying to read/
+    // save against a path that no longer exists is exactly what produced the crash. Verifying
+    // it's still really there means a stale reference is quietly dropped instead of breaking the
+    // form when it reopens. See add_account_screen.dart's identical fix / AttachmentStorage's
+    // doc comment for the fuller story.
+    final savedAttachmentPath = saved['attachmentPath'] as String?;
+    _attachmentPath = savedAttachmentPath != null && File(savedAttachmentPath).existsSync() ? savedAttachmentPath : null;
   }
 
-  /// Called right before handing off to the camera/gallery — see AddAccountScreen's identical
+  /// Called right before handing off to the camera/gallery; see AddAccountScreen's identical
   /// method for the full reasoning (same underlying process-kill risk).
   Future<void> _saveDraft() async {
     if (widget.isEditing) return;
@@ -173,7 +182,29 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     // before that risky handoff, is what lets the person's typed data survive it.
     await _saveDraft();
     final image = await showImageSourceDialog(context);
-    if (image != null && mounted) setState(() => _attachmentPath = image.path);
+    if (image == null || !mounted) return;
+
+    // FIX for the reported camera black-screen/data-loss bug (part 2 of 2 — see
+    // AttachmentStorage's doc comment for part 1, the compression side lives in
+    // image_source_dialog.dart): the path image_picker/the camera hands back can live in a
+    // transient location the OS is free to clear at any time. Copying it into this app's own
+    // permanent storage immediately — before it's ever referenced anywhere else (state, the
+    // draft, or a future save) — is what makes the attachment durable regardless of what happens
+    // to that original location afterwards. Falls back to the picker's own original path if the
+    // copy itself fails, so a rare disk error never silently discards the attachment the person
+    // just picked.
+    String attachmentPath;
+    try {
+      attachmentPath = await AttachmentStorage.persist(image.path);
+    } catch (_) {
+      attachmentPath = image.path;
+    }
+    if (!mounted) return;
+    setState(() => _attachmentPath = attachmentPath);
+    // Re-saves the draft now that the attachment has a real, durable path — so a process kill
+    // that happens AFTER a successful camera return (but before the person taps the final save
+    // button) still has something valid to restore, not just the pre-camera snapshot saved above.
+    await _saveDraft();
   }
 
   /// Rotates the currently-attached photo 90° in place. The file path never changes — see

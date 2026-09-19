@@ -1,4 +1,5 @@
 import 'dart:async' show unawaited;
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/dyooni_picker_theme.dart';
+import '../../../core/utils/attachment_storage.dart';
 import '../../../core/utils/contact_picker.dart';
 import '../../../core/utils/form_draft_storage.dart';
 import '../../../core/utils/image_rotate.dart';
@@ -115,7 +117,14 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     if (savedDirection != null) _direction = AccountDirection.values.byName(savedDirection);
     final savedCategory = saved['category'] as String?;
     if (savedCategory != null) _category = AccountCategory.values.byName(savedCategory);
-    _attachmentPath = saved['attachmentPath'] as String?;
+    // FIX for the reported camera black-screen/crash bug: a restored draft's attachment path can
+    // point to a file the OS has since cleared (most commonly a transient cache location from
+    // before this batch's AttachmentStorage fix existed) — silently restoring and later trying
+    // to read/save against a path that no longer exists is exactly what produced the crash.
+    // Verifying it's still really there means a stale reference is quietly dropped instead of
+    // breaking the form when it reopens.
+    final savedAttachmentPath = saved['attachmentPath'] as String?;
+    _attachmentPath = savedAttachmentPath != null && File(savedAttachmentPath).existsSync() ? savedAttachmentPath : null;
   }
 
   /// Called right before handing off to the camera/gallery — the single riskiest moment for a
@@ -194,7 +203,29 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     // before that risky handoff, is what lets the person's typed data survive it.
     await _saveDraft();
     final image = await showImageSourceDialog(context);
-    if (image != null && mounted) setState(() => _attachmentPath = image.path);
+    if (image == null || !mounted) return;
+
+    // FIX for the reported camera black-screen/data-loss bug (part 2 of 2 — see
+    // AttachmentStorage's doc comment for part 1, the compression side lives in
+    // image_source_dialog.dart): the path image_picker/the camera hands back can live in a
+    // transient location the OS is free to clear at any time. Copying it into this app's own
+    // permanent storage immediately — before it's ever referenced anywhere else (state, the
+    // draft, or a future save) — is what makes the attachment durable regardless of what happens
+    // to that original location afterwards. Falls back to the picker's own original path if the
+    // copy itself fails, so a rare disk error never silently discards the attachment the person
+    // just picked.
+    String attachmentPath;
+    try {
+      attachmentPath = await AttachmentStorage.persist(image.path);
+    } catch (_) {
+      attachmentPath = image.path;
+    }
+    if (!mounted) return;
+    setState(() => _attachmentPath = attachmentPath);
+    // Re-saves the draft now that the attachment has a real, durable path — so a process kill
+    // that happens AFTER a successful camera return (but before the person taps the final Save
+    // button) still has something valid to restore, not just the pre-camera snapshot saved above.
+    await _saveDraft();
   }
 
   /// Rotates the currently-attached photo 90° in place — see AttachmentPreview's doc comment.
@@ -221,7 +252,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     final l10n = AppLocalizations.of(context)!;
     try {
       final contact = await pickDeviceContact();
-      if (contact == null || !mounted) return; // person backed out of the picker, or permission was refused
+      if (contact == null || !mounted) return; // person backed out of the picker without choosing anyone
       final name = displayName(contact);
       final phone = firstPhoneNumber(contact);
       setState(() {
@@ -231,6 +262,12 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
         }
         if (phone != null) _phoneController.text = phone;
       });
+    } on ContactPermissionDeniedException {
+      // FIX for the reported "the phone/person icons stopped doing anything at all when tapped"
+      // bug — see ContactPermissionDeniedException's doc comment: a denied permission used to be
+      // indistinguishable from the person simply closing the picker (both silently did nothing).
+      // Now the person actually sees why nothing opened, instead of the icon looking broken.
+      if (mounted) AppSnackBar.showError(context, l10n.contactPermissionDeniedMessage);
     } catch (_) {
       if (mounted) AppSnackBar.showError(context, l10n.contactPickFailedMessage);
     }
@@ -246,6 +283,10 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       if (contact == null || !mounted) return;
       final phone = firstPhoneNumber(contact);
       if (phone != null) setState(() => _phoneController.text = phone);
+    } on ContactPermissionDeniedException {
+      // Same fix as _pickContactForName above — see ContactPermissionDeniedException's doc
+      // comment for why this is split from a plain cancelled-picker `null` return.
+      if (mounted) AppSnackBar.showError(context, l10n.contactPermissionDeniedMessage);
     } catch (_) {
       if (mounted) AppSnackBar.showError(context, l10n.contactPickFailedMessage);
     }
