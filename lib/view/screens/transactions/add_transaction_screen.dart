@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/currencies.dart';
@@ -92,6 +93,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       if (settings != null) _direction = _resolveDefaultDirection(settings);
       // ثم نعيد أي مسودة محفوظة (قد تُجاوز الاتجاه الافتراضي أعلاه) — انظر FormDraftStorage.
       _restoreDraftIfAny();
+      // Recovers a photo the camera genuinely finished capturing right before Android killed
+      // this app's process — see AddAccountScreen's identical `_recoverLostCameraCapture` for
+      // the full reasoning; only meaningful for the same CREATE-only scope as the draft itself.
+      unawaited(_recoverLostCameraCapture());
     }
   }
 
@@ -113,6 +118,25 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     // doc comment for the fuller story.
     final savedAttachmentPath = saved['attachmentPath'] as String?;
     _attachmentPath = savedAttachmentPath != null && File(savedAttachmentPath).existsSync() ? savedAttachmentPath : null;
+  }
+
+  /// FIX for the reported "camera kills the app process mid-capture, the photo is just gone"
+  /// bug — see AddAccountScreen's identical method for the full reasoning
+  /// (image_picker's own official `retrieveLostData()` recovery API).
+  Future<void> _recoverLostCameraCapture() async {
+    try {
+      final response = await ImagePicker().retrieveLostData();
+      final file = response.file;
+      if (response.isEmpty || file == null || !mounted) return;
+      final persisted = await AttachmentStorage.persist(file.path);
+      if (!mounted) return;
+      setState(() => _attachmentPath = persisted);
+      await _saveDraft();
+    } catch (_) {
+      // Best-effort only — a failed recovery just means the photo itself is genuinely gone; the
+      // rest of the interrupted draft (amount/details/etc., already restored by
+      // _restoreDraftIfAny above) is still recovered regardless.
+    }
   }
 
   /// Called right before handing off to the camera/gallery; see AddAccountScreen's identical

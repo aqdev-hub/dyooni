@@ -3,6 +3,20 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- ===== جهات الاتصال — بداية الإضافة =====
+         FIX for the reported "phone/person contact-pick icons do nothing when tapped" bug: the
+         `flutter_contacts` package's own README explicitly requires the HOST APP (not the
+         plugin) to declare these two permissions itself — the plugin does NOT add them
+         automatically to the final merged manifest the way some plugins do for their own
+         dangerous permissions. Without this declaration, `FlutterContacts.requestPermission()`
+         is refused immediately by the OS with NO system permission dialog ever shown at all —
+         exactly the silent, invisible failure that was reported (see
+         core/utils/contact_picker.dart's ContactPermissionDeniedException, which now at least
+         surfaces this as a real error message once the permission truly is denied — but that
+         message can never fix a permission the manifest itself never declared). -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+    <!-- ===== جهات الاتصال — نهاية الإضافة ===== -->
     <!-- ===== النسخ الاحتياطي المحلي — بداية الإضافة =====
          مطلوب فقط لكتابة ملف .dyoonibackup مباشرة داخل Download/ديوني بدل نافذة اختيار مسار:
          - maxSdkVersion="28": النظام يتجاهل هذا الإذن تلقائيًا على أندرويد 10+ (لا حاجة لطلبه هناك).
@@ -31,10 +45,11 @@
              resolution (maxWidth/maxHeight), addressing the actual memory spike more directly
              than largeHeap alone.
              A complete, unconditional fix — one where the exact SAME dialog reopens automatically
-             after a kill — would still require converting these `showDialog`-based forms into
-             genuine restorable GoRouter routes wired through Flutter's RestorationMixin, which is
-             a materially larger, separate architectural change than the draft-safety-net above;
-             left out of this batch on purpose rather than half-implemented. -->
+             after a kill — still requires converting these `showDialog`-based forms into genuine
+             restorable GoRouter routes wired through Flutter's RestorationMixin (this
+             meta-data flag alone only helps once that wiring exists) — a materially larger,
+             separate architectural change than the draft-safety-net above; left out of this
+             batch on purpose rather than half-implemented. -->
         <meta-data
             android:name="io.flutter.embedding.android.EnableStateRestoration"
             android:value="true" />

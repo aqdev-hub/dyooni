@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/currencies.dart';
@@ -100,6 +101,11 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       // ثم نعيد أي مسودة محفوظة (قد تُجاوز الاتجاه الافتراضي أعلاه إن كانت المسودة تحمل اتجاهًا
       // مختلفًا اختاره المستخدم قبل خروج غير مقصود من الشاشة) — انظر FormDraftStorage.
       _restoreDraftIfAny();
+      // Recovers a photo the camera genuinely finished capturing right before Android killed
+      // this app's process (see AndroidManifest.xml's "Camera-crash mitigation notes") — see
+      // _recoverLostCameraCapture's own doc comment. Only meaningful for the same CREATE-only
+      // scope as the draft itself.
+      unawaited(_recoverLostCameraCapture());
     }
   }
 
@@ -125,6 +131,33 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     // breaking the form when it reopens.
     final savedAttachmentPath = saved['attachmentPath'] as String?;
     _attachmentPath = savedAttachmentPath != null && File(savedAttachmentPath).existsSync() ? savedAttachmentPath : null;
+  }
+
+  /// FIX for the reported "camera kills the app process mid-capture, the photo is just gone"
+  /// bug — the other half of the fix alongside SplashGate's draft-based recovery (see
+  /// core/utils/interrupted_form_recovery.dart). `ImagePicker.retrieveLostData()` is
+  /// image_picker's own OFFICIAL API for exactly this Android failure mode: the camera Activity
+  /// genuinely finished and delivered its result via `onActivityResult`, but the Dart-side
+  /// `Future` awaiting it never got to run its continuation because the whole engine/process
+  /// died first. Calling this recovers that result once the app relaunches.
+  ///
+  /// Safe to call unconditionally on every normal open, not just a recovery-triggered one — when
+  /// nothing was lost (the overwhelming majority of opens), it resolves near-instantly with an
+  /// empty response and does nothing.
+  Future<void> _recoverLostCameraCapture() async {
+    try {
+      final response = await ImagePicker().retrieveLostData();
+      final file = response.file;
+      if (response.isEmpty || file == null || !mounted) return;
+      final persisted = await AttachmentStorage.persist(file.path);
+      if (!mounted) return;
+      setState(() => _attachmentPath = persisted);
+      await _saveDraft();
+    } catch (_) {
+      // Best-effort only — a failed recovery just means the photo itself is genuinely gone; the
+      // rest of the interrupted draft (name/amount/etc., already restored by
+      // _restoreDraftIfAny above) is still recovered regardless.
+    }
   }
 
   /// Called right before handing off to the camera/gallery — the single riskiest moment for a
