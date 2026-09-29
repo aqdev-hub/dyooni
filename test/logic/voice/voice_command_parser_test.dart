@@ -37,6 +37,14 @@ void main() {
     expect(draft.amount, 3200);
   });
 
+  test('recognizes the Yemeni-spoken form ثلاثة ألف as 3000', () {
+    final draft = parser.parse('أحمد علي عليه ثلاثة ألف ريال');
+
+    expect(draft.amount, 3000);
+    expect(draft.currency, 'YER');
+    expect(draft.direction, AccountDirection.debit);
+  });
+
   group('flexible phrasing (regression coverage for the official spec examples)', () {
     test('"على" is an explicit debit marker, distinct from the name "علي"', () {
       final draft = parser.parse('أضف على إبراهيم سعيد 3200 ريال قيمة دجاجة');

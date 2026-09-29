@@ -1,4 +1,4 @@
-﻿{
+{
     "flutter":  {
                     "platforms":  {
                                       "android":  {
@@ -25,5 +25,41 @@
     "firestore":  {
                       "rules":  "firestore.rules",
                       "indexes":  "firestore.indexes.json"
-                  }
+                  },
+    "hosting": {
+        "public": "public",
+        "ignore": [
+            "firebase.json",
+            "**/.*",
+            "**/node_modules/**"
+        ],
+        "cleanUrls": false,
+        "trailingSlash": false,
+        "headers": [
+            {
+                "source": "**/*.@(html)",
+                "headers": [
+                    { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+                ]
+            },
+            {
+                "source": "assets/**",
+                "headers": [
+                    { "key": "Cache-Control", "value": "public, max-age=604800, immutable" }
+                ]
+            },
+            {
+                "source": "/favicon.ico",
+                "headers": [
+                    { "key": "Cache-Control", "value": "public, max-age=604800" }
+                ]
+            },
+            {
+                "source": "/manifest.webmanifest",
+                "headers": [
+                    { "key": "Cache-Control", "value": "public, max-age=86400" }
+                ]
+            }
+        ]
+    }
 }

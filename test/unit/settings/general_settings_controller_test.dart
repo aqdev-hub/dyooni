@@ -95,4 +95,15 @@ void main() {
     final result = await freshContainer.read(generalSettingsProvider.future);
     expect(result.showTimeInOperations, isFalse);
   });
+
+  test('speech recognition provider choice persists across an app restart', () async {
+    await container.read(generalSettingsProvider.future);
+    await container.read(generalSettingsProvider.notifier).setVoiceRecognitionMode(VoiceRecognitionMode.cloud);
+
+    final prefs = await SharedPreferences.getInstance();
+    final freshContainer = ProviderContainer(overrides: [sharedPreferencesProvider.overrideWithValue(prefs)]);
+    addTearDown(freshContainer.dispose);
+
+    expect((await freshContainer.read(generalSettingsProvider.future)).voiceRecognitionMode, VoiceRecognitionMode.cloud);
+  });
 }
