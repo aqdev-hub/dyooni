@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
@@ -22,8 +23,10 @@ import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/home/summary_card.dart';
+import '../../widgets/home/app_drawer.dart';
 import '../../widgets/reports/report_options_sheet.dart';
 import '../../widgets/shared/app_snackbar.dart';
+import '../../widgets/shared/main_bottom_nav.dart';
 
 /// Real .xlsx MIME type — Excel/Sheets and most spreadsheet apps use this to recognize the file
 /// on receipt, the same reason the earlier CSV export always set an explicit mimeType too.
@@ -231,14 +234,41 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     return Scaffold(
       backgroundColor: shell.background,
-      appBar: AppBar(
-        backgroundColor: shell.headerBottom,
-        foregroundColor: Colors.white,
-        title: Text(l10n.reportsTitle),
-      ),
+      drawer: const AppDrawer(),
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [shell.headerTop, shell.headerBottom],
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: Row(
+                children: [
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: Icon(Icons.menu_rounded, color: shell.accent, size: 21),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      l10n.reportsTitle,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.title(context).copyWith(color: shell.accent, fontSize: 17),
+                    ),
+                  ),
+                  const SizedBox(width: 48),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Stack(
+                children: [
             ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -296,6 +326,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 color: Colors.black.withValues(alpha: 0.15),
                 child: Center(child: CircularProgressIndicator(color: shell.accent)),
               ),
+                ],
+              ),
+            ),
+            MainBottomNav(
+              activeTab: MainNavTab.reports,
+              onHome: () => context.go('/home'),
+              onVoice: () => context.push('/voice'),
+              onReports: () {},
+            ),
           ],
         ),
       ),

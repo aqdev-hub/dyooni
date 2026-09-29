@@ -19,12 +19,15 @@ import '../../../core/utils/image_rotate.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/general_settings.dart';
 import '../../../data/models/transaction.dart';
+import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/accounts/ceiling_check.dart';
 import '../../../logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/shared/amount_in_words.dart';
 import '../../widgets/shared/app_snackbar.dart';
+import '../../widgets/shared/account_ceiling_exceeded_dialog.dart';
 import '../../widgets/shared/direction_choice.dart';
 import '../../widgets/shared/labeled_field.dart';
 import '../../widgets/shared/amount_calculator_dialog.dart';
@@ -33,6 +36,7 @@ import '../../widgets/shared/currency_picker_sheet.dart';
 import '../../widgets/shared/image_source_dialog.dart';
 import '../../widgets/shared/modal_header_bar.dart';
 import '../../widgets/shared/validated_field.dart';
+import '../accounts/add_account_screen.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   const AddTransactionScreen({required this.accountId, this.accountName, this.existingTransaction, super.key});
@@ -205,6 +209,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     // this app's process to free memory (see AndroidManifest.xml) — saving the draft NOW, right
     // before that risky handoff, is what lets the person's typed data survive it.
     await _saveDraft();
+    if (!mounted) return;
     final image = await showImageSourceDialog(context);
     if (image == null || !mounted) return;
 
@@ -281,12 +286,57 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     return null;
   }
 
+  Account? _findAccount() {
+    final accounts = ref.read(accountsProvider).value ?? const <Account>[];
+    for (final account in accounts) {
+      if (account.id == widget.accountId) return account;
+    }
+    return null;
+  }
+
+  Future<void> _openEditAccountForCeiling(Account account) {
+    return showDialog<void>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 54),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: SizedBox(
+          width: 340,
+          height: 540,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+            child: AddAccountScreen(existingAccount: account),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _save({required bool keepAdding}) async {
     if (_isSaving) return;
     final l10n = AppLocalizations.of(context)!;
     final amountError = _validateAmount(l10n);
     setState(() => _amountError = amountError);
     if (amountError != null) return;
+
+    final account = _findAccount();
+    final ceilingCheck = checkAccountCeiling(
+      currentBalance: ref.read(accountBalanceProvider(widget.accountId)),
+      direction: _direction,
+      amount: double.parse(_amountController.text.trim()),
+      ceiling: account?.ceiling,
+    );
+    if (ceilingCheck is CeilingExceeded) {
+      final raise = await showAccountCeilingExceededDialog(
+        context,
+        projectedDebitBalance: ceilingCheck.projectedDebitBalance,
+        ceiling: ceilingCheck.ceiling,
+        debitLabel: resolveDebitLabel(l10n, ref.read(generalSettingsProvider).value),
+      );
+      if (raise && mounted && account != null) await _openEditAccountForCeiling(account);
+      return;
+    }
 
     setState(() => _isSaving = true);
     final transaction = _buildTransaction();

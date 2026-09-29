@@ -197,20 +197,6 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: shell.surface,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: shell.border),
-                          ),
-                          child: Text(
-                            l10n.personalDataFeatureNote,
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 11),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
                         Text(
                           l10n.personalDataLogoLabel,
                           style: AppTextStyles.title(context).copyWith(color: shell.textPrimary, fontSize: 15),
@@ -242,11 +228,6 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
                           ],
                         ),
                         const SizedBox(height: 24),
-                        Text(
-                          l10n.personalDataReportHeaderNote,
-                          style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
-                        ),
-                        const SizedBox(height: 14),
                         _ProfileField(label: l10n.nameArLabel, controller: _nameArController),
                         _ProfileField(label: l10n.nameEnLabel, controller: _nameEnController),
                         _ProfileField(label: l10n.addressArLabel, controller: _addressArController),

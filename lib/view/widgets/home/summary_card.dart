@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/settings/direction_labels.dart';
+import '../../../logic/settings/general_settings_provider.dart';
 
-class SummaryCard extends StatelessWidget {
+class SummaryCard extends ConsumerWidget {
   const SummaryCard({required this.summary, required this.title, super.key});
   final AccountsSummary summary;
   final String title;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
+    final settings = ref.watch(generalSettingsProvider).value;
+    final creditLabel = resolveCreditLabel(l10n, settings);
+    final debitLabel = resolveDebitLabel(l10n, settings);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -52,13 +58,13 @@ class SummaryCard extends StatelessWidget {
                 color: shell.textPrimary,
               ),
               _StatColumn(
-                label: l10n.homeTotalCredit,
+                label: creditLabel,
                 value: summary.totalCredit,
                 color: AppColors.credit,
                 icon: Icons.arrow_upward_rounded,
               ),
               _StatColumn(
-                label: l10n.homeTotalDebit,
+                label: debitLabel,
                 value: summary.totalDebit,
                 color: AppColors.debit,
                 icon: Icons.arrow_downward_rounded,

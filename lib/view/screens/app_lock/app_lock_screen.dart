@@ -7,6 +7,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../widgets/shared/app_logo.dart';
+import '../../widgets/shared/app_snackbar.dart';
 
 /// شاشة قفل حقيقية — تُعرض فوق كل شيء عبر `MaterialApp.router`'s `builder:` (انظر main.dart)
 /// كلما كانت الحماية بكلمة مرور و/أو بالبصمة مفعّلة ولم يفتح المستخدم التطبيق بعد لهذه الجلسة.
@@ -51,6 +52,16 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
     // فتح فوري بمجرد صحة كلمة المرور — بلا زر تأكيد، تمامًا كما طُلب.
     final ok = ref.read(generalSettingsProvider.notifier).verifyPassword(value);
     if (ok) widget.onUnlocked();
+  }
+
+  void _attemptLogin() {
+    final l10n = AppLocalizations.of(context)!;
+    final ok = ref.read(generalSettingsProvider.notifier).verifyPassword(_controller.text);
+    if (ok) {
+      widget.onUnlocked();
+    } else {
+      AppSnackBar.showError(context, l10n.appLockWrongPasswordMessage);
+    }
   }
 
   @override
@@ -108,6 +119,24 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                           focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: shell.accent, width: 2)),
                         ),
                         onChanged: _onPasswordChanged,
+                        onSubmitted: (_) => _attemptLogin(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: 220,
+                      child: ElevatedButton(
+                        onPressed: _attemptLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: shell.accent,
+                          foregroundColor: shell.headerBottom,
+                          minimumSize: const Size.fromHeight(46),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: Text(
+                          l10n.appLockLoginButton,
+                          style: AppTextStyles.button(context).copyWith(color: shell.headerBottom, fontWeight: FontWeight.w700),
+                        ),
                       ),
                     ),
                   ],

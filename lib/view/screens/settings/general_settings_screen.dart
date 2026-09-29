@@ -35,10 +35,17 @@ class _GeneralSettingsScreenState extends ConsumerState<GeneralSettingsScreen> {
       final ok = await ref
           .read(biometricAuthServiceProvider)
           .authenticate(reason: l10n.generalSettingsBiometricEnableReason);
-      if (!ok) return;
+      if (!ok) {
+        if (mounted) AppSnackBar.showError(context, l10n.appLockBiometricFailed);
+        return;
+      }
     }
     await ref.read(generalSettingsProvider.notifier).setBiometricEnabled(value);
-    if (mounted) AppSnackBar.showSuccess(context, l10n.generalSettingsSettingsSavedMessage);
+    if (!mounted) return;
+    AppSnackBar.showSuccess(
+      context,
+      value ? l10n.generalSettingsBiometricEnabledSuccessMessage : l10n.generalSettingsSettingsSavedMessage,
+    );
   }
 
   Future<void> _togglePassword(bool value) async {
@@ -79,7 +86,7 @@ class _GeneralSettingsScreenState extends ConsumerState<GeneralSettingsScreen> {
       if (confirmed != true || !mounted) return;
       await ref.read(generalSettingsProvider.notifier).disablePassword();
     }
-    if (mounted) AppSnackBar.showSuccess(context, l10n.generalSettingsSettingsSavedMessage);
+    if (mounted) AppSnackBar.showSuccess(context, l10n.generalSettingsTermsUpdatedMessage);
   }
 
   Future<void> _editLabel({required bool isCredit, required String current}) async {
@@ -133,6 +140,38 @@ class _GeneralSettingsScreenState extends ConsumerState<GeneralSettingsScreen> {
       builder: dyooniPickerTheme,
     );
     if (picked == null || !mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final dShell = dialogContext.shellColors;
+        return AlertDialog(
+          backgroundColor: dShell.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Text(
+            l10n.generalSettingsAnnualClosingConfirmTitle,
+            style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary),
+          ),
+          content: Text(
+            l10n.generalSettingsAnnualClosingConfirmBody,
+            style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: dShell.accent),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.generalSettingsAnnualClosingConfirmContinue),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
     await ref.read(generalSettingsProvider.notifier).setAnnualClosingDate(picked);
     if (mounted) AppSnackBar.showSuccess(context, l10n.generalSettingsSettingsSavedMessage);
   }
@@ -246,6 +285,11 @@ class _Body extends ConsumerWidget {
         _ToggleRow(label: l10n.generalSettingsShowAccountCeiling, value: settings.showAccountCeilingOnAdd, onChanged: notifier.setShowAccountCeilingOnAdd),
         _ToggleRow(label: l10n.generalSettingsVoiceNotifications, value: settings.voiceNotificationsEnabled, onChanged: notifier.setVoiceNotificationsEnabled),
         _ToggleRow(label: l10n.generalSettingsShowTimeInOperations, value: settings.showTimeInOperations, onChanged: notifier.setShowTimeInOperations),
+        const SizedBox(height: 8),
+        _VoiceRecognitionModeRow(
+          value: settings.voiceRecognitionMode,
+          onChanged: notifier.setVoiceRecognitionMode,
+        ),
 
         const SizedBox(height: 10),
         InkWell(
@@ -344,6 +388,41 @@ class _ToggleRow extends StatelessWidget {
           Expanded(child: Text(label, textAlign: TextAlign.end, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary))),
           const SizedBox(width: 10),
           Switch(value: value, onChanged: onChanged, activeThumbColor: shell.accent),
+        ],
+      ),
+    );
+  }
+}
+
+class _VoiceRecognitionModeRow extends StatelessWidget {
+  const _VoiceRecognitionModeRow({required this.value, required this.onChanged});
+  final VoiceRecognitionMode value;
+  final ValueChanged<VoiceRecognitionMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final shell = context.shellColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(10), border: Border.all(color: shell.border)),
+      child: Row(
+        children: [
+          Icon(value == VoiceRecognitionMode.local ? Icons.phone_android_rounded : Icons.cloud_rounded, color: shell.accent),
+          const SizedBox(width: 10),
+          Expanded(child: Text(l10n.voiceRecognitionModeTitle, textAlign: TextAlign.end, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary))),
+          const SizedBox(width: 10),
+          DropdownButton<VoiceRecognitionMode>(
+            value: value,
+            underline: const SizedBox.shrink(),
+            onChanged: (next) {
+              if (next != null) onChanged(next);
+            },
+            items: [
+              DropdownMenuItem(value: VoiceRecognitionMode.local, child: Text(l10n.voiceRecognitionModeLocal)),
+              DropdownMenuItem(value: VoiceRecognitionMode.cloud, child: Text(l10n.voiceRecognitionModeCloud)),
+            ],
+          ),
         ],
       ),
     );

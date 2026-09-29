@@ -8,6 +8,8 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../logic/voice/voice_provider.dart';
+import '../../../logic/settings/general_settings_provider.dart';
+import '../../../data/models/general_settings.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/shared/main_bottom_nav.dart';
 import '../../widgets/voice/vosk_model_download_sheet.dart';
@@ -118,9 +120,15 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
               ),
             ),
             Expanded(
-              child: SingleChildScrollView(
-                child: VoskModelGate(child: const VoiceCommandSheet()),
-              ),
+              child: ref.watch(generalSettingsProvider).when(
+                    loading: () => Center(child: CircularProgressIndicator(color: shell.accent)),
+                    error: (_, __) => const VoskModelGate(child: VoiceCommandSheet()),
+                    data: (settings) => SingleChildScrollView(
+                      child: settings.voiceRecognitionMode == VoiceRecognitionMode.cloud
+                          ? const VoiceCommandSheet()
+                          : const VoskModelGate(child: VoiceCommandSheet()),
+                    ),
+                  ),
             ),
             MainBottomNav(
               activeTab: MainNavTab.voice,

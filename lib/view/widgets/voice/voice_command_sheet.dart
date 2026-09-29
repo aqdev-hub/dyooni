@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
+import '../../../data/models/general_settings.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
@@ -84,7 +85,6 @@ class VoiceCommandSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final shell = context.shellColors;
     final state = ref.watch(voiceProvider);
     final controller = ref.read(voiceProvider.notifier);
     final settings = ref.watch(generalSettingsProvider).value;
@@ -204,7 +204,7 @@ class _MicCircle extends StatelessWidget {
     final isRecording = status == VoiceStatus.listening || status == VoiceStatus.bluetoothListeningCommand;
     final isPaused = status == VoiceStatus.paused;
     final fill = isRecording ? AppColors.voiceListening : (isPaused ? AppColors.voicePaused : AppColors.voiceIdle);
-    final icon = isRecording ? Icons.stop_rounded : (isPaused ? Icons.pause_rounded : Icons.mic_rounded);
+    final icon = isRecording ? Icons.stop_rounded : (isPaused ? Icons.play_arrow_rounded : Icons.mic_rounded);
     final isBusy = status == VoiceStatus.preparing ||
         status == VoiceStatus.bluetoothConnecting ||
         status == VoiceStatus.bluetoothConnected ||
@@ -468,7 +468,13 @@ class _AccountChoices extends ConsumerWidget {
     final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
     if (accounts.isEmpty) return const SizedBox.shrink();
     return Wrap(spacing: 6, runSpacing: 4, alignment: WrapAlignment.center, children: [
-      for (final account in accounts) ActionChip(label: Text(account.name), onPressed: () => onSelected(account)),
+      for (final account in accounts)
+        ActionChip(
+          label: Text(account.name, style: TextStyle(color: context.shellColors.textPrimary)),
+          backgroundColor: context.shellColors.surface,
+          side: BorderSide(color: context.shellColors.border),
+          onPressed: () => onSelected(account),
+        ),
     ]);
   }
 }
@@ -567,7 +573,7 @@ class _ConfirmationCard extends StatelessWidget {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: controller.retry,
+                onPressed: controller.startEdit,
                 icon: const Icon(Icons.edit_rounded, size: 16),
                 label: Text(l10n.voiceEdit),
               ),
@@ -671,11 +677,24 @@ class _BottomToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.spaceBetween,
       children: [
         _RecognitionLanguageButton(disabled: _recognizerBusy(state.status)),
+        _RecognitionProviderButton(disabled: _recognizerBusy(state.status)),
         _PauseResumeButton(state: state, controller: controller),
+        if (_recognizerBusy(state.status) || state.draft != null)
+          OutlinedButton.icon(
+            onPressed: controller.cancel,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.error,
+              side: const BorderSide(color: AppColors.error),
+            ),
+            icon: const Icon(Icons.cancel_outlined, size: 16),
+            label: Text(AppLocalizations.of(context)!.cancel),
+          ),
       ],
     );
   }
@@ -701,6 +720,39 @@ class _RecognitionLanguageButton extends ConsumerWidget {
       style: OutlinedButton.styleFrom(foregroundColor: shell.textPrimary, side: BorderSide(color: shell.border)),
       icon: const Icon(Icons.language_rounded, size: 16),
       label: Text(isArabic ? l10n.voiceLanguageArabic : l10n.voiceLanguageEnglish),
+    );
+  }
+}
+
+/// Provider selection is visible at the point of use and persisted in general settings. It is
+/// disabled during a live utterance so one command can never be split across two recognizers.
+class _RecognitionProviderButton extends ConsumerWidget {
+  const _RecognitionProviderButton({required this.disabled});
+  final bool disabled;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final shell = context.shellColors;
+    final current = ref.watch(generalSettingsProvider).value?.voiceRecognitionMode ?? VoiceRecognitionMode.local;
+    return PopupMenuButton<VoiceRecognitionMode>(
+      enabled: !disabled,
+      color: shell.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      tooltip: l10n.voiceRecognitionModeTitle,
+      onSelected: (mode) => ref.read(voiceProvider.notifier).setRecognitionMode(mode),
+      itemBuilder: (_) => [
+        PopupMenuItem(value: VoiceRecognitionMode.local, child: Text(l10n.voiceRecognitionModeLocal, style: TextStyle(color: shell.textPrimary))),
+        PopupMenuItem(value: VoiceRecognitionMode.cloud, child: Text(l10n.voiceRecognitionModeCloud, style: TextStyle(color: shell.textPrimary))),
+      ],
+      child: IgnorePointer(
+        child: OutlinedButton.icon(
+          onPressed: () {},
+          style: OutlinedButton.styleFrom(foregroundColor: shell.textPrimary, side: BorderSide(color: shell.border)),
+          icon: Icon(current == VoiceRecognitionMode.local ? Icons.phone_android_rounded : Icons.cloud_rounded, size: 16),
+          label: Text(current == VoiceRecognitionMode.local ? l10n.voiceRecognitionModeLocal : l10n.voiceRecognitionModeCloud),
+        ),
+      ),
     );
   }
 }

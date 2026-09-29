@@ -21,12 +21,14 @@ import '../../../data/models/account.dart';
 import '../../../data/models/general_settings.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/accounts/ceiling_check.dart';
 import '../../../logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/shared/amount_in_words.dart';
 import '../../widgets/shared/app_snackbar.dart';
+import '../../widgets/shared/account_ceiling_exceeded_dialog.dart';
 import '../../widgets/shared/currency_picker_sheet.dart';
 import '../../widgets/shared/direction_choice.dart';
 import '../../widgets/shared/labeled_field.dart';
@@ -75,9 +77,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   String? _nameError;
   String? _amountError;
 
-  /// Only meaningful while CREATING (never editing) — see the doc comment on
-  /// FormDraftStorage for the full story on why this exists at all.
-  static const _draftKey = 'draft_add_account';
+  String get _draftKey => widget.isEditing ? 'draft_edit_account_${widget.existingAccount!.id}' : 'draft_add_account';
 
   FormDraftStorage get _draft => FormDraftStorage(ref.read(sharedPreferencesProvider), _draftKey);
 
@@ -93,6 +93,9 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       _detailsController.text = existing.details ?? '';
       _phoneController.text = existing.phone ?? '';
       _ceilingController.text = existing.ceiling == null ? '' : _formatNumber(existing.ceiling!);
+      _attachmentPath = existing.attachmentPath;
+      _restoreDraftIfAny();
+      unawaited(_recoverLostCameraCapture());
     } else {
       // الاتجاه الافتراضي عند إنشاء حساب جديد يأتي من الإعدادات العامة — انظر
       // logic/settings/general_settings_provider.dart. لا معنى لهذا عند التعديل (existing != null).
@@ -162,9 +165,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
 
   /// Called right before handing off to the camera/gallery — the single riskiest moment for a
   /// background process kill (see AndroidManifest.xml's "Camera-crash mitigation notes"). A
-  /// no-op while editing an existing account, matching FormDraftStorage's stated scope.
   Future<void> _saveDraft() async {
-    if (widget.isEditing) return;
     await _draft.save({
       'name': _nameController.text,
       'amount': _amountController.text,
@@ -179,7 +180,6 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   }
 
   Future<void> _clearDraft() async {
-    if (widget.isEditing) return;
     await _draft.clear();
   }
 
@@ -235,6 +235,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     // this app's process to free memory (see AndroidManifest.xml) — saving the draft NOW, right
     // before that risky handoff, is what lets the person's typed data survive it.
     await _saveDraft();
+    if (!mounted) return;
     final image = await showImageSourceDialog(context);
     if (image == null || !mounted) return;
 
@@ -363,8 +364,27 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     });
     if (nameError != null || amountError != null) return;
 
-    setState(() => _isSaving = true);
     final ceiling = double.tryParse(_ceilingController.text.trim());
+
+    if (!widget.isEditing) {
+      final ceilingCheck = checkAccountCeiling(
+        currentBalance: 0,
+        direction: _direction,
+        amount: double.parse(_amountController.text.trim()),
+        ceiling: ceiling,
+      );
+      if (ceilingCheck is CeilingExceeded) {
+        await showAccountCeilingExceededDialog(
+          context,
+          projectedDebitBalance: ceilingCheck.projectedDebitBalance,
+          ceiling: ceilingCheck.ceiling,
+          debitLabel: resolveDebitLabel(l10n, ref.read(generalSettingsProvider).value),
+        );
+        return;
+      }
+    }
+
+    setState(() => _isSaving = true);
 
     if (widget.isEditing) {
       final updated = Account(
@@ -375,9 +395,11 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
         details: _detailsController.text.trim().isEmpty ? null : _detailsController.text.trim(),
         phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
         ceiling: ceiling,
+        attachmentPath: _attachmentPath,
       );
       try {
         await ref.read(accountsProvider.notifier).updateAccount(updated);
+        await _clearDraft();
         if (!mounted) return;
         AppSnackBar.showSuccess(context, l10n.accountUpdatedSuccessMessage);
         context.pop();
@@ -399,6 +421,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       details: _detailsController.text.trim().isEmpty ? null : _detailsController.text.trim(),
       phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
       ceiling: ceiling,
+      attachmentPath: _attachmentPath,
     );
     final firstTransaction = Transaction(
       id: const Uuid().v4(),
@@ -437,7 +460,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     final creditLabel = resolveCreditLabel(l10n, settings);
     final debitLabel = resolveDebitLabel(l10n, settings);
     final showAmountInWords = settings?.showAmountInWordsWhileTyping ?? true;
-    final showCeilingField = settings?.showAccountCeilingOnAdd ?? false;
+    final showCeilingField = (settings?.showAccountCeilingOnAdd ?? false) || widget.isEditing;
 
     return Scaffold(
       backgroundColor: shell.background,
@@ -557,10 +580,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                   decoration: InputDecoration(hintText: l10n.detailsLabel, border: InputBorder.none),
                 ),
               ),
-              // Only meaningful while CREATING — this attachment belongs to the account's
-              // first transaction, and editing an account never touches a transaction at all
-              // (see the class doc comment on `existingAccount`).
-              if (!widget.isEditing && _attachmentPath != null)
+              if (_attachmentPath != null)
                 AttachmentPreview(
                   path: _attachmentPath!,
                   isBusy: _isRotating,
