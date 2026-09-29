@@ -1,15 +1,20 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/voice/bluetooth_audio_route_service.dart';
 import '../../core/voice/offline_speech_engine.dart';
+import '../../core/voice/speech_engine.dart';
+import '../../core/voice/system_speech_engine.dart';
 import '../../core/voice/vosk_model_provider.dart';
 import '../../core/voice/voice_output_service.dart';
 import '../../data/models/account.dart';
+import '../../data/models/general_settings.dart';
 import '../../data/models/transaction.dart';
 import '../accounts/accounts_provider.dart';
+import '../settings/general_settings_provider.dart';
 import '../transactions/transactions_provider.dart';
 import 'voice_command_parser.dart';
 
@@ -24,6 +29,22 @@ final offlineSpeechEngineProvider = Provider<OfflineSpeechEngine>((ref) {
   final engine = OfflineSpeechEngine(model: model);
   ref.onDispose(engine.dispose);
   return engine;
+});
+
+final systemSpeechEngineProvider = Provider<SystemSpeechEngine>((ref) {
+  final engine = SystemSpeechEngine();
+  ref.onDispose(engine.dispose);
+  return engine;
+});
+
+/// The dialogue reads this one provider only. Adding Whisper or a dedicated server provider
+/// later means adding one adapter here; every parsing and saving path stays untouched.
+final speechEngineProvider = Provider<SpeechEngine>((ref) {
+  final mode = ref.watch(generalSettingsProvider).value?.voiceRecognitionMode ?? VoiceRecognitionMode.local;
+  return switch (mode) {
+    VoiceRecognitionMode.local => ref.watch(offlineSpeechEngineProvider),
+    VoiceRecognitionMode.cloud => ref.watch(systemSpeechEngineProvider),
+  };
 });
 
 final bluetoothAudioRouteServiceProvider = Provider<BluetoothAudioRouteService>((ref) => BluetoothAudioRouteService());
@@ -133,13 +154,14 @@ class VoiceState {
     bool clearAccount = false,
     bool clearError = false,
     bool clearClarifyingField = false,
+    bool clearRecordingPath = false,
   }) => VoiceState(
         status: status ?? this.status,
         transcript: transcript ?? this.transcript,
         committedTranscript: committedTranscript ?? this.committedTranscript,
         draft: clearDraft ? null : draft ?? this.draft,
         account: clearAccount ? null : account ?? this.account,
-        recordingPath: recordingPath ?? this.recordingPath,
+        recordingPath: clearRecordingPath ? null : recordingPath ?? this.recordingPath,
         recordingStartedAt: recordingStartedAt ?? this.recordingStartedAt,
         elapsedBeforePause: elapsedBeforePause ?? this.elapsedBeforePause,
         errorCode: clearError ? null : errorCode ?? this.errorCode,
@@ -161,18 +183,56 @@ class _VoiceEditResult {
 
 class VoiceController extends StateNotifier<VoiceState> {
   VoiceController(this._ref) : super(const VoiceState()) {
-    _partialSubscription = _engine.partialResults.listen(_onPartial);
-    _finalSubscription = _engine.finalResults.listen(_onFinal);
+    _bindEngine();
   }
 
   static const wakeWord = 'ديوني';
   final Ref _ref;
-  OfflineSpeechEngine get _engine => _ref.read(offlineSpeechEngineProvider);
+  late SpeechEngine _engine;
   VoiceOutputService get _voiceOutput => _ref.read(voiceOutputServiceProvider);
-  late final StreamSubscription<String> _partialSubscription;
-  late final StreamSubscription<String> _finalSubscription;
+  StreamSubscription<String>? _partialSubscription;
+  StreamSubscription<String>? _finalSubscription;
   Timer? _bluetoothMonitor;
+  Timer? _speechSilenceTimer;
   final _uuid = const Uuid();
+  int _session = 0;
+
+  static const _speechEndAfter = Duration(seconds: 2);
+  static const _noSpeechAfter = Duration(seconds: 8);
+
+  void _armSpeechEndTimer([Duration? delay]) {
+    _speechSilenceTimer?.cancel();
+    _speechSilenceTimer = Timer(delay ?? _speechEndAfter, () {
+      if (state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand) {
+        unawaited(stopAndAnalyze());
+      } else if (state.status == VoiceStatus.confirmationListening) {
+        unawaited(_finishVoiceConfirmation(state.transcript));
+      }
+    });
+  }
+
+  void _clearSpeechEndTimer() {
+    _speechSilenceTimer?.cancel();
+    _speechSilenceTimer = null;
+  }
+
+  void _bindEngine() {
+    _partialSubscription?.cancel();
+    _finalSubscription?.cancel();
+    _engine = _ref.read(speechEngineProvider);
+    _partialSubscription = _engine.partialResults.listen(_onPartial);
+    _finalSubscription = _engine.finalResults.listen(_onFinal);
+  }
+
+  /// Provider changes are intentionally limited to idle state. This releases the old engine
+  /// before rebinding streams, so a single utterance can never be split between recognizers.
+  Future<void> setRecognitionMode(VoiceRecognitionMode mode) async {
+    if (state.status != VoiceStatus.idle) return;
+    final current = _ref.read(generalSettingsProvider).value?.voiceRecognitionMode ?? VoiceRecognitionMode.local;
+    if (current == mode) return;
+    await _ref.read(generalSettingsProvider.notifier).setVoiceRecognitionMode(mode);
+    _bindEngine();
+  }
 
   // ─────────────────────────── Phrase builders (all spoken aloud) ───────────────────────────
 
@@ -235,6 +295,7 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   /// Called once when the voice screen opens, for BOTH entry modes.
   void setEntryMode({required bool bluetoothMode}) {
+    ++_session;
     state = VoiceState(bluetoothMode: bluetoothMode);
   }
 
@@ -275,6 +336,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   }
 
   Future<void> _beginListening({required bool bluetoothMode}) async {
+    final session = ++_session;
     state = VoiceState(status: VoiceStatus.preparing, bluetoothMode: bluetoothMode);
     if (!await _engine.hasPermission()) {
       state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
@@ -287,6 +349,11 @@ class VoiceController extends StateNotifier<VoiceState> {
     );
     try {
       await _engine.start();
+      if (session != _session) {
+        await _engine.cancel();
+        return;
+      }
+      _armSpeechEndTimer(_noSpeechAfter);
     } catch (_) {
       state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
     }
@@ -294,9 +361,17 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   Future<void> pauseRecording() async {
     if (state.status != VoiceStatus.listening && state.status != VoiceStatus.bluetoothListeningCommand) return;
+    _clearSpeechEndTimer();
     final startedAt = state.recordingStartedAt;
     final elapsedThisRun = startedAt == null ? Duration.zero : DateTime.now().difference(startedAt);
-    await _engine.pause();
+    try {
+      await _engine.pause();
+    } catch (_) {
+      if (state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand) {
+        state = state.copyWith(status: VoiceStatus.error, errorCode: 'recognition');
+      }
+      return;
+    }
     state = state.copyWith(
       status: VoiceStatus.paused,
       committedTranscript: state.transcript,
@@ -306,7 +381,14 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   Future<void> resumeRecording() async {
     if (state.status != VoiceStatus.paused) return;
-    await _engine.resume();
+    final session = ++_session;
+    try {
+      await _engine.resume();
+    } catch (_) {
+      if (session == _session) state = state.copyWith(status: VoiceStatus.error, errorCode: 'recognition');
+      return;
+    }
+    if (session != _session || state.status != VoiceStatus.paused) return;
     state = state.copyWith(
       status: state.bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
       recordingStartedAt: DateTime.now(),
@@ -321,14 +403,22 @@ class VoiceController extends StateNotifier<VoiceState> {
         state.status == VoiceStatus.bluetoothListeningCommand ||
         state.status == VoiceStatus.confirmationListening) {
       state = state.copyWith(transcript: text);
+      _armSpeechEndTimer();
       return;
     }
     if (state.status == VoiceStatus.bluetoothWaitingWakeWord) {
       if (text.replaceAll(' ', '').contains(wakeWord)) {
         state = state.copyWith(status: VoiceStatus.bluetoothWakeWordDetected, transcript: text);
-        unawaited(_engine.stop());
-        unawaited(_beginListening(bluetoothMode: true));
+        unawaited(_restartAfterWakeWord());
       }
+    }
+  }
+
+  Future<void> _restartAfterWakeWord() async {
+    final (_, wakeWordRecordingPath) = await _engine.stop();
+    await _deleteRecording(wakeWordRecordingPath);
+    if (state.status == VoiceStatus.bluetoothWakeWordDetected) {
+      await _beginListening(bluetoothMode: true);
     }
   }
 
@@ -338,22 +428,40 @@ class VoiceController extends StateNotifier<VoiceState> {
   void _onFinal(String text) {
     if (state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand) {
       state = state.copyWith(transcript: text);
-      if (state.clarifyingField != null) {
-        unawaited(_finishClarificationListening());
-      } else {
-        unawaited(_finishListening());
+      _armSpeechEndTimer();
+      // Vosk returns a final result after an ordinary short pause. Treating that as the end of
+      // the command used to discard everything said afterwards, including amounts. The mic tap
+      // remains the explicit end-of-command action, while the final text stays visible live.
+      if (_engine.endsSessionOnFinal) {
+        if (state.clarifyingField != null) {
+          unawaited(_finishClarificationListening());
+        } else {
+          unawaited(_finishListening());
+        }
       }
       return;
     }
     if (state.status == VoiceStatus.confirmationListening) {
       state = state.copyWith(transcript: text);
-      unawaited(_engine.stop());
-      unawaited(_handleVoiceConfirmation(text));
+      unawaited(_finishVoiceConfirmation(text));
     }
+  }
+
+  Future<void> _finishVoiceConfirmation(String text) async {
+    _clearSpeechEndTimer();
+    final (_, confirmationRecordingPath) = await _engine.stop();
+    await _deleteRecording(confirmationRecordingPath);
+    final effective = text.trim().isNotEmpty ? text : state.transcript;
+    if (effective.trim().isEmpty) {
+      await _confirmationNotUnderstood();
+      return;
+    }
+    await _handleVoiceConfirmation(effective);
   }
 
   Future<void> stopAndAnalyze() async {
     if (state.status != VoiceStatus.listening && state.status != VoiceStatus.bluetoothListeningCommand) return;
+    _clearSpeechEndTimer();
     if (state.clarifyingField != null) {
       await _finishClarificationListening();
     } else {
@@ -366,17 +474,24 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// stopping and waiting for a manual tap.
   Future<void> _finishListening() async {
     if (state.status != VoiceStatus.listening && state.status != VoiceStatus.bluetoothListeningCommand) return;
+    _clearSpeechEndTimer();
     final current = state;
+    final session = _session;
     state = state.copyWith(status: VoiceStatus.processing);
 
     final (engineTranscript, recordingPath) = await _engine.stop();
-    final effectiveTranscript = current.transcript.trim().isNotEmpty ? current.transcript : engineTranscript;
+    if (session != _session || state.status != VoiceStatus.processing) {
+      await _deleteRecording(recordingPath);
+      return;
+    }
+    final effectiveTranscript = _chooseMoreCompleteTranscript(current.transcript, engineTranscript);
 
     if (effectiveTranscript.trim().isEmpty) {
+      await _deleteRecording(recordingPath);
       state = state.copyWith(
         status: VoiceStatus.needsClarification,
         errorCode: 'noSpeech',
-        recordingPath: recordingPath ?? current.recordingPath,
+        clearRecordingPath: true,
       );
       await _speak(_clarificationSpeech('noSpeech', _ref.read(voiceRecognitionLanguageProvider)));
       state = state.copyWith(
@@ -386,6 +501,7 @@ class VoiceController extends StateNotifier<VoiceState> {
       );
       try {
         await _engine.start();
+        _armSpeechEndTimer(_noSpeechAfter);
       } catch (_) {
         state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
       }
@@ -407,12 +523,22 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// into the EXISTING draft (never re-parse the whole thing from scratch, which would throw
   /// away every other field already understood correctly).
   Future<void> _finishClarificationListening() async {
+    _clearSpeechEndTimer();
     final current = state;
+    final session = _session;
     final field = current.clarifyingField;
     final draft = current.draft;
     state = state.copyWith(status: VoiceStatus.processing);
     final (engineTranscript, recordingPath) = await _engine.stop();
-    final effective = current.transcript.trim().isNotEmpty ? current.transcript : engineTranscript;
+    if (session != _session || state.status != VoiceStatus.processing) {
+      await _deleteRecording(recordingPath);
+      return;
+    }
+    final effective = _chooseMoreCompleteTranscript(current.transcript, engineTranscript);
+
+    // Follow-up audio is only used to complete the text field; the original command remains the
+    // sole audio attachment for the financial entry.
+    await _deleteRecording(recordingPath);
 
     if (draft == null || field == null) {
       state = state.copyWith(status: VoiceStatus.idle);
@@ -420,7 +546,6 @@ class VoiceController extends StateNotifier<VoiceState> {
     }
 
     if (effective.trim().isEmpty) {
-      state = state.copyWith(recordingPath: recordingPath ?? current.recordingPath);
       await _speak(_clarificationSpeech('noSpeech', _ref.read(voiceRecognitionLanguageProvider)));
       state = state.copyWith(
         status: current.bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
@@ -429,6 +554,7 @@ class VoiceController extends StateNotifier<VoiceState> {
       );
       try {
         await _engine.start();
+        _armSpeechEndTimer(_noSpeechAfter);
       } catch (_) {
         state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
       }
@@ -474,7 +600,7 @@ class VoiceController extends StateNotifier<VoiceState> {
       draft: updatedDraft,
       account: updatedAccount,
       clearAccount: updatedAccount == null,
-      recordingPath: recordingPath ?? current.recordingPath,
+      recordingPath: current.recordingPath,
       clearClarifyingField: true,
     );
     await _advanceAfterParsing(draft: updatedDraft, account: updatedAccount);
@@ -512,29 +638,38 @@ class VoiceController extends StateNotifier<VoiceState> {
   }
 
   Future<void> _speakThenListenForClarification(String field) async {
+    final session = _session;
+    _clearSpeechEndTimer();
     await _speak(_clarificationSpeech(field, _ref.read(voiceRecognitionLanguageProvider)));
+    if (session != _session) return;
     state = state.copyWith(
       status: state.bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
       clearError: true,
       transcript: '',
-      recordingStartedAt: DateTime.now(),
+      // This is a follow-up answer, not the primary recorded command. Keep the original start
+      // timestamp so the recording metadata remains associated with the first command.
     );
     try {
       await _engine.start();
+      _armSpeechEndTimer(_noSpeechAfter);
     } catch (_) {
       state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
     }
   }
 
   Future<void> _speakThenListenForConfirmation({bool editApplied = false}) async {
+    final session = _session;
+    _clearSpeechEndTimer();
     final draft = state.draft;
     final accountName = state.account?.name ?? draft?.accountName;
     if (draft == null || accountName == null || draft.amount == null || draft.direction == null) return;
     final languageCode = _ref.read(voiceRecognitionLanguageProvider);
     await _speak(_confirmationSpeech(draft, accountName, languageCode, editApplied: editApplied));
+    if (session != _session) return;
     state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
     try {
       await _engine.start();
+      _armSpeechEndTimer(_noSpeechAfter);
     } catch (_) {
       state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
     }
@@ -602,21 +737,40 @@ class VoiceController extends StateNotifier<VoiceState> {
   }
 
   Future<void> _askWhatToEditThenListen() async {
+    final session = _session;
+    _clearSpeechEndTimer();
     await _speak(_askEditSpeech(_ref.read(voiceRecognitionLanguageProvider)));
+    if (session != _session) return;
     state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
     try {
       await _engine.start();
+      _armSpeechEndTimer(_noSpeechAfter);
     } catch (_) {
       state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
     }
   }
 
+  /// Explicit UI edit action. Unlike retry, this keeps the recognized draft intact and asks
+  /// only for the requested amendment.
+  Future<void> startEdit() async {
+    if (state.draft == null || (state.status != VoiceStatus.awaitingConfirmation && state.status != VoiceStatus.confirmationListening)) return;
+    ++_session;
+    _clearSpeechEndTimer();
+    state = state.copyWith(status: VoiceStatus.awaitingConfirmation, transcript: '');
+    await _engine.cancel();
+    await _askWhatToEditThenListen();
+  }
+
   Future<void> _confirmationNotUnderstood() async {
+    final session = _session;
+    _clearSpeechEndTimer();
     state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'confirmation');
     await _speak(_notUnderstoodSpeech(_ref.read(voiceRecognitionLanguageProvider)));
+    if (session != _session) return;
     state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
     try {
       await _engine.start();
+      _armSpeechEndTimer(_noSpeechAfter);
     } catch (_) {
       state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
     }
@@ -625,6 +779,26 @@ class VoiceController extends StateNotifier<VoiceState> {
   Future<void> _cancelWithSpeech() async {
     await _speak(_cancelledSpeech(_ref.read(voiceRecognitionLanguageProvider)));
     state = const VoiceState();
+  }
+
+  Future<void> _deleteRecording(String? path) async {
+    if (path == null) return;
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } on FileSystemException {
+      // Audio cleanup is best effort; never block saving/cancelling a financial entry for it.
+    }
+  }
+
+  /// Some recognizers emit a short partial just before stopping and a fuller final transcript
+  /// afterwards. Prefer the result carrying more words, so a final amount is never discarded
+  /// merely because a partial arrived first.
+  String _chooseMoreCompleteTranscript(String live, String finalResult) {
+    final liveTrimmed = live.trim();
+    final finalTrimmed = finalResult.trim();
+    if (finalTrimmed.split(RegExp(r'\s+')).length > liveTrimmed.split(RegExp(r'\s+')).length) return finalTrimmed;
+    return liveTrimmed.isNotEmpty ? liveTrimmed : finalTrimmed;
   }
 
   /// Best-effort natural-language edit parser for the confirmation step. Deliberately
@@ -643,6 +817,10 @@ class VoiceController extends StateNotifier<VoiceState> {
         final newAmount = double.tryParse(amountMatch.group(1)!.replaceAll(',', '.'));
         if (newAmount != null) return _VoiceEditResult(draft: draft.copyWith(amount: newAmount));
       }
+      // Do not limit editing to digits. The same Arabic number parser used for a new command
+      // also understands speech-engine output such as "ثلاثة آلاف".
+      final spokenAmount = _ref.read(voiceCommandParserProvider).parse(normalized).amount;
+      if (spokenAmount != null) return _VoiceEditResult(draft: draft.copyWith(amount: spokenAmount));
     }
 
     final detailsMatch = RegExp(r'التفاصيل\s+(?:الى|إلى)?\s*(.+)').firstMatch(normalized);
@@ -749,9 +927,10 @@ class VoiceController extends StateNotifier<VoiceState> {
     }
 
     final id = _uuid.v4();
-    final duration = state.recordingStartedAt == null
-        ? state.elapsedBeforePause.inMilliseconds
-        : (state.elapsedBeforePause + DateTime.now().difference(state.recordingStartedAt!)).inMilliseconds;
+    final duration = await _recordingDurationMs(state.recordingPath) ??
+        (state.recordingStartedAt == null
+            ? state.elapsedBeforePause.inMilliseconds
+            : (state.elapsedBeforePause + DateTime.now().difference(state.recordingStartedAt!)).inMilliseconds);
     final recording = state.recordingPath == null
         ? null
         : VoiceRecording(path: state.recordingPath!, durationMs: duration, transcript: draft.transcript, transactionId: id);
@@ -787,16 +966,38 @@ class VoiceController extends StateNotifier<VoiceState> {
   }
 
   Future<void> cancel() async {
+    ++_session;
+    _clearSpeechEndTimer();
     _bluetoothMonitor?.cancel();
-    await _engine.cancel();
+    await _voiceOutput.stop();
+    try {
+      await _engine.cancel();
+    } catch (_) {
+      // Cancellation must always return the interface to idle, even if a platform recognizer
+      // has already disposed its native session.
+    }
+    await _deleteRecording(state.recordingPath);
     state = const VoiceState();
+  }
+
+  Future<int?> _recordingDurationMs(String? path) async {
+    if (path == null) return null;
+    try {
+      final length = await File(path).length();
+      if (length < 44) return null;
+      // PCM16 mono at 16 kHz: 32,000 bytes per second, excluding the WAV header.
+      return ((length - 44) * 1000 / 32000).round();
+    } on FileSystemException {
+      return null;
+    }
   }
 
   @override
   void dispose() {
+    _clearSpeechEndTimer();
     _bluetoothMonitor?.cancel();
-    _partialSubscription.cancel();
-    _finalSubscription.cancel();
+    _partialSubscription?.cancel();
+    _finalSubscription?.cancel();
     unawaited(_engine.cancel());
     super.dispose();
   }

@@ -85,4 +85,7 @@ class GeneralSettingsController extends AsyncNotifier<GeneralSettings> {
 
   Future<void> setAnnualClosingDate(DateTime? date) =>
       _update((s) => s.copyWith(annualClosingDate: date, clearAnnualClosingDate: date == null));
+
+  Future<void> setVoiceRecognitionMode(VoiceRecognitionMode value) =>
+      _update((s) => s.copyWith(voiceRecognitionMode: value));
 }

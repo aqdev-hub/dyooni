@@ -72,6 +72,7 @@ class VoskModelController extends Notifier<VoskModelState> {
   /// blips without ever bothering the person — this is what fixes the reported
   /// "starts, drops, starts, drops" pattern on an otherwise-healthy connection.
   static const _maxAutoRetries = 6;
+  Future<void>? _activeStart;
 
   @override
   VoskModelState build() {
@@ -92,7 +93,11 @@ class VoskModelController extends Notifier<VoskModelState> {
   /// user-triggered "retry" button) — every step first checks whether its own output already
   /// exists on disk and skips straight past it if so, which is exactly what makes retrying after
   /// a failure RESUME instead of restarting from zero.
-  Future<void> _start() async {
+  Future<void> _start() {
+    return _activeStart ??= _startInternal().whenComplete(() => _activeStart = null);
+  }
+
+  Future<void> _startInternal() async {
     try {
       final modelDir = await _modelDir();
       final readyMarker = File('${modelDir.path}/$_readyMarkerFileName');

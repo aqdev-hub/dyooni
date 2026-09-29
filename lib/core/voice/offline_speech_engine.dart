@@ -8,6 +8,7 @@ import 'package:record/record.dart';
 import 'package:vosk_flutter_service/vosk_flutter_service.dart';
 
 import 'vosk_model_provider.dart' show voskSampleRate;
+import 'speech_engine.dart';
 import 'wav_file_writer.dart';
 
 /// Owns the ONE and ONLY microphone session for a voice command, and fans out the SAME stream of
@@ -23,7 +24,7 @@ import 'wav_file_writer.dart';
 /// call; everything downstream is pure Dart-side fan-out of bytes already captured — no second
 /// consumer ever touches the microphone, so the conflict is structurally impossible, not just
 /// "less likely."
-class OfflineSpeechEngine {
+class OfflineSpeechEngine implements SpeechEngine {
   OfflineSpeechEngine({required this.model, this.sampleRate = voskSampleRate});
 
   final Model model;
@@ -33,25 +34,39 @@ class OfflineSpeechEngine {
   Recognizer? _recognizer;
   WavFileWriter? _wavWriter;
   StreamSubscription<Uint8List>? _micSubscription;
+  Future<void> _audioQueue = Future<void>.value();
+  Future<void>? _stopping;
+  final List<String> _finalSegments = <String>[];
 
   final _partialController = StreamController<String>.broadcast();
   final _finalController = StreamController<String>.broadcast();
 
   /// Live, not-yet-final text — updates continuously while the person is still talking. Fills the
   /// same UI role `speech_to_text`'s `onResult` with `finalResult: false` used to play.
+  @override
   Stream<String> get partialResults => _partialController.stream;
 
   /// Fires once per finished utterance, whenever Vosk itself decides enough silence/certainty was
   /// reached. Fills the same role as `finalResult: true` in the old flow.
+  @override
   Stream<String> get finalResults => _finalController.stream;
 
-  bool get isListening => _micSubscription != null;
+  @override
+  bool get endsSessionOnFinal => false;
 
+  bool get isListening => _micSubscription != null || _stopping != null;
+
+  @override
   Future<bool> hasPermission() => _recorder.hasPermission();
 
   /// Starts the single microphone session: creates a fresh recognizer bound to [model], opens the
   /// destination .wav file, then opens ONE raw audio stream and subscribes to it.
+  @override
   Future<void> start() async {
+    // A start requested immediately after stop (Bluetooth wake word and voice confirmation are
+    // common examples) must wait for the native recorder and WAV writer to be fully released.
+    // Otherwise AudioRecorder may still own the mic and silently ignore the new start.
+    await _stopping;
     if (isListening) return;
     if (!await hasPermission()) {
       throw StateError('Microphone permission was not granted.');
@@ -59,6 +74,7 @@ class OfflineSpeechEngine {
 
     final vosk = VoskFlutterPlugin.instance();
     _recognizer = await vosk.createRecognizer(model: model, sampleRate: sampleRate);
+    _finalSegments.clear();
 
     final dir = await getApplicationDocumentsDirectory();
     final recordings = Directory('${dir.path}/voice_recordings');
@@ -91,29 +107,38 @@ class OfflineSpeechEngine {
     // The fix: pause the subscription the instant a chunk arrives, fully await its processing,
     // THEN resume — guaranteeing every chunk is handed to the recognizer strictly one at a time,
     // in the order it was recorded, with no possible overlap.
-    _micSubscription = stream.listen((chunk) {
-      _micSubscription?.pause();
-      unawaited(_onAudioChunk(chunk).whenComplete(() => _micSubscription?.resume()));
-    });
+    _micSubscription = stream.listen(_enqueueAudioChunk);
+  }
+
+  void _enqueueAudioChunk(Uint8List chunk) {
+    // Stream.listen does not await an async callback. Keep an explicit FIFO instead: it keeps
+    // native recognizer calls AND file writes ordered, and lets stop() drain every accepted
+    // chunk before finalising the WAV header.
+    _audioQueue = _audioQueue.then((_) => _onAudioChunk(chunk)).catchError((_) {});
   }
 
   /// Every chunk goes to BOTH consumers — this is the fan-out that replaces the old two-mic-
   /// session design. Neither consumer here opens any audio hardware; they only process bytes that
   /// [start] already captured, so there is no possible contention between them.
   Future<void> _onAudioChunk(Uint8List chunk) async {
-    unawaited(_wavWriter?.write(chunk)); // consumer 1: save to disk
+    await _wavWriter?.write(chunk); // consumer 1: save to disk, in the same FIFO
 
     final recognizer = _recognizer; // consumer 2: understand
     if (recognizer == null) return;
     final hasFinal = await recognizer.acceptWaveformBytes(chunk);
     if (hasFinal) {
       final text = _extractText(await recognizer.getResult(), key: 'text');
-      if (text.isNotEmpty) _finalController.add(text);
+      if (text.isNotEmpty) {
+        _finalSegments.add(text);
+        _finalController.add(_joinedTranscript());
+      }
     } else {
       final text = _extractText(await recognizer.getPartialResult(), key: 'partial');
-      if (text.isNotEmpty) _partialController.add(text);
+      if (text.isNotEmpty) _partialController.add(_joinedTranscript(partial: text));
     }
   }
+
+  String _joinedTranscript({String partial = ''}) => [..._finalSegments, if (partial.isNotEmpty) partial].join(' ').trim();
 
   /// Vosk returns JSON strings like `{"partial": "..."}` or `{"text": "..."}` — this pulls the
   /// plain string out, defensively (a malformed/empty JSON must never crash a live audio chunk
@@ -127,54 +152,80 @@ class OfflineSpeechEngine {
     }
   }
 
+  @override
   Future<void> pause() => _recorder.pause();
+  @override
   Future<void> resume() => _recorder.resume();
 
   /// Stops the mic session, flushes the .wav file to a valid playable state, and asks the
   /// recognizer for whatever text is left — even if Vosk never emitted its own "final" result
   /// (e.g. the person tapped stop before a natural pause). Returns both the transcript and the
   /// saved recording's path.
+  @override
   Future<(String transcript, String? recordingPath)> stop() async {
-    await _micSubscription?.cancel();
-    _micSubscription = null;
-    await _recorder.stop();
+    final activeStop = _stopping;
+    if (activeStop != null) {
+      await activeStop;
+      return ('', null);
+    }
+    String transcript = '';
+    String? path;
+    _stopping = () async {
+      await _micSubscription?.cancel();
+      _micSubscription = null;
+      await _audioQueue;
+      await _recorder.stop();
 
-    var lastText = '';
-    final recognizer = _recognizer;
-    if (recognizer != null) {
-      lastText = _extractText(await recognizer.getFinalResult(), key: 'text');
-      // NOTE: verify the exact disposal method name against the installed `vosk_flutter` version
-      // after `flutter pub get` (docs confirm `SpeechService.dispose()`; `Recognizer` very likely
-      // follows the same pattern to free its native handle, but double-check your resolved
-      // version's API before relying on it in production).
-      recognizer.dispose();
-      _recognizer = null;
+      final recognizer = _recognizer;
+      if (recognizer != null) {
+        final lastText = _extractText(await recognizer.getFinalResult(), key: 'text');
+        if (lastText.isNotEmpty) _finalSegments.add(lastText);
+        transcript = _joinedTranscript();
+        await recognizer.dispose();
+        _recognizer = null;
+      }
+
+      path = _wavWriter?.path;
+      await _wavWriter?.close();
+      _wavWriter = null;
+    }();
+    try {
+      await _stopping;
+    } finally {
+      _stopping = null;
     }
 
-    final path = _wavWriter?.path;
-    await _wavWriter?.close();
-    _wavWriter = null;
-
-    return (lastText, path);
+    return (transcript, path);
   }
 
   /// Aborts everything without keeping the file or the text — used when the person cancels
   /// mid-recording (matches the old VoiceController.cancel()'s `_recorder.cancel()` behavior).
+  @override
   Future<void> cancel() async {
+    final activeStop = _stopping;
+    if (activeStop != null) {
+      await activeStop;
+      return;
+    }
     await _micSubscription?.cancel();
     _micSubscription = null;
+    await _audioQueue;
     await _recorder.stop();
-    _recognizer?.dispose();
+    if (_recognizer != null) {
+      await _recognizer!.dispose();
+    }
     _recognizer = null;
     final path = _wavWriter?.path;
     await _wavWriter?.close();
     _wavWriter = null;
+    _finalSegments.clear();
     if (path != null) {
       final file = File(path);
       if (await file.exists()) await file.delete();
     }
   }
 
+  @override
   void dispose() {
     _micSubscription?.cancel();
     _recorder.dispose();

@@ -20,6 +20,7 @@ class Account {
     this.phone,
     this.updatedAt,
     this.ceiling,
+    this.attachmentPath,
   });
 
   final String id;
@@ -36,6 +37,10 @@ class Account {
   /// لا يوجد بعد أي منطق تنبيه/تجاوز حد فعلي مبني على هذه القيمة — حقل مُخزَّن فقط في هذه الدفعة.
   final double? ceiling;
 
+  /// Optional photo attached to the account itself. Unlike a transaction attachment, this can
+  /// be safely changed from the account edit form.
+  final String? attachmentPath;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -45,6 +50,7 @@ class Account {
         'phone': phone,
         'updatedAt': updatedAt?.toIso8601String(),
         'ceiling': ceiling,
+        'attachmentPath': attachmentPath,
       };
 
   factory Account.fromJson(Map<String, dynamic> json) => Account(
@@ -60,5 +66,6 @@ class Account {
         phone: json['phone'] as String?,
         updatedAt: json['updatedAt'] is String ? DateTime.tryParse(json['updatedAt'] as String) : null,
         ceiling: (json['ceiling'] as num?)?.toDouble(),
+        attachmentPath: json['attachmentPath'] as String?,
       );
 }

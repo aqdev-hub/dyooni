@@ -417,10 +417,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personalDataDeleteLogo => 'Delete logo';
 
   @override
-  String get personalDataReportHeaderNote =>
-      'Details shown in the report header';
-
-  @override
   String get nameArLabel => 'Name (Arabic)';
 
   @override
@@ -440,10 +436,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get personalDataSavedMessage => 'Data saved successfully';
-
-  @override
-  String get personalDataFeatureNote =>
-      'This info will be used in PDF report headers soon';
 
   @override
   String get signatureScreenTitle => 'Signature';
@@ -556,7 +548,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceAccountLabel => 'Account';
 
   @override
-  String get voiceAccountWillBeCreated => 'A new account will be created with this name';
+  String get voiceAccountWillBeCreated =>
+      'A new account will be created with this name';
 
   @override
   String voiceRecordingDuration(int seconds) {
@@ -955,6 +948,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t finish preparing the speech model. See details below — retry resumes automatically, it won\'t restart the download from scratch';
 
   @override
+  String get voiceRecognitionModeTitle => 'Speech recognition mode';
+
+  @override
+  String get voiceRecognitionModeLocal => 'On device';
+
+  @override
+  String get voiceRecognitionModeCloud => 'Cloud';
+
+  @override
   String get openLinkFailedMessage =>
       'Couldn\'t open the link, check your internet connection';
 
@@ -1007,6 +1009,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get generalSettingsAnnualClosingConfirmTitle => 'Important Notice';
+
+  @override
+  String get generalSettingsAnnualClosingConfirmBody =>
+      'We strongly recommend taking a backup before the annual closing. Are you sure you want to continue?';
+
+  @override
+  String get generalSettingsAnnualClosingConfirmContinue => 'Continue';
+
+  @override
   String get generalSettingsChangeDebitLabel => 'Change debit label';
 
   @override
@@ -1032,6 +1044,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get generalSettingsBiometricNotSupported =>
       'Sorry, this device does not support biometric protection';
+
+  @override
+  String get generalSettingsBiometricEnabledSuccessMessage =>
+      'Biometric protection enabled successfully';
+
+  @override
+  String get generalSettingsTermsUpdatedMessage =>
+      'Terminology updated successfully';
 
   @override
   String get generalSettingsSettingsSavedMessage =>
@@ -1076,11 +1096,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appLockEnterPasswordOnly => 'Enter your password to continue';
 
   @override
+  String get appLockLoginButton => 'Log In';
+
+  @override
+  String get appLockWrongPasswordMessage =>
+      'Incorrect password, please try again';
+
+  @override
   String get appLockBiometricReason => 'Authenticate to access Dyooni';
 
   @override
   String get appLockBiometricFailed =>
       'Authentication failed, please try again';
+
+  @override
+  String get ceilingExceededTitle => 'Ceiling Exceeded';
+
+  @override
+  String ceilingExceededBody(
+      String ceiling, String directionLabel, String balance) {
+    return 'This entry would push the account\'s balance past its ceiling ($ceiling) — the account would become $directionLabel by $balance. Raise the ceiling to continue.';
+  }
+
+  @override
+  String get ceilingExceededRaiseButton => 'Raise Ceiling';
 
   @override
   String get voiceDiagnosticsTitle => 'Diagnostic info';

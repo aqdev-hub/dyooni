@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
@@ -75,13 +76,30 @@ class TransactionsController extends AsyncNotifier<List<Transaction>> {
   /// Deletes exactly one transaction — used by the edit screen's "حذف" button and by the
   /// long-press action sheet's "حذف"/multi-select delete.
   Future<void> deleteTransaction(String id) async {
+    final deleted = (state.value ?? const <Transaction>[]).where((t) => t.id == id);
     await ref.read(transactionsRepositoryProvider).deleteTransaction(id);
+    await _deleteRecordingFiles(deleted);
     state = AsyncData((state.value ?? const <Transaction>[]).where((t) => t.id != id).toList());
   }
 
   Future<void> deleteForAccount(String accountId) async {
+    final deleted = (state.value ?? const <Transaction>[]).where((t) => t.accountId == accountId);
     await ref.read(transactionsRepositoryProvider).deleteTransactionsForAccount(accountId);
+    await _deleteRecordingFiles(deleted);
     state = AsyncData((state.value ?? const <Transaction>[]).where((t) => t.accountId != accountId).toList());
+  }
+
+  Future<void> _deleteRecordingFiles(Iterable<Transaction> transactions) async {
+    for (final path in transactions.map((transaction) => transaction.voiceRecording?.path)) {
+      if (path == null) continue;
+      try {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      } on FileSystemException {
+        // The cloud record was already deleted. A missing/locked local audio file must not make
+        // a completed deletion look like it failed.
+      }
+    }
   }
 }
 

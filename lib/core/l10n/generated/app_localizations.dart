@@ -890,12 +890,6 @@ abstract class AppLocalizations {
   /// **'حذف الشعار'**
   String get personalDataDeleteLogo;
 
-  /// No description provided for @personalDataReportHeaderNote.
-  ///
-  /// In ar, this message translates to:
-  /// **'البيانات التي تظهر في ترويسة التقارير'**
-  String get personalDataReportHeaderNote;
-
   /// No description provided for @nameArLabel.
   ///
   /// In ar, this message translates to:
@@ -937,12 +931,6 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تم حفظ البيانات بنجاح'**
   String get personalDataSavedMessage;
-
-  /// No description provided for @personalDataFeatureNote.
-  ///
-  /// In ar, this message translates to:
-  /// **'سيتم استخدام هذه البيانات في رأس تقارير PDF قريبًا'**
-  String get personalDataFeatureNote;
 
   /// No description provided for @signatureScreenTitle.
   ///
@@ -1874,6 +1862,24 @@ abstract class AppLocalizations {
   /// **'تعذّر تجهيز نموذج التعرف الصوتي. التفاصيل أدناه — أعد المحاولة (سيُكمل تلقائيًا من حيث توقف، ولن يعيد التنزيل من الصفر)'**
   String get voiceModelDownloadFailedMessage;
 
+  /// No description provided for @voiceRecognitionModeTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'طريقة التعرف الصوتي'**
+  String get voiceRecognitionModeTitle;
+
+  /// No description provided for @voiceRecognitionModeLocal.
+  ///
+  /// In ar, this message translates to:
+  /// **'محلي'**
+  String get voiceRecognitionModeLocal;
+
+  /// No description provided for @voiceRecognitionModeCloud.
+  ///
+  /// In ar, this message translates to:
+  /// **'سحابي'**
+  String get voiceRecognitionModeCloud;
+
   /// No description provided for @openLinkFailedMessage.
   ///
   /// In ar, this message translates to:
@@ -1958,6 +1964,24 @@ abstract class AppLocalizations {
   /// **'الإغلاق السنوي للحسابات — {date}'**
   String generalSettingsAnnualClosingWithDate(String date);
 
+  /// No description provided for @generalSettingsAnnualClosingConfirmTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيه مهم'**
+  String get generalSettingsAnnualClosingConfirmTitle;
+
+  /// No description provided for @generalSettingsAnnualClosingConfirmBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ننصح بشدة بأخذ نسخة احتياطية قبل الإغلاق السنوي. هل أنت متأكد من المتابعة؟'**
+  String get generalSettingsAnnualClosingConfirmBody;
+
+  /// No description provided for @generalSettingsAnnualClosingConfirmContinue.
+  ///
+  /// In ar, this message translates to:
+  /// **'استمرار'**
+  String get generalSettingsAnnualClosingConfirmContinue;
+
   /// No description provided for @generalSettingsChangeDebitLabel.
   ///
   /// In ar, this message translates to:
@@ -2005,6 +2029,18 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'عذرًا، هذا الجهاز لا يدعم الحماية بالبصمة'**
   String get generalSettingsBiometricNotSupported;
+
+  /// No description provided for @generalSettingsBiometricEnabledSuccessMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تفعيل الحماية بالبصمة بنجاح'**
+  String get generalSettingsBiometricEnabledSuccessMessage;
+
+  /// No description provided for @generalSettingsTermsUpdatedMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تغيير المصطلحات بنجاح'**
+  String get generalSettingsTermsUpdatedMessage;
 
   /// No description provided for @generalSettingsSettingsSavedMessage.
   ///
@@ -2078,6 +2114,18 @@ abstract class AppLocalizations {
   /// **'أدخل كلمة المرور للمتابعة'**
   String get appLockEnterPasswordOnly;
 
+  /// No description provided for @appLockLoginButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'دخول'**
+  String get appLockLoginButton;
+
+  /// No description provided for @appLockWrongPasswordMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور غير صحيحة، يرجى المحاولة مرة أخرى'**
+  String get appLockWrongPasswordMessage;
+
   /// No description provided for @appLockBiometricReason.
   ///
   /// In ar, this message translates to:
@@ -2089,6 +2137,25 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تعذرت المصادقة، حاول مرة أخرى'**
   String get appLockBiometricFailed;
+
+  /// No description provided for @ceilingExceededTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيه تجاوز السقف'**
+  String get ceilingExceededTitle;
+
+  /// No description provided for @ceilingExceededBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتجاوز رصيد الحساب بعد هذه العملية السقف المحدد ({ceiling}) — سيصبح الحساب {directionLabel} بمبلغ {balance}. يجب رفع السقف للمتابعة.'**
+  String ceilingExceededBody(
+      String ceiling, String directionLabel, String balance);
+
+  /// No description provided for @ceilingExceededRaiseButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفع السقف'**
+  String get ceilingExceededRaiseButton;
 
   /// No description provided for @voiceDiagnosticsTitle.
   ///

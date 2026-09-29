@@ -1,6 +1,10 @@
 /// كيف يُختار الاتجاه (له/عليه) الافتراضي عند فتح شاشة إضافة حساب/عملية جديدة.
 enum DefaultDirectionOption { credit, debit, keepLast }
 
+/// Selection is intentionally an app setting, not a property of a transaction. A person can
+/// change provider whenever they need without changing any already-recorded financial data.
+enum VoiceRecognitionMode { local, cloud }
+
 /// كل إعدادات "الإعدادات العامة" — مخزّنة محليًا (SharedPreferences)، تخص هذا الجهاز فقط، وليست
 /// جزءًا من النسخ الاحتياطي السحابي (نفس مبدأ PersonalData في هذا المشروع — انظر
 /// data/models/personal_data.dart).
@@ -22,6 +26,7 @@ class GeneralSettings {
     this.defaultDirection = DefaultDirectionOption.keepLast,
     this.lastUsedDirectionIsCredit,
     this.annualClosingDate,
+    this.voiceRecognitionMode = VoiceRecognitionMode.local,
   });
 
   final bool biometricEnabled;
@@ -53,6 +58,7 @@ class GeneralSettings {
   /// يؤرشف العمليات؟ يُصفّر الرصيد؟) قبل بنائه، تمامًا كما تُوثَّق حدود مشابهة في
   /// personal_data.dart لهذا المشروع.
   final DateTime? annualClosingDate;
+  final VoiceRecognitionMode voiceRecognitionMode;
 
   GeneralSettings copyWith({
     bool? biometricEnabled,
@@ -72,6 +78,7 @@ class GeneralSettings {
     bool? lastUsedDirectionIsCredit,
     DateTime? annualClosingDate,
     bool clearAnnualClosingDate = false,
+    VoiceRecognitionMode? voiceRecognitionMode,
   }) {
     return GeneralSettings(
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
@@ -87,6 +94,7 @@ class GeneralSettings {
       defaultDirection: defaultDirection ?? this.defaultDirection,
       lastUsedDirectionIsCredit: lastUsedDirectionIsCredit ?? this.lastUsedDirectionIsCredit,
       annualClosingDate: clearAnnualClosingDate ? null : (annualClosingDate ?? this.annualClosingDate),
+      voiceRecognitionMode: voiceRecognitionMode ?? this.voiceRecognitionMode,
     );
   }
 
@@ -104,6 +112,7 @@ class GeneralSettings {
         'defaultDirection': defaultDirection.name,
         'lastUsedDirectionIsCredit': lastUsedDirectionIsCredit,
         'annualClosingDate': annualClosingDate?.toIso8601String(),
+        'voiceRecognitionMode': voiceRecognitionMode.name,
       };
 
   factory GeneralSettings.fromJson(Map<String, dynamic> json) => GeneralSettings(
@@ -121,5 +130,6 @@ class GeneralSettings {
         lastUsedDirectionIsCredit: json['lastUsedDirectionIsCredit'] as bool?,
         annualClosingDate:
             json['annualClosingDate'] is String ? DateTime.tryParse(json['annualClosingDate'] as String) : null,
+        voiceRecognitionMode: VoiceRecognitionMode.values.byName(json['voiceRecognitionMode'] as String? ?? 'local'),
       );
 }

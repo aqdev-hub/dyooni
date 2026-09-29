@@ -181,12 +181,9 @@ class PdfReportService {
     );
   }
 
-  /// The signature/stamp block shown at the end of the report, each under its own heading —
-  /// "الختم" above the stamp image, "التوقيع" above the signature image — sized generously
-  /// (large enough to be genuinely legible on a printed page, not a thumbnail) since a report
-  /// meant to be shown to a client is exactly where these need to look real and official. Returns
-  /// `null` (and renders nothing) when BOTH images are unavailable, so an empty section is never
-  /// left dangling at the bottom of a report.
+  /// The signature/stamp block is printed directly on the paper, without frames, fills, or inset
+  /// padding around either image. A white-background scan therefore blends into the report page
+  /// and a transparent PNG keeps its natural signature/stamp shape.
   pw.Widget? _buildSignatureStampSection({
     required pw.MemoryImage? signatureImage,
     required pw.MemoryImage? stampImage,
@@ -204,14 +201,11 @@ class PdfReportService {
         children: [
           pw.Text(shapeArabicForPdf(label), style: pw.TextStyle(font: boldFont, fontSize: 11, color: PdfColors.blueGrey800)),
           pw.SizedBox(height: 8),
-          pw.Container(
-            width: width,
-            height: height,
-            alignment: pw.Alignment.center,
-            decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey300, width: 0.6)),
-            padding: const pw.EdgeInsets.all(6),
-            child: pw.Image(image, fit: pw.BoxFit.contain),
-          ),
+            pw.SizedBox(
+              width: width,
+              height: height,
+              child: pw.Center(child: pw.Image(image, fit: pw.BoxFit.contain)),
+            ),
         ],
       );
     }

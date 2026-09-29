@@ -415,10 +415,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get personalDataDeleteLogo => 'حذف الشعار';
 
   @override
-  String get personalDataReportHeaderNote =>
-      'البيانات التي تظهر في ترويسة التقارير';
-
-  @override
   String get nameArLabel => 'الإسم (عربي)';
 
   @override
@@ -438,10 +434,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get personalDataSavedMessage => 'تم حفظ البيانات بنجاح';
-
-  @override
-  String get personalDataFeatureNote =>
-      'سيتم استخدام هذه البيانات في رأس تقارير PDF قريبًا';
 
   @override
   String get signatureScreenTitle => 'التوقيع';
@@ -946,6 +938,15 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر تجهيز نموذج التعرف الصوتي. التفاصيل أدناه — أعد المحاولة (سيُكمل تلقائيًا من حيث توقف، ولن يعيد التنزيل من الصفر)';
 
   @override
+  String get voiceRecognitionModeTitle => 'طريقة التعرف الصوتي';
+
+  @override
+  String get voiceRecognitionModeLocal => 'محلي';
+
+  @override
+  String get voiceRecognitionModeCloud => 'سحابي';
+
+  @override
   String get openLinkFailedMessage =>
       'تعذّر فتح الرابط، تحقق من اتصالك بالإنترنت';
 
@@ -997,6 +998,16 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get generalSettingsAnnualClosingConfirmTitle => 'تنبيه مهم';
+
+  @override
+  String get generalSettingsAnnualClosingConfirmBody =>
+      'ننصح بشدة بأخذ نسخة احتياطية قبل الإغلاق السنوي. هل أنت متأكد من المتابعة؟';
+
+  @override
+  String get generalSettingsAnnualClosingConfirmContinue => 'استمرار';
+
+  @override
   String get generalSettingsChangeDebitLabel => 'تغيير عبارة (مدين)';
 
   @override
@@ -1022,6 +1033,13 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get generalSettingsBiometricNotSupported =>
       'عذرًا، هذا الجهاز لا يدعم الحماية بالبصمة';
+
+  @override
+  String get generalSettingsBiometricEnabledSuccessMessage =>
+      'تم تفعيل الحماية بالبصمة بنجاح';
+
+  @override
+  String get generalSettingsTermsUpdatedMessage => 'تم تغيير المصطلحات بنجاح';
 
   @override
   String get generalSettingsSettingsSavedMessage => 'تم حفظ الإعدادات بنجاح';
@@ -1065,10 +1083,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get appLockEnterPasswordOnly => 'أدخل كلمة المرور للمتابعة';
 
   @override
+  String get appLockLoginButton => 'دخول';
+
+  @override
+  String get appLockWrongPasswordMessage =>
+      'كلمة المرور غير صحيحة، يرجى المحاولة مرة أخرى';
+
+  @override
   String get appLockBiometricReason => 'قم بالمصادقة للدخول إلى ديوني';
 
   @override
   String get appLockBiometricFailed => 'تعذرت المصادقة، حاول مرة أخرى';
+
+  @override
+  String get ceilingExceededTitle => 'تنبيه تجاوز السقف';
+
+  @override
+  String ceilingExceededBody(
+      String ceiling, String directionLabel, String balance) {
+    return 'سيتجاوز رصيد الحساب بعد هذه العملية السقف المحدد ($ceiling) — سيصبح الحساب $directionLabel بمبلغ $balance. يجب رفع السقف للمتابعة.';
+  }
+
+  @override
+  String get ceilingExceededRaiseButton => 'رفع السقف';
 
   @override
   String get voiceDiagnosticsTitle => 'معلومات تشخيصية';
