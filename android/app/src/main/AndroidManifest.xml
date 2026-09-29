@@ -1,8 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Used by the system/cloud recognizer on Android devices when a Bluetooth headset is the
+         active input. Android 12+ uses BLUETOOTH_CONNECT below; these cover older devices. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- ===== جهات الاتصال — بداية الإضافة =====
          FIX for the reported "phone/person contact-pick icons do nothing when tapped" bug: the
          `flutter_contacts` package's own README explicitly requires the HOST APP (not the
@@ -117,6 +122,11 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Required on Android 11+ to discover the installed system speech-recognition service
+             used by the selectable cloud recognition provider. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

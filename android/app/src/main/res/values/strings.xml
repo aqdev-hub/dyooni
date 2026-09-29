@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  مفاتيح Facebook Login — ضع القيم الحقيقية من لوحة تحكم Facebook for Developers
+  (Settings → Basic) هنا فقط، ولا تضعها في أي مكان آخر من الكود.
+
+  facebook_app_id            → "App ID" كما هو، أرقام فقط (مثال: 1234567890123456)
+  fb_login_protocol_scheme   → نفس الرقم بالضبط لكن مسبوقًا بـ fb (مثال: fb1234567890123456)
+  facebook_client_token      → "Client Token" من نفس الصفحة (Settings → Advanced → Client Token)
+-->
+<resources>
+    <string name="facebook_app_id">1077760148310283</string>
+    <string name="fb_login_protocol_scheme">fb1077760148310283</string>
+    <string name="facebook_client_token">759bc3d56fe94c4a41c899b24d5f476f</string>
+</resources>
