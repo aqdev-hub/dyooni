@@ -1273,4 +1273,105 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportStampLabel => 'Stamp';
+
+  @override
+  String get voiceListeningSubtitle => 'Speak clearly and calmly now.\nYour words will be recorded accurately.';
+
+  @override
+  String get voiceStopLabel => 'Stop';
+
+  @override
+  String get voiceTipText => 'Speak clearly and unhurriedly\nfor the best recording result';
+
+  @override
+  String get voiceProcessingSubtitle => 'Extracting the debt details';
+
+  @override
+  String get voiceStepAnalyze => 'Analyzing the text';
+
+  @override
+  String get voiceStepExtract => 'Extracting the information';
+
+  @override
+  String get voiceStepValidate => 'Validating the data';
+
+  @override
+  String get voiceClarifyTitle => 'I need a clarification';
+
+  @override
+  String get voiceClarifySubtitle => 'Please complete the missing detail';
+
+  @override
+  String get voiceQuestionDirection => 'Which type is it?';
+
+  @override
+  String get voiceQuestionDirectionHint => '(Is the debt owed to or by them?)';
+
+  @override
+  String get voiceQuestionAmount => 'What is the amount?';
+
+  @override
+  String get voiceQuestionAmountHint => '(Say only the amount, e.g. five thousand two hundred)';
+
+  @override
+  String get voiceQuestionAmountUncertain => 'I was not sure about the amount';
+
+  @override
+  String get voiceQuestionAmountUncertainHint => '(Say only the amount again)';
+
+  @override
+  String get voiceQuestionAccount => 'Who is the account holder?';
+
+  @override
+  String get voiceQuestionAccountHint => '(Say the first and last name)';
+
+  @override
+  String get voiceQuestionAccountName => 'Complete the account name';
+
+  @override
+  String get voiceQuestionAccountNameHint => '(The name needs at least two words)';
+
+  @override
+  String get voiceQuestionSameAccount => 'Do you mean this account?';
+
+  @override
+  String voiceQuestionSameAccountHint(String name) {
+    return '(Existing account: ${name})';
+  }
+
+  @override
+  String get voiceQuestionCurrency => 'Which currency?';
+
+  @override
+  String get voiceQuestionCurrencyHint => '(Yemeni rial, Saudi riyal, dollar, dirham…)';
+
+  @override
+  String get voiceQuestionNoSpeech => 'I did not catch any sound';
+
+  @override
+  String get voiceQuestionNoSpeechHint => '(Try speaking clearly)';
+
+  @override
+  String get voiceYes => 'Yes';
+
+  @override
+  String get voiceNo => 'No';
+
+  @override
+  String get voiceConfirmYes => 'Yes';
+
+  @override
+  String get voiceConfirmSave => '(Save)';
+
+  @override
+  String get voiceSummaryTitle => 'Transaction summary:';
+
+  @override
+  String get voiceNameLabel => 'Name';
+
+  @override
+  String get voiceYouCanSay => 'You can say:';
+
+  @override
+  String get voiceYouCanSayExamples => '"Yes" or "Save" or "Edit the amount to 3500"';
 }

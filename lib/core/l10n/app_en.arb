@@ -440,5 +440,45 @@
     }
   },
   "reportSignatureLabel": "Signature",
-  "reportStampLabel": "Stamp"
+  "reportStampLabel": "Stamp",
+  "voiceListeningSubtitle": "Speak clearly and calmly now.\nYour words will be recorded accurately.",
+  "voiceStopLabel": "Stop",
+  "voiceTipText": "Speak clearly and unhurriedly\nfor the best recording result",
+  "voiceProcessingSubtitle": "Extracting the debt details",
+  "voiceStepAnalyze": "Analyzing the text",
+  "voiceStepExtract": "Extracting the information",
+  "voiceStepValidate": "Validating the data",
+  "voiceClarifyTitle": "I need a clarification",
+  "voiceClarifySubtitle": "Please complete the missing detail",
+  "voiceQuestionDirection": "Which type is it?",
+  "voiceQuestionDirectionHint": "(Is the debt owed to or by them?)",
+  "voiceQuestionAmount": "What is the amount?",
+  "voiceQuestionAmountHint": "(Say only the amount, e.g. five thousand two hundred)",
+  "voiceQuestionAmountUncertain": "I was not sure about the amount",
+  "voiceQuestionAmountUncertainHint": "(Say only the amount again)",
+  "voiceQuestionAccount": "Who is the account holder?",
+  "voiceQuestionAccountHint": "(Say the first and last name)",
+  "voiceQuestionAccountName": "Complete the account name",
+  "voiceQuestionAccountNameHint": "(The name needs at least two words)",
+  "voiceQuestionSameAccount": "Do you mean this account?",
+  "voiceQuestionSameAccountHint": "(Existing account: {name})",
+  "@voiceQuestionSameAccountHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceQuestionCurrency": "Which currency?",
+  "voiceQuestionCurrencyHint": "(Yemeni rial, Saudi riyal, dollar, dirham…)",
+  "voiceQuestionNoSpeech": "I did not catch any sound",
+  "voiceQuestionNoSpeechHint": "(Try speaking clearly)",
+  "voiceYes": "Yes",
+  "voiceNo": "No",
+  "voiceConfirmYes": "Yes",
+  "voiceConfirmSave": "(Save)",
+  "voiceSummaryTitle": "Transaction summary:",
+  "voiceNameLabel": "Name",
+  "voiceYouCanSay": "You can say:",
+  "voiceYouCanSayExamples": "\"Yes\" or \"Save\" or \"Edit the amount to 3500\""
 }

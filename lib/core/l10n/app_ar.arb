@@ -440,5 +440,45 @@
     }
   },
   "reportSignatureLabel": "التوقيع",
-  "reportStampLabel": "الختم"
+  "reportStampLabel": "الختم",
+  "voiceListeningSubtitle": "تحدث الآن بوضوح وبهدوء\nوستقوم بتسجيل كلامك بدقة",
+  "voiceStopLabel": "إيقاف",
+  "voiceTipText": "تأكد من التحدث بوضوح وتأنٍّ\nللحصول على أفضل نتيجة للتسجيل",
+  "voiceProcessingSubtitle": "جاري استخراج بيانات الدين",
+  "voiceStepAnalyze": "تحليل النص",
+  "voiceStepExtract": "استخراج المعلومات",
+  "voiceStepValidate": "التحقق من البيانات",
+  "voiceClarifyTitle": "أحتاج إلى توضيح",
+  "voiceClarifySubtitle": "من فضلك أكمل المعلومة",
+  "voiceQuestionDirection": "ما هو النوع؟",
+  "voiceQuestionDirectionHint": "(هل الدين له أم عليه؟)",
+  "voiceQuestionAmount": "كم المبلغ؟",
+  "voiceQuestionAmountHint": "(قل المبلغ فقط، مثل: خمسة آلاف ومئتين)",
+  "voiceQuestionAmountUncertain": "لم أتأكد من المبلغ",
+  "voiceQuestionAmountUncertainHint": "(قل المبلغ فقط مرة أخرى)",
+  "voiceQuestionAccount": "من هو صاحب الحساب؟",
+  "voiceQuestionAccountHint": "(قل الاسم الأول والأخير)",
+  "voiceQuestionAccountName": "أكمل اسم الحساب",
+  "voiceQuestionAccountNameHint": "(الاسم يتكون من اسمين على الأقل)",
+  "voiceQuestionSameAccount": "هل تقصد هذا الحساب؟",
+  "voiceQuestionSameAccountHint": "(الحساب الموجود: {name})",
+  "@voiceQuestionSameAccountHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceQuestionCurrency": "ما هي العملة؟",
+  "voiceQuestionCurrencyHint": "(ريال يمني، سعودي، دولار، درهم…)",
+  "voiceQuestionNoSpeech": "لم ألتقط أي صوت",
+  "voiceQuestionNoSpeechHint": "(حاول التحدث بوضوح)",
+  "voiceYes": "نعم",
+  "voiceNo": "لا",
+  "voiceConfirmYes": "نعم",
+  "voiceConfirmSave": "(إحفظ)",
+  "voiceSummaryTitle": "تلخيص العملية:",
+  "voiceNameLabel": "الاسم",
+  "voiceYouCanSay": "يمكنك قول:",
+  "voiceYouCanSayExamples": "\"نعم\" أو \"احفظ\" أو \"عدل المبلغ إلى 3500\""
 }

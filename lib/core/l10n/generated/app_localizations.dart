@@ -2432,6 +2432,204 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الختم'**
   String get reportStampLabel;
+
+  /// No description provided for @voiceListeningSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحدث الآن بوضوح وبهدوء\nوستقوم بتسجيل كلامك بدقة'**
+  String get voiceListeningSubtitle;
+
+  /// No description provided for @voiceStopLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف'**
+  String get voiceStopLabel;
+
+  /// No description provided for @voiceTipText.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكد من التحدث بوضوح وتأنٍّ\nللحصول على أفضل نتيجة للتسجيل'**
+  String get voiceTipText;
+
+  /// No description provided for @voiceProcessingSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري استخراج بيانات الدين'**
+  String get voiceProcessingSubtitle;
+
+  /// No description provided for @voiceStepAnalyze.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحليل النص'**
+  String get voiceStepAnalyze;
+
+  /// No description provided for @voiceStepExtract.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخراج المعلومات'**
+  String get voiceStepExtract;
+
+  /// No description provided for @voiceStepValidate.
+  ///
+  /// In ar, this message translates to:
+  /// **'التحقق من البيانات'**
+  String get voiceStepValidate;
+
+  /// No description provided for @voiceClarifyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أحتاج إلى توضيح'**
+  String get voiceClarifyTitle;
+
+  /// No description provided for @voiceClarifySubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'من فضلك أكمل المعلومة'**
+  String get voiceClarifySubtitle;
+
+  /// No description provided for @voiceQuestionDirection.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما هو النوع؟'**
+  String get voiceQuestionDirection;
+
+  /// No description provided for @voiceQuestionDirectionHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(هل الدين له أم عليه؟)'**
+  String get voiceQuestionDirectionHint;
+
+  /// No description provided for @voiceQuestionAmount.
+  ///
+  /// In ar, this message translates to:
+  /// **'كم المبلغ؟'**
+  String get voiceQuestionAmount;
+
+  /// No description provided for @voiceQuestionAmountHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(قل المبلغ فقط، مثل: خمسة آلاف ومئتين)'**
+  String get voiceQuestionAmountHint;
+
+  /// No description provided for @voiceQuestionAmountUncertain.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم أتأكد من المبلغ'**
+  String get voiceQuestionAmountUncertain;
+
+  /// No description provided for @voiceQuestionAmountUncertainHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(قل المبلغ فقط مرة أخرى)'**
+  String get voiceQuestionAmountUncertainHint;
+
+  /// No description provided for @voiceQuestionAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'من هو صاحب الحساب؟'**
+  String get voiceQuestionAccount;
+
+  /// No description provided for @voiceQuestionAccountHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(قل الاسم الأول والأخير)'**
+  String get voiceQuestionAccountHint;
+
+  /// No description provided for @voiceQuestionAccountName.
+  ///
+  /// In ar, this message translates to:
+  /// **'أكمل اسم الحساب'**
+  String get voiceQuestionAccountName;
+
+  /// No description provided for @voiceQuestionAccountNameHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(الاسم يتكون من اسمين على الأقل)'**
+  String get voiceQuestionAccountNameHint;
+
+  /// No description provided for @voiceQuestionSameAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل تقصد هذا الحساب؟'**
+  String get voiceQuestionSameAccount;
+
+  /// No description provided for @voiceQuestionSameAccountHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(الحساب الموجود: {name})'**
+  String voiceQuestionSameAccountHint(String name);
+
+  /// No description provided for @voiceQuestionCurrency.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما هي العملة؟'**
+  String get voiceQuestionCurrency;
+
+  /// No description provided for @voiceQuestionCurrencyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(ريال يمني، سعودي، دولار، درهم…)'**
+  String get voiceQuestionCurrencyHint;
+
+  /// No description provided for @voiceQuestionNoSpeech.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم ألتقط أي صوت'**
+  String get voiceQuestionNoSpeech;
+
+  /// No description provided for @voiceQuestionNoSpeechHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(حاول التحدث بوضوح)'**
+  String get voiceQuestionNoSpeechHint;
+
+  /// No description provided for @voiceYes.
+  ///
+  /// In ar, this message translates to:
+  /// **'نعم'**
+  String get voiceYes;
+
+  /// No description provided for @voiceNo.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا'**
+  String get voiceNo;
+
+  /// No description provided for @voiceConfirmYes.
+  ///
+  /// In ar, this message translates to:
+  /// **'نعم'**
+  String get voiceConfirmYes;
+
+  /// No description provided for @voiceConfirmSave.
+  ///
+  /// In ar, this message translates to:
+  /// **'(إحفظ)'**
+  String get voiceConfirmSave;
+
+  /// No description provided for @voiceSummaryTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تلخيص العملية:'**
+  String get voiceSummaryTitle;
+
+  /// No description provided for @voiceNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم'**
+  String get voiceNameLabel;
+
+  /// No description provided for @voiceYouCanSay.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك قول:'**
+  String get voiceYouCanSay;
+
+  /// No description provided for @voiceYouCanSayExamples.
+  ///
+  /// In ar, this message translates to:
+  /// **'"نعم" أو "احفظ" أو "عدل المبلغ إلى 3500"'**
+  String get voiceYouCanSayExamples;
 }
 
 class _AppLocalizationsDelegate

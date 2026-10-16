@@ -1258,4 +1258,105 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reportStampLabel => 'الختم';
+
+  @override
+  String get voiceListeningSubtitle => 'تحدث الآن بوضوح وبهدوء\nوستقوم بتسجيل كلامك بدقة';
+
+  @override
+  String get voiceStopLabel => 'إيقاف';
+
+  @override
+  String get voiceTipText => 'تأكد من التحدث بوضوح وتأنٍّ\nللحصول على أفضل نتيجة للتسجيل';
+
+  @override
+  String get voiceProcessingSubtitle => 'جاري استخراج بيانات الدين';
+
+  @override
+  String get voiceStepAnalyze => 'تحليل النص';
+
+  @override
+  String get voiceStepExtract => 'استخراج المعلومات';
+
+  @override
+  String get voiceStepValidate => 'التحقق من البيانات';
+
+  @override
+  String get voiceClarifyTitle => 'أحتاج إلى توضيح';
+
+  @override
+  String get voiceClarifySubtitle => 'من فضلك أكمل المعلومة';
+
+  @override
+  String get voiceQuestionDirection => 'ما هو النوع؟';
+
+  @override
+  String get voiceQuestionDirectionHint => '(هل الدين له أم عليه؟)';
+
+  @override
+  String get voiceQuestionAmount => 'كم المبلغ؟';
+
+  @override
+  String get voiceQuestionAmountHint => '(قل المبلغ فقط، مثل: خمسة آلاف ومئتين)';
+
+  @override
+  String get voiceQuestionAmountUncertain => 'لم أتأكد من المبلغ';
+
+  @override
+  String get voiceQuestionAmountUncertainHint => '(قل المبلغ فقط مرة أخرى)';
+
+  @override
+  String get voiceQuestionAccount => 'من هو صاحب الحساب؟';
+
+  @override
+  String get voiceQuestionAccountHint => '(قل الاسم الأول والأخير)';
+
+  @override
+  String get voiceQuestionAccountName => 'أكمل اسم الحساب';
+
+  @override
+  String get voiceQuestionAccountNameHint => '(الاسم يتكون من اسمين على الأقل)';
+
+  @override
+  String get voiceQuestionSameAccount => 'هل تقصد هذا الحساب؟';
+
+  @override
+  String voiceQuestionSameAccountHint(String name) {
+    return '(الحساب الموجود: ${name})';
+  }
+
+  @override
+  String get voiceQuestionCurrency => 'ما هي العملة؟';
+
+  @override
+  String get voiceQuestionCurrencyHint => '(ريال يمني، سعودي، دولار، درهم…)';
+
+  @override
+  String get voiceQuestionNoSpeech => 'لم ألتقط أي صوت';
+
+  @override
+  String get voiceQuestionNoSpeechHint => '(حاول التحدث بوضوح)';
+
+  @override
+  String get voiceYes => 'نعم';
+
+  @override
+  String get voiceNo => 'لا';
+
+  @override
+  String get voiceConfirmYes => 'نعم';
+
+  @override
+  String get voiceConfirmSave => '(إحفظ)';
+
+  @override
+  String get voiceSummaryTitle => 'تلخيص العملية:';
+
+  @override
+  String get voiceNameLabel => 'الاسم';
+
+  @override
+  String get voiceYouCanSay => 'يمكنك قول:';
+
+  @override
+  String get voiceYouCanSayExamples => '"نعم" أو "احفظ" أو "عدل المبلغ إلى 3500"';
 }
