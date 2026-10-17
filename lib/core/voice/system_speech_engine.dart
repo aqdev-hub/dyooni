@@ -62,10 +62,6 @@ class SystemSpeechEngine implements SpeechEngine {
   String _latestTranscript = '';
   bool _initialized = false;
 
-  /// Set after a native error that leaves the recognizer in an unknown state; the next
-  /// [start] then re-initialises the plugin (fresh native SpeechRecognizer) before listening.
-  bool _needsReinit = false;
-
   @override
   Stream<String> get partialResults => _partialController.stream;
   @override
@@ -81,11 +77,10 @@ class SystemSpeechEngine implements SpeechEngine {
   bool get endsSessionOnFinal => true;
 
   Future<bool> _ensureInitialized() async {
-    if (_initialized && !_needsReinit) return true;
-    _needsReinit = false;
+    if (_initialized) return true;
     _initialized = await _speech.initialize(
       onError: _handleNativeError,
-      onStatus: (_) {},
+      onStatus: (status) => debugPrint('[voice] system recognizer status: $status'),
     );
     return _initialized;
   }
@@ -112,10 +107,6 @@ class SystemSpeechEngine implements SpeechEngine {
     };
     const noMatchCodes = {'error_no_match', 'error_speech_timeout'};
     const permissionCodes = {'error_insufficient_permissions'};
-    // Previously every one of these fell into `other` and was ignored, so the person just waited
-    // out the 8-second timeout and heard "لم ألتقط أي صوت" although the OS recognizer had never
-    // actually listened (e.g. right after the local engine used the microphone).
-    const recoverableCodes = {'error_busy', 'error_client', 'error_audio'};
 
     final code = error.errorMsg;
     final type = networkCodes.contains(code)
@@ -124,10 +115,7 @@ class SystemSpeechEngine implements SpeechEngine {
             ? SpeechEngineErrorType.noMatch
             : permissionCodes.contains(code)
                 ? SpeechEngineErrorType.permission
-                : recoverableCodes.contains(code)
-                    ? SpeechEngineErrorType.recoverable
-                    : SpeechEngineErrorType.other;
-    if (type == SpeechEngineErrorType.recoverable) _needsReinit = true;
+                : SpeechEngineErrorType.other;
     // Kept in the logs on purpose: the exact Android code is what identifies a device-specific
     // recognizer problem.
     debugPrint('[voice] system recognizer error: $code (permanent: ${error.permanent})');
@@ -144,11 +132,6 @@ class SystemSpeechEngine implements SpeechEngine {
     }
     _latestTranscript = '';
     _lastAlternatives = const [];
-    // A previous session (or the plugin's own bookkeeping) may still think it is listening — a
-    // new listen() on top of that is silently ignored, which looks exactly like "hears nothing".
-    if (_speech.isListening) {
-      await _speech.cancel();
-    }
     // Muted BEFORE listen() starts so the very first of the two system tones is covered too —
     // restored in stop()/cancel(), both of which run on every exit path (see voice_provider.dart,
     // every code path that ends a session calls one of the two).
@@ -219,9 +202,6 @@ class SystemSpeechEngine implements SpeechEngine {
       // Nothing to cancel is fine.
     }
     await _soundMuter.restore();
-    // Fresh native recognizer on the next start — it may have been left stale while another
-    // engine owned the microphone.
-    _needsReinit = true;
   }
 
   @override

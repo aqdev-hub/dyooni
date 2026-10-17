@@ -353,6 +353,20 @@ class VoiceCommandDraft {
   final DateTime date;
   final String type;
 
+  /// Same draft with the amount cleared and flagged uncertain (the dialogue then asks for it).
+  VoiceCommandDraft withUncertainAmount() => VoiceCommandDraft(
+        transcript: transcript,
+        accountName: accountName,
+        amount: null,
+        amountUncertain: true,
+        currency: currency,
+        currencyUnsupported: currencyUnsupported,
+        details: details,
+        direction: direction,
+        date: date,
+        type: type,
+      );
+
   /// Extended to cover every field the voice-confirmation "قل تعديلك" flow (and the amount/
   /// account/direction/currency clarification loop) can change — see
   /// VoiceController._tryParseEdit and VoiceController._finishClarificationListening, which

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -249,8 +250,6 @@ class VoiceController extends StateNotifier<VoiceState> {
   static const _maxNetworkRetries = 4;
   int _networkRetryCount = 0;
 
-  /// Which kind of error is being retried — decides the message if every retry fails.
-  SpeechEngineErrorType _lastRetryErrorType = SpeechEngineErrorType.network;
 
   /// `true` once the person has answered (or no question was needed) for the account-name
   /// similarity check of the CURRENT command — prevents asking "same account?" twice.
@@ -293,8 +292,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// are acted on here — everything else (genuine silence, permission problems) is left to the
   /// existing silence-timeout / permission-check paths, which already handle those correctly.
   void _onEngineError(SpeechEngineError error) {
-    if (error.type == SpeechEngineErrorType.network || error.type == SpeechEngineErrorType.recoverable) {
-      _lastRetryErrorType = error.type;
+    if (error.type == SpeechEngineErrorType.network) {
       unawaited(_retryAfterNetworkBlip());
     }
   }
@@ -312,10 +310,7 @@ class VoiceController extends StateNotifier<VoiceState> {
 
     if (_networkRetryCount >= _maxNetworkRetries) {
       _networkRetryCount = 0;
-      state = state.copyWith(
-        status: VoiceStatus.error,
-        errorCode: _lastRetryErrorType == SpeechEngineErrorType.network ? 'network' : 'recognition',
-      );
+      state = state.copyWith(status: VoiceStatus.error, errorCode: 'network');
       return;
     }
     _networkRetryCount++;
@@ -333,13 +328,39 @@ class VoiceController extends StateNotifier<VoiceState> {
         (wasConfirmationListening && state.status == VoiceStatus.confirmationListening);
     if (!stillListening) return;
     try {
-      await _engine.start();
+      await _startEngine();
       state = state.copyWith(transcript: keptTranscript);
       _armSpeechEndTimer(_noSpeechAfter);
     } catch (_) {
       // Another error event (or the outer silence timeout) will take it from here.
     }
   }
+
+  /// The recognizer must be listening within this time or it is treated as stuck.
+  static const _engineStartTimeout = Duration(seconds: 6);
+
+  /// Starts the engine with a HARD time limit. Reported symptom: the screen stayed on "listening"
+  /// for minutes and never failed, succeeded or asked anything — that is `start()` never
+  /// returning (so the silence timer was never even armed). Now a start that does not complete in
+  /// [_engineStartTimeout] releases the engine and tries exactly once more; if that also times
+  /// out the exception reaches the caller, which shows a real error instead of waiting forever.
+  Future<void> _startEngine() async {
+    try {
+      await _engine.start().timeout(_engineStartTimeout);
+    } on TimeoutException {
+      debugPrint('[voice] engine start timed out - releasing and retrying once');
+      try {
+        await _engine.release().timeout(const Duration(seconds: 3));
+      } catch (_) {
+        // Best effort — the retry below is what matters.
+      }
+      await _engine.start().timeout(_engineStartTimeout);
+    }
+  }
+
+  /// A timeout means the recognizer itself is stuck ("recognition"); anything else here is the
+  /// permission/availability failure the old code assumed for every exception.
+  String _startFailureCode(Object error) => error is TimeoutException ? 'recognition' : 'permission';
 
   /// Provider changes are intentionally limited to idle state. This releases the old engine
   /// before rebinding streams, so a single utterance can never be split between recognizers.
@@ -500,7 +521,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     state = state.copyWith(status: VoiceStatus.bluetoothWaitingWakeWord);
     _startBluetoothMonitor();
     try {
-      await _engine.start();
+      await _startEngine();
     } catch (_) {
       state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'recognition');
     }
@@ -521,7 +542,9 @@ class VoiceController extends StateNotifier<VoiceState> {
     final session = ++_session;
     _networkRetryCount = 0;
     state = VoiceState(status: VoiceStatus.preparing, bluetoothMode: bluetoothMode);
-    if (!await _engine.hasPermission()) {
+    // Bounded too: a recognizer whose initialisation never answers must not freeze the screen.
+    final granted = await _engine.hasPermission().timeout(const Duration(seconds: 8), onTimeout: () => false);
+    if (!granted) {
       state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
       return;
     }
@@ -531,14 +554,14 @@ class VoiceController extends StateNotifier<VoiceState> {
       clearError: true,
     );
     try {
-      await _engine.start();
+      await _startEngine();
       if (session != _session) {
         await _engine.cancel();
         return;
       }
       _armSpeechEndTimer(_noSpeechAfter);
-    } catch (_) {
-      state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+    } catch (e) {
+      state = state.copyWith(status: VoiceStatus.error, errorCode: _startFailureCode(e));
     }
   }
 
@@ -691,16 +714,21 @@ class VoiceController extends StateNotifier<VoiceState> {
         clearError: true,
       );
       try {
-        await _engine.start();
+        await _startEngine();
         _armSpeechEndTimer(_noSpeechAfter);
-      } catch (_) {
-        state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+      } catch (e) {
+        state = state.copyWith(status: VoiceStatus.error, errorCode: _startFailureCode(e));
       }
       return;
     }
 
     state = state.copyWith(processingStep: 1);
-    final draft = _ref.read(voiceCommandParserProvider).parse(effectiveTranscript);
+    var draft = _ref.read(voiceCommandParserProvider).parse(effectiveTranscript);
+    if (_amountDoubtedByAlternatives(effectiveTranscript, _engine.lastAlternatives)) {
+      // Same audio, different hypotheses about the number → the recognizer itself is not sure.
+      // Ask for the amount instead of saving a guess.
+      draft = draft.withUncertainAmount();
+    }
     state = state.copyWith(processingStep: 2);
     _nameDecided = false;
     _lastEditedField = null;
@@ -749,10 +777,10 @@ class VoiceController extends StateNotifier<VoiceState> {
         clearError: true,
       );
       try {
-        await _engine.start();
+        await _startEngine();
         _armSpeechEndTimer(_noSpeechAfter);
-      } catch (_) {
-        state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+      } catch (e) {
+        state = state.copyWith(status: VoiceStatus.error, errorCode: _startFailureCode(e));
       }
       return;
     }
@@ -888,10 +916,10 @@ class VoiceController extends StateNotifier<VoiceState> {
       // timestamp so the recording metadata remains associated with the first command.
     );
     try {
-      await _engine.start();
+      await _startEngine();
       _armSpeechEndTimer(_noSpeechAfter);
-    } catch (_) {
-      state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+    } catch (e) {
+      state = state.copyWith(status: VoiceStatus.error, errorCode: _startFailureCode(e));
     }
   }
 
@@ -908,10 +936,10 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (session != _session) return;
     state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
     try {
-      await _engine.start();
+      await _startEngine();
       _armSpeechEndTimer(_noSpeechAfter);
-    } catch (_) {
-      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
+    } catch (e) {
+      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: _startFailureCode(e));
     }
   }
 
@@ -1026,10 +1054,10 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (session != _session) return;
     state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
     try {
-      await _engine.start();
+      await _startEngine();
       _armSpeechEndTimer(_noSpeechAfter);
-    } catch (_) {
-      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
+    } catch (e) {
+      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: _startFailureCode(e));
     }
   }
 
@@ -1052,10 +1080,10 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (session != _session) return;
     state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
     try {
-      await _engine.start();
+      await _startEngine();
       _armSpeechEndTimer(_noSpeechAfter);
-    } catch (_) {
-      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
+    } catch (e) {
+      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: _startFailureCode(e));
     }
   }
 
@@ -1193,6 +1221,25 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// Cloud recognizers return several ranked hypotheses. Keep the first unless a LATER one parses
   /// strictly better — a readable amount (+4), a two-word name (+2), an explicit direction (+1);
   /// a garbled amount costs 2. Ties keep the recognizer's own top choice.
+  /// `true` when the chosen transcript's amount is a bare "ألف"/"مليون" while another hypothesis
+  /// of the SAME audio holds a noisy or different number phrase. Example: Vosk's top result is
+  /// "أحمد عليه ألف ريال" but its 2nd is "أحمد عليه إلا ألف ريال" — the person most likely said
+  /// "خمسة ألف" and the best hypothesis simply lost the word. Saving 1000 there is the
+  /// reported "التعويض بألف"; asking is the honest behaviour.
+  bool _amountDoubtedByAlternatives(String chosen, List<String> alternatives) {
+    if (alternatives.length < 2) return false;
+    final parser = _ref.read(voiceCommandParserProvider);
+    final main = parser.parseAmount(chosen);
+    if (main.value == null || !main.bare) return false;
+    for (final candidate in alternatives) {
+      if (candidate == chosen) continue;
+      final other = parser.parseAmount(candidate);
+      if (other.uncertain) return true;
+      if (other.value != null && other.value != main.value) return true;
+    }
+    return false;
+  }
+
   String _pickBestTranscript(String primary, List<String> alternatives) {
     if (alternatives.length < 2) return primary;
     final parser = _ref.read(voiceCommandParserProvider);
@@ -1200,7 +1247,9 @@ class VoiceController extends StateNotifier<VoiceState> {
       final d = parser.parse(text);
       var v = 0;
       if (d.amount != null) {
-        v += 4;
+        // A bare "ألف" is what is left when the number word before it was dropped, so it must
+        // never beat a hypothesis that kept the uncertainty — that was the silent "1000".
+        v += parser.parseAmount(text).bare ? -2 : 4;
       } else if (d.amountUncertain) {
         v -= 2;
       }

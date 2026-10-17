@@ -144,4 +144,19 @@ void main() {
       expect(draft.amountUncertain, isFalse);
     });
   });
+
+  group('bare multiplier', () {
+    test('"ألف" alone is flagged bare; a full phrase is not', () {
+      expect(parser.parseAmount('أحمد عليه ألف ريال').bare, isTrue);
+      expect(parser.parseAmount('أحمد عليه خمسة ألف ريال').bare, isFalse);
+    });
+
+    test('withUncertainAmount clears the amount and asks for it again', () {
+      final draft = parser.parse('أحمد عليه ألف ريال').withUncertainAmount();
+
+      expect(draft.amount, isNull);
+      expect(draft.amountUncertain, isTrue);
+      expect(draft.accountName, 'أحمد');
+    });
+  });
 }

@@ -19,6 +19,7 @@ class AmountExtraction {
     required this.uncertain,
     required this.startToken,
     required this.endToken,
+    this.bare = false,
   });
 
   const AmountExtraction.none()
@@ -36,6 +37,11 @@ class AmountExtraction {
   /// Inclusive token range of the number phrase inside the token list given to [extract].
   final int startToken;
   final int endToken;
+
+  /// `true` when the phrase is ONLY a multiplier ("ألف" alone → 1000). That is also exactly what
+  /// a recognizer leaves behind when it drops or garbles the number word in front of it
+  /// ("خمسة ألف" → "ألف"), so it is weaker evidence than a full phrase.
+  final bool bare;
 
   bool get found => startToken >= 0;
 }
@@ -318,6 +324,7 @@ class ArabicNumberParser {
     if (value <= 0) {
       return AmountExtraction(value: null, uncertain: false, startToken: chosen.$1, endToken: chosen.$2);
     }
-    return AmountExtraction(value: value, uncertain: false, startToken: chosen.$1, endToken: chosen.$2);
+    final bare = chosen.$1 == chosen.$2 && toks[chosen.$1].kind == _Kind.multiplier;
+    return AmountExtraction(value: value, uncertain: false, startToken: chosen.$1, endToken: chosen.$2, bare: bare);
   }
 }
