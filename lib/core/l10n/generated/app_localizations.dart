@@ -1862,6 +1862,48 @@ abstract class AppLocalizations {
   /// **'تعذّر تجهيز نموذج التعرف الصوتي. التفاصيل أدناه — أعد المحاولة (سيُكمل تلقائيًا من حيث توقف، ولن يعيد التنزيل من الصفر)'**
   String get voiceModelDownloadFailedMessage;
 
+  /// No description provided for @whisperPickTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر دقة التعرف الصوتي'**
+  String get whisperPickTitle;
+
+  /// No description provided for @whisperPickBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'يُحمَّل النموذج مرة واحدة فقط، ثم يعمل الأمر الصوتي بلا إنترنت.'**
+  String get whisperPickBody;
+
+  /// No description provided for @whisperOptionBalancedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'متوازن (موصى به)'**
+  String get whisperOptionBalancedTitle;
+
+  /// No description provided for @whisperOptionBalancedSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حجمه نحو 190 ميجابايت — أسرع في الفهم'**
+  String get whisperOptionBalancedSubtitle;
+
+  /// No description provided for @whisperOptionAccurateTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'دقيق'**
+  String get whisperOptionAccurateTitle;
+
+  /// No description provided for @whisperOptionAccurateSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حجمه نحو 540 ميجابايت — أدق لكنه أبطأ، ويناسب الهاتف القوي'**
+  String get whisperOptionAccurateSubtitle;
+
+  /// No description provided for @whisperDownloadingHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ تحميل نموذج التعرف الصوتي (مرة واحدة فقط) — بعدها يعمل الأمر الصوتي بلا إنترنت'**
+  String get whisperDownloadingHint;
+
   /// No description provided for @voiceRecognitionModeTitle.
   ///
   /// In ar, this message translates to:

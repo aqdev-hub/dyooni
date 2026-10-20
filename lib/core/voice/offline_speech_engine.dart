@@ -96,6 +96,12 @@ class OfflineSpeechEngine implements SpeechEngine {
   @override
   bool get endsSessionOnFinal => false;
 
+  @override
+  Stream<void> get speechActivity => const Stream<void>.empty();
+
+  @override
+  bool get providesLiveText => true;
+
   bool get isListening => _micSubscription != null || _stopping != null;
 
   @override

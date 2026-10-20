@@ -43,6 +43,18 @@ class SpeechEngineError {
   final String? message;
 }
 
+/// Thrown by [SpeechEngine.stop] when the recognizer FAILED to produce a result (as opposed to
+/// hearing nothing, which is an ordinary empty transcript). [code] is the dialogue's own error code
+/// (see VoiceController) and [message] is for logs only.
+class SpeechEngineException implements Exception {
+  const SpeechEngineException(this.code, [this.message]);
+  final String code;
+  final String? message;
+
+  @override
+  String toString() => 'SpeechEngineException($code${message == null ? '' : ': $message'})';
+}
+
 /// The stable contract used by the voice dialogue. Implementations may be fully offline, use
 /// the device's cloud-backed recognizer, or be replaced by another provider later without
 /// changing parsing, confirmation, account creation, or transaction saving.
@@ -63,6 +75,17 @@ abstract interface class SpeechEngine {
   /// System/cloud recognizers naturally finish a session after silence; local streaming engines
   /// do not. The controller uses this to finish exactly once in the right place.
   bool get endsSessionOnFinal;
+
+  /// Fires repeatedly while the person is audibly speaking, for engines that produce NO live text
+  /// (Whisper decodes only after recording stops). The controller re-arms its "end of speech"
+  /// timer on every event, exactly as it does for a live partial transcript — without this a
+  /// batch engine would be cut off by the initial no-speech timer in the middle of a sentence.
+  /// Engines with live text may simply never emit.
+  Stream<void> get speechActivity;
+
+  /// `true` when [partialResults] carries real live text (Vosk, system recognizer). `false` for a
+  /// batch engine: wake-word detection (which needs live text) is then unavailable.
+  bool get providesLiveText;
 
   Future<bool> hasPermission();
   Future<void> start();

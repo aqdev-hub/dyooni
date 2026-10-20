@@ -938,6 +938,34 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر تجهيز نموذج التعرف الصوتي. التفاصيل أدناه — أعد المحاولة (سيُكمل تلقائيًا من حيث توقف، ولن يعيد التنزيل من الصفر)';
 
   @override
+  String get whisperPickTitle =>
+      'اختر دقة التعرف الصوتي';
+
+  @override
+  String get whisperPickBody =>
+      'يُحمَّل النموذج مرة واحدة فقط، ثم يعمل الأمر الصوتي بلا إنترنت.';
+
+  @override
+  String get whisperOptionBalancedTitle =>
+      'متوازن (موصى به)';
+
+  @override
+  String get whisperOptionBalancedSubtitle =>
+      'حجمه نحو 190 ميجابايت — أسرع في الفهم';
+
+  @override
+  String get whisperOptionAccurateTitle =>
+      'دقيق';
+
+  @override
+  String get whisperOptionAccurateSubtitle =>
+      'حجمه نحو 540 ميجابايت — أدق لكنه أبطأ، ويناسب الهاتف القوي';
+
+  @override
+  String get whisperDownloadingHint =>
+      'جارٍ تحميل نموذج التعرف الصوتي (مرة واحدة فقط) — بعدها يعمل الأمر الصوتي بلا إنترنت';
+
+  @override
   String get voiceRecognitionModeTitle => 'طريقة التعرف الصوتي';
 
   @override

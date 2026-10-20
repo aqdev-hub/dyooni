@@ -14,16 +14,16 @@ import '../../../logic/settings/general_settings_provider.dart';
 import '../../../data/models/general_settings.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/shared/main_bottom_nav.dart';
-import '../../widgets/voice/vosk_model_download_sheet.dart';
 import '../../widgets/voice/voice_command_sheet.dart';
+import '../../widgets/voice/whisper_model_gate.dart';
 
 /// A real full-page recording experience, sharing the same header/drawer/bottom-nav chrome as
 /// Home (see the reference design) rather than a modal pushed on top of it. It owns the
 /// recording lifecycle so the recognizer never starts behind an unopened sheet.
 ///
-/// CHANGED: [VoiceCommandSheet] is now wrapped in [VoskModelGate] — the offline Arabic speech
-/// model must finish downloading/loading before the mic UI is usable at all. On every run after
-/// the first successful download this gate is invisible (resolves instantly from local cache).
+/// In local mode [VoiceCommandSheet] is wrapped in [WhisperModelGate] — a Whisper speech model
+/// must be on the device before the mic UI is usable. On every run after the first download the
+/// gate is invisible (it resolves instantly from the files already on disk).
 class VoiceCommandScreen extends ConsumerStatefulWidget {
   const VoiceCommandScreen({required this.bluetoothMode, super.key});
   final bool bluetoothMode;
@@ -33,13 +33,10 @@ class VoiceCommandScreen extends ConsumerStatefulWidget {
 }
 
 class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
-  @override
-  void dispose() {
-    // Only if the controller was ever created — creating it here (e.g. while the offline model
-    // is still downloading) would throw.
-    if (ref.exists(voiceProvider)) unawaited(ref.read(voiceProvider.notifier).cancel());
-    super.dispose();
-  }
+  // No dispose() override on purpose: using `ref` while a ConsumerStatefulWidget unmounts throws
+  // "Cannot use ref after the widget was disposed" (seen in the v5 device log). The controller is
+  // an autoDispose provider whose own dispose() cancels the recording and frees the engine, so
+  // leaving the screen is already handled there.
 
   void _goHome(BuildContext context) {
     if (context.canPop()) {
@@ -130,10 +127,10 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
                   painter: _WavesPainter(color: palette.wave),
                   child: ref.watch(generalSettingsProvider).when(
                         loading: () => Center(child: CircularProgressIndicator(color: shell.accent)),
-                        error: (_, __) => _scrollable(VoskModelGate(child: _sheet())),
+                        error: (_, __) => _scrollable(WhisperModelGate(child: _sheet())),
                         data: (settings) => settings.voiceRecognitionMode == VoiceRecognitionMode.cloud
                             ? _scrollable(_sheet())
-                            : _scrollable(VoskModelGate(child: _sheet())),
+                            : _scrollable(WhisperModelGate(child: _sheet())),
                       ),
                 ),
               ),
@@ -192,8 +189,8 @@ class _WavesPainter extends CustomPainter {
   bool shouldRepaint(covariant _WavesPainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// Sets the entry mode once, from INSIDE the model gate — i.e. only after the controller can be
-/// created safely (it needs the offline model in local mode).
+/// Sets the entry mode once, from INSIDE the model gate — i.e. only once the recognizer's model is
+/// available.
 class _EntryModeInit extends ConsumerStatefulWidget {
   const _EntryModeInit({required this.bluetoothMode, required this.child});
   final bool bluetoothMode;

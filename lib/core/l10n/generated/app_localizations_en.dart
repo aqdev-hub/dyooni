@@ -948,6 +948,34 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t finish preparing the speech model. See details below — retry resumes automatically, it won\'t restart the download from scratch';
 
   @override
+  String get whisperPickTitle =>
+      'Choose speech recognition quality';
+
+  @override
+  String get whisperPickBody =>
+      'The model downloads once, then voice commands work without internet.';
+
+  @override
+  String get whisperOptionBalancedTitle =>
+      'Balanced (recommended)';
+
+  @override
+  String get whisperOptionBalancedSubtitle =>
+      'About 190 MB — faster';
+
+  @override
+  String get whisperOptionAccurateTitle =>
+      'Accurate';
+
+  @override
+  String get whisperOptionAccurateSubtitle =>
+      'About 540 MB — more accurate but slower, best on a powerful phone';
+
+  @override
+  String get whisperDownloadingHint =>
+      'Downloading the speech model (one time only) — after this, voice commands work offline';
+
+  @override
   String get voiceRecognitionModeTitle => 'Speech recognition mode';
 
   @override

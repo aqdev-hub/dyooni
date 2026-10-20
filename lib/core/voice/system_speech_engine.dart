@@ -76,6 +76,13 @@ class SystemSpeechEngine implements SpeechEngine {
   @override
   bool get endsSessionOnFinal => true;
 
+  // The system recognizer streams live text, so it never needs the activity signal.
+  @override
+  Stream<void> get speechActivity => const Stream<void>.empty();
+
+  @override
+  bool get providesLiveText => true;
+
   Future<bool> _ensureInitialized() async {
     if (_initialized) return true;
     _initialized = await _speech.initialize(
@@ -146,6 +153,9 @@ class SystemSpeechEngine implements SpeechEngine {
       ),
       onResult: (result) {
         final text = result.recognizedWords.trim();
+        // Diagnostic only (v5 log showed sessions but never whether any text came back): length
+        // and finality, never the words themselves.
+        debugPrint('[voice] system recognizer result: final=${result.finalResult} chars=${text.length} alternates=${result.alternates.length}');
         if (text.isEmpty) return;
         _latestTranscript = text;
         if (result.finalResult) {

@@ -6,11 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/voice/bluetooth_audio_route_service.dart';
-import '../../core/voice/offline_speech_engine.dart';
 import '../../core/voice/speech_engine.dart';
 import '../../core/voice/system_speech_engine.dart';
-import '../../core/voice/vosk_model_provider.dart';
 import '../../core/voice/voice_output_service.dart';
+import '../../core/voice/whisper_model_provider.dart';
+import '../../core/voice/whisper_speech_engine.dart';
 import '../../data/models/account.dart';
 import '../../data/models/general_settings.dart';
 import '../../data/models/transaction.dart';
@@ -18,17 +18,21 @@ import '../accounts/accounts_provider.dart';
 import '../settings/general_settings_provider.dart';
 import '../transactions/transactions_provider.dart';
 import 'arabic_number_parser.dart';
+import 'transcript_cleaner.dart';
 import 'voice_command_parser.dart';
 
-/// Built once the Vosk model has finished loading (see vosk_model_provider.dart /
-/// VoskModelGate) — `as VoskModelReady` is safe here specifically because every screen that can
-/// reach this provider is already gated behind [voskModelControllerProvider] being in the
-/// `VoskModelReady` state; if that ever stops being true, this throws loudly instead of silently
-/// listening with a broken engine.
-final offlineSpeechEngineProvider = Provider<OfflineSpeechEngine>((ref) {
-  final modelState = ref.watch(voskModelControllerProvider);
-  final model = (modelState as VoskModelReady).model;
-  final engine = OfflineSpeechEngine(model: model);
+/// Local recognition (Whisper). The engine looks the model files up when recording starts, so
+/// creating it never depends on the model being downloaded — the previous Vosk provider cast the
+/// model state at construction time and crashed ("VoskModelIdle is not a subtype of
+/// VoskModelReady") whenever the person switched to local mode before the model was ready.
+final whisperSpeechEngineProvider = Provider<WhisperSpeechEngine>((ref) {
+  final engine = WhisperSpeechEngine(
+    modelFiles: () {
+      final state = ref.read(whisperModelControllerProvider);
+      return state is WhisperModelReady ? state.files : null;
+    },
+    cleanTranscript: (raw) => TranscriptCleaner.clean(raw, prompt: whisperInitialPrompt),
+  );
   ref.onDispose(engine.dispose);
   return engine;
 });
@@ -44,7 +48,7 @@ final systemSpeechEngineProvider = Provider<SystemSpeechEngine>((ref) {
 final speechEngineProvider = Provider<SpeechEngine>((ref) {
   final mode = ref.watch(generalSettingsProvider).value?.voiceRecognitionMode ?? VoiceRecognitionMode.local;
   return switch (mode) {
-    VoiceRecognitionMode.local => ref.watch(offlineSpeechEngineProvider),
+    VoiceRecognitionMode.local => ref.watch(whisperSpeechEngineProvider),
     VoiceRecognitionMode.cloud => ref.watch(systemSpeechEngineProvider),
   };
 });
@@ -73,14 +77,9 @@ final voiceProvider = StateNotifierProvider.autoDispose<VoiceController, VoiceSt
 });
 
 /// Whether the voice screen is showing the confirmation stage (the header swaps its title and
-/// icon then). Deliberately SAFE to watch from the screen itself, i.e. ABOVE the Vosk model gate:
-/// it never touches [voiceProvider] while the offline model isn't ready, because creating the
-/// controller at that moment would throw (see [offlineSpeechEngineProvider]) and blank the page.
+/// icon then). Safe to watch from the screen itself: creating the controller no longer depends on
+/// the local model being ready.
 final voiceIsConfirmingProvider = Provider.autoDispose<bool>((ref) {
-  final mode = ref.watch(generalSettingsProvider).value?.voiceRecognitionMode ?? VoiceRecognitionMode.local;
-  if (mode == VoiceRecognitionMode.local && ref.watch(voskModelControllerProvider) is! VoskModelReady) {
-    return false;
-  }
   return ref.watch(
     voiceProvider.select(
       (s) => s.status == VoiceStatus.awaitingConfirmation || s.status == VoiceStatus.confirmationListening,
@@ -233,6 +232,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   StreamSubscription<String>? _partialSubscription;
   StreamSubscription<String>? _finalSubscription;
   StreamSubscription<SpeechEngineError>? _errorSubscription;
+  StreamSubscription<void>? _activitySubscription;
   Timer? _bluetoothMonitor;
   Timer? _speechSilenceTimer;
   final _uuid = const Uuid();
@@ -282,10 +282,38 @@ class VoiceController extends StateNotifier<VoiceState> {
     _partialSubscription?.cancel();
     _finalSubscription?.cancel();
     _errorSubscription?.cancel();
+    _activitySubscription?.cancel();
     _engine = _ref.read(speechEngineProvider);
     _partialSubscription = _engine.partialResults.listen(_onPartial);
     _finalSubscription = _engine.finalResults.listen(_onFinal);
     _errorSubscription = _engine.errors.listen(_onEngineError);
+    _activitySubscription = _engine.speechActivity.listen(_onSpeechActivity);
+  }
+
+  /// Batch engines (Whisper) produce no live text, so "the person is still talking" arrives as
+  /// this audio-activity signal instead. It restarts the same end-of-speech timer a live partial
+  /// transcript would.
+  void _onSpeechActivity(void _) {
+    if (state.status == VoiceStatus.listening ||
+        state.status == VoiceStatus.bluetoothListeningCommand ||
+        state.status == VoiceStatus.confirmationListening) {
+      _armSpeechEndTimer();
+    }
+  }
+
+  /// Stops the engine and returns its result, or `null` after showing a recognition error when the
+  /// engine FAILED (a batch engine can fail while decoding). Without this a failure inside
+  /// `stop()` would leave the screen on "processing" forever.
+  Future<(String, String?)?> _stopEngineSafely() async {
+    try {
+      return await _engine.stop();
+    } catch (e) {
+      debugPrint('[voice] engine stop failed: $e');
+      ++_session;
+      _clearSpeechEndTimer();
+      state = state.copyWith(status: VoiceStatus.error, errorCode: e is SpeechEngineException ? e.code : 'recognition');
+      return null;
+    }
   }
 
   /// Routes a structured recognizer error (see speech_engine.dart). Only NETWORK-class errors
@@ -518,6 +546,14 @@ class VoiceController extends StateNotifier<VoiceState> {
     }
     state = state.copyWith(status: VoiceStatus.bluetoothConnected);
     await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!_engine.providesLiveText) {
+      // Wake-word detection reads the recognizer's LIVE text, which a batch engine (Whisper) does
+      // not produce; running it on every sound near the headset would drain the battery. So here
+      // the headset connection goes straight to listening for the command.
+      _startBluetoothMonitor();
+      await _beginListening(bluetoothMode: true);
+      return;
+    }
     state = state.copyWith(status: VoiceStatus.bluetoothWaitingWakeWord);
     _startBluetoothMonitor();
     try {
@@ -658,11 +694,29 @@ class VoiceController extends StateNotifier<VoiceState> {
     }
   }
 
+  bool _finishingConfirmation = false;
+
   Future<void> _finishVoiceConfirmation(String text) async {
+    // A batch engine decodes inside stop() for seconds; a second trigger (timer + tap) during that
+    // time must not stop it again and read the empty second result as "not understood".
+    if (_finishingConfirmation) return;
+    _finishingConfirmation = true;
     _clearSpeechEndTimer();
-    final (_, confirmationRecordingPath) = await _engine.stop();
+    final session = _session;
+    (String, String?)? stopped;
+    try {
+      stopped = await _stopEngineSafely();
+    } finally {
+      _finishingConfirmation = false;
+    }
+    if (stopped == null) return;
+    final (engineText, confirmationRecordingPath) = stopped;
     await _deleteRecording(confirmationRecordingPath);
-    final effective = text.trim().isNotEmpty ? text : state.transcript;
+    if (session != _session) return;
+    // The text passed in comes from a live recognizer; a batch engine only has its text now.
+    final effective = text.trim().isNotEmpty
+        ? text
+        : (engineText.trim().isNotEmpty ? engineText : state.transcript);
     if (effective.trim().isEmpty) {
       await _confirmationNotUnderstood();
       return;
@@ -690,7 +744,9 @@ class VoiceController extends StateNotifier<VoiceState> {
     final session = _session;
     state = state.copyWith(status: VoiceStatus.processing, processingStep: 0);
 
-    final (engineTranscript, recordingPath) = await _engine.stop();
+    final stopped = await _stopEngineSafely();
+    if (stopped == null) return;
+    final (engineTranscript, recordingPath) = stopped;
     if (session != _session || state.status != VoiceStatus.processing) {
       await _deleteRecording(recordingPath);
       return;
@@ -753,7 +809,9 @@ class VoiceController extends StateNotifier<VoiceState> {
     final field = current.clarifyingField;
     final draft = current.draft;
     state = state.copyWith(status: VoiceStatus.processing, processingStep: 0);
-    final (engineTranscript, recordingPath) = await _engine.stop();
+    final stopped = await _stopEngineSafely();
+    if (stopped == null) return;
+    final (engineTranscript, recordingPath) = stopped;
     if (session != _session || state.status != VoiceStatus.processing) {
       await _deleteRecording(recordingPath);
       return;
@@ -1521,7 +1579,10 @@ class VoiceController extends StateNotifier<VoiceState> {
     _partialSubscription?.cancel();
     _finalSubscription?.cancel();
     _errorSubscription?.cancel();
-    unawaited(_engine.cancel());
+    _activitySubscription?.cancel();
+    // release() (not just cancel()) so a Whisper model parked in memory is freed when the person
+    // leaves the voice screen.
+    unawaited(_engine.release());
     super.dispose();
   }
 }
