@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -127,26 +126,30 @@ class VoiceCommandSheet extends ConsumerWidget {
   }
 }
 
-/// A gold-tinted Material icon — or the person's own PNG when `assets/icons/<name>.png` exists.
-/// Flutter has no brain icon (and no exact match for the reference's ear / bulb), so the design
-/// asks for these three as images; until they are added the closest Flutter icon is drawn.
+/// The person's own PNG from `assets/icons/`; if the file is missing the closest Flutter icon is
+/// drawn instead so the screen never breaks. [width]/[height] are the box the image is fitted
+/// into (aspect ratio preserved, nothing cropped).
 class _AssetIcon extends StatelessWidget {
-  const _AssetIcon({required this.asset, required this.fallback, required this.size});
+  const _AssetIcon({required this.asset, required this.fallback, double? size, double? width, double? height})
+      : width = width ?? size,
+        height = height ?? size;
   final String asset;
   final IconData fallback;
-  final double size;
+  final double? width;
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.voicePalette;
+    final box = (height ?? width ?? 100);
     return Image.asset(
       asset,
-      width: size,
-      height: size,
+      width: width,
+      height: height,
       fit: BoxFit.contain,
       // The box is intentionally larger than the visible glyph (see callers), so the Flutter
       // fallback icon is drawn smaller than the box.
-      errorBuilder: (_, __, ___) => Icon(fallback, size: size * 0.42, color: palette.gold),
+      errorBuilder: (_, __, ___) => Icon(fallback, size: box * 0.42, color: palette.gold),
     );
   }
 }
@@ -371,67 +374,16 @@ class _ListeningView extends StatelessWidget {
   }
 }
 
-/// Navy badge (99) with a thin gold ring, the ear glyph, and two pairs of gold sound arcs.
+/// The listening illustration: the person's own PNG (navy disc, gold ear, sound arcs on both
+/// sides) — replaces the earlier version that was assembled from a Container, an image and a
+/// CustomPaint. One image means one asset to restyle and no layout maths to maintain.
 class _EarBadge extends StatelessWidget {
   const _EarBadge();
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.voicePalette;
-    return SizedBox(
-      width: 200,
-      height: 100,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(size: const Size(200, 100), painter: _SoundArcsPainter(color: palette.gold)),
-          Container(
-            width: 99,
-            height: 99,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: palette.micBottom,
-              border: Border.all(color: palette.gold, width: 1.5),
-            ),
-            alignment: Alignment.center,
-            clipBehavior: Clip.antiAlias,
-            // The PNGs carry transparent margins (the glyph filled only ~half of the box when
-            // drawn at 52), so the image is drawn LARGER than the disc and clipped by it —
-            // the glyph then fills the circle as in the reference.
-            child: const OverflowBox(
-              maxWidth: 128,
-              maxHeight: 128,
-              child: _AssetIcon(asset: 'assets/icons/voice_ear.png', fallback: Icons.hearing_rounded, size: 128),
-            ),
-          ),
-        ],
-      ),
-    );
+    return const _AssetIcon(asset: 'assets/icons/voice_ear.png', fallback: Icons.hearing_rounded, width: 200, height: 104);
   }
-}
-
-class _SoundArcsPainter extends CustomPainter {
-  const _SoundArcsPainter({required this.color});
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round;
-    const sweep = 0.62; // ≈ ±35°
-    for (final radius in const [62.0, 76.0]) {
-      final rect = Rect.fromCircle(center: center, radius: radius);
-      canvas.drawArc(rect, -sweep / 2, sweep, false, paint); // right side
-      canvas.drawArc(rect, 3.14159265 - sweep / 2, sweep, false, paint); // left side
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _SoundArcsPainter oldDelegate) => oldDelegate.color != color;
 }
 
 /// Decorative level bars under the headline (fixed heights — the recorder exposes no live
@@ -1034,61 +986,14 @@ class _ClarificationView extends StatelessWidget {
   }
 }
 
-/// Gold disc (78) with a white check, a pale ring (108) and twelve radial rays (reference 4).
+/// The clarification illustration: the person's own PNG (gold "?" medal with rays).
 class _ClarifyBadge extends StatelessWidget {
   const _ClarifyBadge();
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.voicePalette;
-    return SizedBox(
-      width: 176,
-      height: 176,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(size: const Size(176, 176), painter: _RaysPainter(color: palette.goldSoft)),
-          Container(
-            width: 108,
-            height: 108,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: palette.goldGlow.withValues(alpha: 0.7), border: Border.all(color: palette.goldSoft, width: 1.5)),
-          ),
-          Container(
-            width: 78,
-            height: 78,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [palette.goldButtonTop, palette.goldDeepBottom]),
-            ),
-            child: const Icon(Icons.check_rounded, size: 50, color: Colors.white),
-          ),
-        ],
-      ),
-    );
+    return const _AssetIcon(asset: 'assets/icons/voice_clarify.png', fallback: Icons.help_outline_rounded, width: 190, height: 140);
   }
-}
-
-class _RaysPainter extends CustomPainter {
-  const _RaysPainter({required this.color});
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-    for (var i = 0; i < 12; i++) {
-      final angle = i * 3.14159265 / 6;
-      final dx = math.cos(angle);
-      final dy = math.sin(angle);
-      canvas.drawLine(center + Offset(dx, dy) * 68, center + Offset(dx, dy) * 80, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _RaysPainter oldDelegate) => oldDelegate.color != color;
 }
 
 /// Pill button: gold gradient (primary) or white with a gold outline, with a mic glyph (the

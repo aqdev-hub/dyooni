@@ -19,6 +19,10 @@ class MockAccountsRepository extends Mock implements AccountsRepository {}
 
 class MockTransactionsRepository extends Mock implements TransactionsRepository {}
 
+class _FakeAccount extends Fake implements Account {}
+
+class _FakeTransaction extends Fake implements Transaction {}
+
 Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txRepo, SharedPreferences prefs) {
   final router = GoRouter(
     initialLocation: '/add-account',
@@ -47,6 +51,11 @@ void main() {
   late MockAccountsRepository accountsRepo;
   late MockTransactionsRepository txRepo;
   late SharedPreferences prefs;
+
+  setUpAll(() {
+    registerFallbackValue(_FakeAccount());
+    registerFallbackValue(_FakeTransaction());
+  });
 
   setUp(() async {
     accountsRepo = MockAccountsRepository();

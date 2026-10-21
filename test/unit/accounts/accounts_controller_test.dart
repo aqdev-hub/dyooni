@@ -13,6 +13,10 @@ class MockAccountsRepository extends Mock implements AccountsRepository {}
 
 class MockTransactionsRepository extends Mock implements TransactionsRepository {}
 
+class _FakeAccount extends Fake implements Account {}
+
+class _FakeTransaction extends Fake implements Transaction {}
+
 void main() {
   late MockAccountsRepository accountsRepo;
   late MockTransactionsRepository transactionsRepo;
@@ -30,6 +34,11 @@ void main() {
     category: AccountCategory.supplier,
     createdDate: DateTime(2026, 1, 2),
   );
+
+  setUpAll(() {
+    registerFallbackValue(_FakeAccount());
+    registerFallbackValue(_FakeTransaction());
+  });
 
   setUp(() {
     accountsRepo = MockAccountsRepository();

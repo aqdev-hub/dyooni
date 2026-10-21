@@ -100,6 +100,17 @@ class AppShellColors extends ThemeExtension<AppShellColors> {
 
 /// Convenience so call sites read `context.shellColors.background` instead of the longer
 /// `Theme.of(context).extension<AppShellColors>()!.background` everywhere.
+///
+/// If the surrounding theme does not carry the extension (a bare `MaterialApp` — which is exactly
+/// what the widget tests build, and what any screen shown inside a dialog/route with a foreign
+/// theme gets), the palette matching the theme's brightness is used instead of crashing with
+/// "Null check operator used on a null value". The real app always installs the extension
+/// (see AppTheme), so this changes nothing there; it only makes the lookup total. Same pattern
+/// as `VoicePaletteX.voicePalette`.
 extension AppShellColorsX on BuildContext {
-  AppShellColors get shellColors => Theme.of(this).extension<AppShellColors>()!;
+  AppShellColors get shellColors {
+    final theme = Theme.of(this);
+    return theme.extension<AppShellColors>() ??
+        (theme.brightness == Brightness.dark ? AppShellColors.dark : AppShellColors.light);
+  }
 }

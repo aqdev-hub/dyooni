@@ -9,6 +9,8 @@ import 'package:dyooni/logic/transactions/transactions_provider.dart';
 
 class MockTransactionsRepository extends Mock implements TransactionsRepository {}
 
+class _FakeTransaction extends Fake implements Transaction {}
+
 void main() {
   late MockTransactionsRepository repository;
   late ProviderContainer container;
@@ -37,6 +39,10 @@ void main() {
     direction: AccountDirection.credit,
     date: DateTime(2026, 1, 3),
   );
+
+  setUpAll(() {
+    registerFallbackValue(_FakeTransaction());
+  });
 
   setUp(() {
     repository = MockTransactionsRepository();

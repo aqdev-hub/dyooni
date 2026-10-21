@@ -15,6 +15,10 @@ import 'package:dyooni/view/screens/transactions/add_transaction_screen.dart';
 
 class MockTransactionsRepository extends Mock implements TransactionsRepository {}
 
+/// mocktail needs a stand-in instance for every custom type used with `any()`; it is only passed
+/// around, never inspected.
+class _FakeTransaction extends Fake implements Transaction {}
+
 Widget _wrap(MockTransactionsRepository repository, SharedPreferences prefs) {
   final router = GoRouter(
     initialLocation: '/add-transaction',
@@ -44,6 +48,10 @@ Widget _wrap(MockTransactionsRepository repository, SharedPreferences prefs) {
 void main() {
   late MockTransactionsRepository repository;
   late SharedPreferences prefs;
+
+  setUpAll(() {
+    registerFallbackValue(_FakeTransaction());
+  });
 
   setUp(() async {
     repository = MockTransactionsRepository();
