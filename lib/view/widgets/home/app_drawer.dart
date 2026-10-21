@@ -82,7 +82,7 @@ class AppDrawer extends ConsumerWidget {
       (Icons.settings_outlined, l10n.drawerSettings, '/general-settings'),
       (Icons.notifications_active_outlined, l10n.drawerAutoBalanceAlerts, null),
       (Icons.category_outlined, l10n.drawerCategories, null),
-      (Icons.attach_money_outlined, l10n.drawerCurrencies, null),
+      (Icons.attach_money_outlined, l10n.drawerCurrencies, '/currencies'),
       (Icons.save_alt_outlined, l10n.drawerLocalBackup, '/local-backup'),
       (Icons.cloud_outlined, l10n.drawerGoogleBackup, '/drive-backup'),
       (Icons.sync_outlined, l10n.drawerGoogleDriveSync, '/drive-backup'),

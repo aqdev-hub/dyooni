@@ -15,6 +15,7 @@ import '../../data/models/account.dart';
 import '../../data/models/general_settings.dart';
 import '../../data/models/transaction.dart';
 import '../accounts/accounts_provider.dart';
+import '../currencies/currencies_provider.dart';
 import '../settings/general_settings_provider.dart';
 import '../transactions/transactions_provider.dart';
 import 'arabic_number_parser.dart';
@@ -1523,6 +1524,8 @@ class VoiceController extends StateNotifier<VoiceState> {
           details: draft.details,
           voiceRecording: recording,
         ));
+    // Show the currency page the entry was saved in (Home / Account Details are per currency).
+    _ref.read(selectedCurrencyIdProvider.notifier).state = draft.currency;
     // Mic stops here — state becomes `success` and nothing auto-starts listening again, matching
     // "ثم يتوقف الميكروفون عن التشغيل" from the spec. [startAnother] is the only way back in.
     state = state.copyWith(status: VoiceStatus.success);

@@ -240,6 +240,42 @@ class AppLocalizationsAr extends AppLocalizations {
   String get drawerCurrencies => 'العملات';
 
   @override
+  String get currenciesScreenTitle => 'إدارة العملات';
+
+  @override
+  String get currencyAddTitle => 'إضافة عملة';
+
+  @override
+  String get currencyEditTitle => 'تعديل العملة';
+
+  @override
+  String get currencyNameLabel => 'اسم العملة';
+
+  @override
+  String get currencyNameRequired => 'اكتب اسم العملة';
+
+  @override
+  String get currencyNameDuplicate => 'هذه العملة موجودة مسبقًا';
+
+  @override
+  String get currencyDeleteInUse => 'لا يمكن حذف عملة لها عمليات مسجّلة';
+
+  @override
+  String get currencyDeleteProtected => 'هذه هي العملة الأساسية ولا يمكن حذفها';
+
+  @override
+  String get currencyDeleteConfirmBody => 'هل تريد حذف هذه العملة؟';
+
+  @override
+  String get currencySwitchTooltip => 'تغيير العملة';
+
+  @override
+  String get currencyNoTransactionsHere => 'لا توجد عمليات بهذه العملة';
+
+  @override
+  String get homeEmptyAccountsInCurrency => 'لا توجد حسابات بهذه العملة';
+
+  @override
   String get drawerLocalBackup => 'حفظ واسترجاع البيانات من الجهاز';
 
   @override

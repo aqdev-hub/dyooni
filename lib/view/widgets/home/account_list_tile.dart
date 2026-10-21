@@ -6,7 +6,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
 import '../../../logic/accounts/accounts_provider.dart';
-import '../../../logic/transactions/transactions_provider.dart';
+import '../../../logic/currencies/currencies_provider.dart';
 import '../shared/entity_actions_sheet.dart';
 
 /// Matches the reference row exactly: a gold/navy chevron toggle on the far side, name + balance
@@ -24,10 +24,15 @@ class AccountListTile extends ConsumerStatefulWidget {
   const AccountListTile({
     required this.account,
     required this.onLongPressAction,
+    required this.currencyId,
     this.onTap,
     super.key,
   });
   final Account account;
+
+  /// The currency page being shown: the balance, count and last details of THIS row are the
+  /// account's figures in that currency only.
+  final String currencyId;
   final VoidCallback? onTap;
   final ValueChanged<EntityAction> onLongPressAction;
 
@@ -59,11 +64,11 @@ class _AccountListTileState extends ConsumerState<AccountListTile> {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
     final account = widget.account;
-    final balance = ref.watch(accountBalanceProvider(account.id));
-    final direction = ref.watch(accountDirectionProvider(account.id));
-    final count = ref.watch(accountTransactionCountProvider(account.id));
-    final transactions = ref.watch(transactionsForAccountProvider(account.id));
-    final isCredit = direction == AccountDirection.credit;
+    final key = (accountId: account.id, currency: widget.currencyId);
+    final balance = ref.watch(accountCurrencyBalanceProvider(key));
+    final transactions = ref.watch(accountCurrencyTransactionsProvider(key));
+    final count = transactions.length;
+    final isCredit = balance >= 0;
     final color = isCredit ? AppColors.credit : AppColors.debit;
     final selectionMode = ref.watch(accountSelectionModeProvider);
     final selected = ref.watch(selectedAccountIdsProvider).contains(account.id);

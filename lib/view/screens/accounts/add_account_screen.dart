@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/constants/currencies.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
@@ -18,10 +17,12 @@ import '../../../core/utils/contact_picker.dart';
 import '../../../core/utils/form_draft_storage.dart';
 import '../../../core/utils/image_rotate.dart';
 import '../../../data/models/account.dart';
+import '../../../data/models/currency_type.dart';
 import '../../../data/models/general_settings.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/accounts/ceiling_check.dart';
+import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
@@ -63,7 +64,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   final _phoneController = TextEditingController();
   final _ceilingController = TextEditingController();
 
-  String _currencyCode = currencies.first.code;
+  String _currencyCode = defaultCurrencyId; // new accounts: set from the selected currency page in initState
   DateTime _date = DateTime.now();
   AccountDirection _direction = AccountDirection.debit; // may be overridden by general settings, see initState
   AccountCategory _category = AccountCategory.client;
@@ -101,6 +102,8 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       // logic/settings/general_settings_provider.dart. لا معنى لهذا عند التعديل (existing != null).
       final settings = ref.read(generalSettingsProvider).value;
       if (settings != null) _direction = _resolveDefaultDirection(settings);
+      // The new account's first entry starts in the currency page currently shown on Home.
+      _currencyCode = ref.read(effectiveCurrencyIdProvider);
       // ثم نعيد أي مسودة محفوظة (قد تُجاوز الاتجاه الافتراضي أعلاه إن كانت المسودة تحمل اتجاهًا
       // مختلفًا اختاره المستخدم قبل خروج غير مقصود من الشاشة) — انظر FormDraftStorage.
       _restoreDraftIfAny();
@@ -119,7 +122,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     _amountController.text = saved['amount'] as String? ?? '';
     _detailsController.text = saved['details'] as String? ?? '';
     _phoneController.text = saved['phone'] as String? ?? '';
-    _currencyCode = saved['currencyCode'] as String? ?? currencies.first.code;
+    _currencyCode = saved['currencyCode'] as String? ?? _currencyCode;
     final savedDate = DateTime.tryParse(saved['date'] as String? ?? '');
     if (savedDate != null) _date = savedDate;
     final savedDirection = saved['direction'] as String?;
@@ -221,7 +224,11 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   /// Reached identically from the currency field itself and from its pencil icon — see
   /// currency_picker_sheet.dart's doc comment for why these used to be two different pickers.
   Future<void> _chooseCurrency() async {
-    final selected = await showCurrencyPickerSheet(context, selectedCode: _currencyCode);
+    final selected = await showCurrencyPickerSheet(
+      context,
+      selectedCode: _currencyCode,
+      options: ref.read(currencyTypesProvider),
+    );
     if (selected != null && mounted) setState(() => _currencyCode = selected);
   }
 
@@ -442,6 +449,8 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
         ref.read(generalSettingsProvider.notifier).recordLastUsedDirection(isCredit: _direction == AccountDirection.credit),
       );
       if (!mounted) return;
+      // Show the currency page the new account was created in, so it is visible on Home.
+      ref.read(selectedCurrencyIdProvider.notifier).state = _currencyCode;
       AppSnackBar.showSuccess(context, l10n.accountSavedSuccessMessage);
       context.pop();
     } catch (_) {
@@ -537,7 +546,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                                   child: Align(
                                     alignment: Alignment.center,
                                     child: Text(
-                                      currencies.firstWhere((c) => c.code == _currencyCode).label(l10n),
+                                      currencyNameOf(ref.watch(currencyTypesProvider), _currencyCode),
                                       textAlign: TextAlign.center,
                                       style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
                                     ),

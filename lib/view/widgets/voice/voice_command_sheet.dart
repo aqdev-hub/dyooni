@@ -218,7 +218,7 @@ class _IdleView extends StatelessWidget {
         const SizedBox(height: 11),
         GestureDetector(
           onTap: _resolveMicTap(state, controller),
-          child: _BigMic(icon: isPaused ? Icons.play_arrow_rounded : Icons.mic_rounded, busy: isBusy),
+          child: _BigMic(paused: isPaused, busy: isBusy),
         ),
         const SizedBox(height: 18),
         if (isIdle || status == VoiceStatus.preparing)
@@ -282,8 +282,10 @@ class _IdleDecoration extends StatelessWidget {
 
 /// The big navy microphone: soft gold halo (215) → thin gold ring (191) → navy disc (168).
 class _BigMic extends StatelessWidget {
-  const _BigMic({required this.icon, required this.busy});
-  final IconData icon;
+  const _BigMic({required this.paused, required this.busy});
+
+  /// While paused the button shows "resume" (play) instead of the microphone.
+  final bool paused;
   final bool busy;
 
   @override
@@ -320,7 +322,10 @@ class _BigMic extends StatelessWidget {
             alignment: Alignment.center,
             child: busy
                 ? const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
-                : Icon(icon, size: 84, color: Colors.white),
+                : paused
+                    ? const Icon(Icons.play_arrow_rounded, size: 84, color: Colors.white)
+                    // The person's own microphone illustration instead of Flutter's mic glyph.
+                    : const _AssetIcon(asset: 'assets/icons/voice_mic.png', fallback: Icons.mic_rounded, width: 78, height: 104),
           ),
         ],
       ),

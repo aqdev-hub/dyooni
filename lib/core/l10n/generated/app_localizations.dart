@@ -542,6 +542,78 @@ abstract class AppLocalizations {
   /// **'العملات'**
   String get drawerCurrencies;
 
+  /// No description provided for @currenciesScreenTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدارة العملات'**
+  String get currenciesScreenTitle;
+
+  /// No description provided for @currencyAddTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة عملة'**
+  String get currencyAddTitle;
+
+  /// No description provided for @currencyEditTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل العملة'**
+  String get currencyEditTitle;
+
+  /// No description provided for @currencyNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم العملة'**
+  String get currencyNameLabel;
+
+  /// No description provided for @currencyNameRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب اسم العملة'**
+  String get currencyNameRequired;
+
+  /// No description provided for @currencyNameDuplicate.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه العملة موجودة مسبقًا'**
+  String get currencyNameDuplicate;
+
+  /// No description provided for @currencyDeleteInUse.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يمكن حذف عملة لها عمليات مسجّلة'**
+  String get currencyDeleteInUse;
+
+  /// No description provided for @currencyDeleteProtected.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه هي العملة الأساسية ولا يمكن حذفها'**
+  String get currencyDeleteProtected;
+
+  /// No description provided for @currencyDeleteConfirmBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل تريد حذف هذه العملة؟'**
+  String get currencyDeleteConfirmBody;
+
+  /// No description provided for @currencySwitchTooltip.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير العملة'**
+  String get currencySwitchTooltip;
+
+  /// No description provided for @currencyNoTransactionsHere.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد عمليات بهذه العملة'**
+  String get currencyNoTransactionsHere;
+
+  /// No description provided for @homeEmptyAccountsInCurrency.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد حسابات بهذه العملة'**
+  String get homeEmptyAccountsInCurrency;
+
   /// No description provided for @drawerLocalBackup.
   ///
   /// In ar, this message translates to:

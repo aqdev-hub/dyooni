@@ -242,6 +242,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerCurrencies => 'Currencies';
 
   @override
+  String get currenciesScreenTitle => 'Manage currencies';
+
+  @override
+  String get currencyAddTitle => 'Add currency';
+
+  @override
+  String get currencyEditTitle => 'Edit currency';
+
+  @override
+  String get currencyNameLabel => 'Currency name';
+
+  @override
+  String get currencyNameRequired => 'Enter a currency name';
+
+  @override
+  String get currencyNameDuplicate => 'This currency already exists';
+
+  @override
+  String get currencyDeleteInUse => 'A currency with recorded transactions cannot be deleted';
+
+  @override
+  String get currencyDeleteProtected => 'This is the default currency and cannot be deleted';
+
+  @override
+  String get currencyDeleteConfirmBody => 'Delete this currency?';
+
+  @override
+  String get currencySwitchTooltip => 'Change currency';
+
+  @override
+  String get currencyNoTransactionsHere => 'No transactions in this currency';
+
+  @override
+  String get homeEmptyAccountsInCurrency => 'No accounts in this currency';
+
+  @override
   String get drawerLocalBackup => 'Backup & restore from device';
 
   @override

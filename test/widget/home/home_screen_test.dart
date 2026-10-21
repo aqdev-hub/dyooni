@@ -99,7 +99,7 @@ void main() {
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => [_client]);
     when(() => txRepo.getTransactions()).thenAnswer(
       (_) async => [
-        Transaction(id: 't1', accountId: '1', amount: 500, currency: 'SAR', direction: AccountDirection.credit, date: DateTime(2026, 1, 1)),
+        Transaction(id: 't1', accountId: '1', amount: 500, currency: 'LOCAL', direction: AccountDirection.credit, date: DateTime(2026, 1, 1)),
       ],
     );
 

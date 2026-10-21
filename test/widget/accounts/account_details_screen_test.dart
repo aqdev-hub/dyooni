@@ -91,8 +91,8 @@ void main() {
   testWidgets('lists each transaction entry for this account in the table', (tester) async {
     when(() => txRepo.getTransactions()).thenAnswer(
       (_) async => [
-        Transaction(id: 't1', accountId: '1', amount: 500, currency: 'SAR', direction: AccountDirection.credit, date: DateTime(2026, 1, 1), details: 'دفعة أولى'),
-        Transaction(id: 't2', accountId: '1', amount: 100, currency: 'SAR', direction: AccountDirection.debit, date: DateTime(2026, 1, 5), details: 'سحب جزئي'),
+        Transaction(id: 't1', accountId: '1', amount: 500, currency: 'LOCAL', direction: AccountDirection.credit, date: DateTime(2026, 1, 1), details: 'دفعة أولى'),
+        Transaction(id: 't2', accountId: '1', amount: 100, currency: 'LOCAL', direction: AccountDirection.debit, date: DateTime(2026, 1, 5), details: 'سحب جزئي'),
       ],
     );
 

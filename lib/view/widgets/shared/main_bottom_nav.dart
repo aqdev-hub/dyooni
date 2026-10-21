@@ -63,6 +63,7 @@ class MainBottomNav extends StatelessWidget {
           Expanded(
             child: _NavItem(
               icon: prominent && activeTab == MainNavTab.voice ? Icons.mic_rounded : Icons.mic_none_rounded,
+              assetIcon: 'assets/icons/voice_mic.png',
               prominent: prominent,
               label: l10n.navVoice,
               active: activeTab == MainNavTab.voice,
@@ -93,9 +94,14 @@ class _NavItem extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     this.prominent = false,
+    this.assetIcon,
   });
   final bool prominent;
   final IconData icon;
+
+  /// When set, this image is drawn instead of [icon] ([icon] stays as the fallback if the file
+  /// is missing).
+  final String? assetIcon;
   final String label;
   final bool active;
   final VoidCallback onTap;
@@ -116,7 +122,18 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: prominent ? 28 : 22, color: color),
+            if (assetIcon != null)
+              Opacity(
+                opacity: active ? 1 : 0.75,
+                child: Image.asset(
+                  assetIcon!,
+                  height: prominent ? 30 : 24,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Icon(icon, size: prominent ? 28 : 22, color: color),
+                ),
+              )
+            else
+              Icon(icon, size: prominent ? 28 : 22, color: color),
             SizedBox(height: prominent ? 3 : 2),
             Text(
               label,

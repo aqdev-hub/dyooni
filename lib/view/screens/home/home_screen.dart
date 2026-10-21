@@ -9,13 +9,16 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
+import '../../../data/models/currency_type.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/drive_backup_controller.dart';
 import '../../widgets/home/account_list_tile.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
 import '../../widgets/shared/app_snackbar.dart';
+import '../../widgets/shared/currency_picker_sheet.dart';
 import '../../widgets/shared/entity_actions_sheet.dart';
 import '../../widgets/shared/selection_toolbar.dart';
 import '../accounts/add_account_screen.dart';
@@ -176,8 +179,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
     final accountsAsync = ref.watch(accountsProvider);
-    final categoryFiltered = ref.watch(filteredAccountsProvider);
-    final summary = ref.watch(accountsSummaryProvider);
+    final categoryFiltered = ref.watch(currencyAccountsProvider);
+    final summary = ref.watch(currencyAccountsSummaryProvider);
+    final currencyId = ref.watch(effectiveCurrencyIdProvider);
+    final currencies = ref.watch(currencyTypesProvider);
+    final currencyName = currencyNameOf(currencies, currencyId);
     final selectionMode = ref.watch(accountSelectionModeProvider);
     final selectedIds = ref.watch(selectedAccountIdsProvider);
     final pinMatches = ref.watch(generalSettingsProvider).value?.pinMatchingAccountsOnSearch ?? true;
@@ -217,6 +223,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   const SizedBox(width: 6),
                   Icon(Icons.people_outline, size: 18, color: shell.accent),
+                  const SizedBox(width: 10),
+                  // The currency page: Home lists only the accounts that have entries in this
+                  // currency, with their figures in it. Tap to switch page.
+                  InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () async {
+                      final selected = await showCurrencyPickerSheet(context, selectedCode: currencyId, options: currencies);
+                      if (selected != null) ref.read(selectedCurrencyIdProvider.notifier).state = selected;
+                    },
+                    child: Tooltip(
+                      message: l10n.currencySwitchTooltip,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: shell.accent.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: shell.accent),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.attach_money_rounded, size: 16, color: shell.accent),
+                            const SizedBox(width: 2),
+                            Text(
+                              currencyName,
+                              style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                   const Spacer(),
                   Text(
                     l10n.homeSortNewest,
@@ -242,7 +280,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 padding: const EdgeInsets.only(top: 40),
                                 child: Center(
                                   child: Text(
-                                    l10n.homeEmptyAccounts,
+                                    currencyId == defaultCurrencyId ? l10n.homeEmptyAccounts : l10n.homeEmptyAccountsInCurrency,
                                     textAlign: TextAlign.center,
                                     style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
                                   ),
@@ -256,6 +294,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               for (final account in filtered.reversed)
                                 AccountListTile(
                                   account: account,
+                                  currencyId: currencyId,
                                   onTap: () => context.push('/account-details', extra: account),
                                   onLongPressAction: (action) => _handleAccountAction(account, action, filtered),
                                 ),
@@ -274,7 +313,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 },
               ),
             ),
-            BottomSummaryBar(totalCredit: summary.totalCredit, totalDebit: summary.totalDebit, onAdd: _openAddAccount, addTooltip: l10n.homeAddAccount),
+            BottomSummaryBar(
+              totalCredit: summary.totalCredit,
+              totalDebit: summary.totalDebit,
+              onAdd: _openAddAccount,
+              addTooltip: l10n.homeAddAccount,
+              currencyName: currencyName,
+            ),
             _HomeBottomNav(
               onVoice: () => _openVoiceScreen(bluetoothMode: false),
               onVoiceLongPress: () => _openVoiceScreen(bluetoothMode: true),
@@ -402,6 +447,7 @@ class _HomeBottomNav extends StatelessWidget {
           Expanded(
             child: _NavItem(
               icon: Icons.mic_none_rounded,
+              assetIcon: 'assets/icons/voice_mic.png',
               label: l10n.navVoice,
               active: voiceActive,
               onTap: onVoice,
@@ -418,8 +464,11 @@ class _HomeBottomNav extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.icon, required this.label, required this.active, required this.onTap, this.onLongPress});
+  const _NavItem({required this.icon, required this.label, required this.active, required this.onTap, this.onLongPress, this.assetIcon});
   final IconData icon;
+
+  /// When set, drawn instead of [icon] (which remains the fallback if the file is missing).
+  final String? assetIcon;
   final String label;
   final bool active;
   final VoidCallback onTap;
@@ -437,7 +486,18 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 22, color: color),
+            if (assetIcon != null)
+              Opacity(
+                opacity: active ? 1 : 0.75,
+                child: Image.asset(
+                  assetIcon!,
+                  height: 24,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Icon(icon, size: 22, color: color),
+                ),
+              )
+            else
+              Icon(icon, size: 22, color: color),
             const SizedBox(height: 2),
             Text(label, style: AppTextStyles.bodySecondary(context).copyWith(color: color, fontSize: 11)),
           ],
