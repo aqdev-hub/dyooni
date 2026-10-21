@@ -1304,7 +1304,7 @@ class _SuccessCard extends StatelessWidget {
     final shell = context.shellColors;
     return Column(
       children: [
-        const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 56),
+        const _AssetIcon(asset: 'assets/icons/voice_success.png', fallback: Icons.check_circle_rounded, width: 200, height: 115),
         const SizedBox(height: 10),
         Text(l10n.voiceSaved, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w600)),
         const SizedBox(height: 14),
