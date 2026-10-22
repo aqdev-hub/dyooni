@@ -143,7 +143,7 @@ void main() {
     final fields = find.byType(TextFormField);
     await tester.enterText(fields.at(0), 'مورد الأجهزة');
     await tester.enterText(fields.at(1), '1200');
-    await tester.tap(find.text(l10n.categorySupplier));
+    await tester.tap(find.text('الموردين'));
     await tester.tap(find.text(l10n.saveButton));
     await tester.pump();
     await tester.pumpAndSettle();

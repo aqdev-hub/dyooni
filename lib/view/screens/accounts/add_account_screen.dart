@@ -22,6 +22,7 @@ import '../../../data/models/general_settings.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/accounts/ceiling_check.dart';
+import '../../../logic/categories/categories_provider.dart';
 import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import '../../../logic/settings/direction_labels.dart';
@@ -67,7 +68,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   String _currencyCode = defaultCurrencyId; // new accounts: set from the selected currency page in initState
   DateTime _date = DateTime.now();
   AccountDirection _direction = AccountDirection.debit; // may be overridden by general settings, see initState
-  AccountCategory _category = AccountCategory.client;
+  AccountCategory _category = AccountCategory.client; // new accounts: set from defaultAccountCategoryProvider in initState
   bool _isSaving = false;
   bool _isRotating = false;
   String? _attachmentPath;
@@ -104,6 +105,8 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       if (settings != null) _direction = _resolveDefaultDirection(settings);
       // The new account's first entry starts in the currency page currently shown on Home.
       _currencyCode = ref.read(effectiveCurrencyIdProvider);
+      // A new account starts in the category tab Home is on (if it is a real one), else the default.
+      _category = ref.read(effectiveCategoryProvider) ?? ref.read(defaultAccountCategoryProvider);
       // ثم نعيد أي مسودة محفوظة (قد تُجاوز الاتجاه الافتراضي أعلاه إن كانت المسودة تحمل اتجاهًا
       // مختلفًا اختاره المستخدم قبل خروج غير مقصود من الشاشة) — انظر FormDraftStorage.
       _restoreDraftIfAny();
@@ -128,7 +131,9 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     final savedDirection = saved['direction'] as String?;
     if (savedDirection != null) _direction = AccountDirection.values.byName(savedDirection);
     final savedCategory = saved['category'] as String?;
-    if (savedCategory != null) _category = AccountCategory.values.byName(savedCategory);
+    if (savedCategory != null && ref.read(assignableCategoriesProvider).any((c) => c.id == savedCategory)) {
+      _category = AccountCategory(savedCategory);
+    }
     // FIX for the reported camera black-screen/crash bug: a restored draft's attachment path can
     // point to a file the OS has since cleared (most commonly a transient cache location from
     // before this batch's AttachmentStorage fix existed) — silently restoring and later trying
@@ -623,25 +628,36 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
               const SizedBox(height: 16),
               Text(l10n.categoryLabel, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _CategoryChoiceChip(
-                      label: l10n.categoryClient,
-                      selected: _category == AccountCategory.client,
-                      onTap: () => setState(() => _category = AccountCategory.client),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _CategoryChoiceChip(
-                      label: l10n.categorySupplier,
-                      selected: _category == AccountCategory.supplier,
-                      onTap: () => setState(() => _category = AccountCategory.supplier),
-                    ),
-                  ),
-                ],
-              ),
+              // The choices are the person's own categories from "إدارة التصنيفات" (never "عام",
+              // which means "all"). A category the account already has is always offered.
+              LayoutBuilder(builder: (context, constraints) {
+                final options = ref.watch(assignableCategoriesProvider);
+                // One or two categories share the row equally (the old look); more wrap onto lines.
+                final equalWidth = options.length <= 2 ? (constraints.maxWidth - 10 * (options.length - 1)) / options.length : null;
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    for (final c in options)
+                      equalWidth != null
+                          ? SizedBox(
+                              width: equalWidth,
+                              child: _CategoryChoiceChip(
+                                label: c.name,
+                                selected: _category.id == c.id,
+                                onTap: () => setState(() => _category = AccountCategory(c.id)),
+                              ),
+                            )
+                          : IntrinsicWidth(
+                              child: _CategoryChoiceChip(
+                                label: c.name,
+                                selected: _category.id == c.id,
+                                onTap: () => setState(() => _category = AccountCategory(c.id)),
+                              ),
+                            ),
+                  ],
+                );
+              }),
               const SizedBox(height: 20),
               if (!widget.isEditing)
                 Row(
@@ -703,7 +719,7 @@ class _CategoryChoiceChip extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? shell.accent.withValues(alpha: 0.1) : shell.surface,

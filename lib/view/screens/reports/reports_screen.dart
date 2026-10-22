@@ -16,6 +16,8 @@ import '../../../data/models/account.dart';
 import '../../../data/models/personal_data.dart';
 import '../../../data/models/report_options.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/categories/categories_provider.dart';
+import '../../../data/models/category_type.dart';
 import '../../../logic/reports/pdf_report_service.dart';
 import '../../../logic/reports/report_export_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
@@ -45,11 +47,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   AccountCategory? _categoryFilter;
   bool _isExporting = false;
 
-  String _categoryLabel(AppLocalizations l10n) => switch (_categoryFilter) {
-        null => l10n.homeTabGeneral,
-        AccountCategory.client => l10n.homeTabClients,
-        AccountCategory.supplier => l10n.homeTabSuppliers,
-      };
+  String _categoryLabel(AppLocalizations l10n) =>
+      categoryNameOf(ref.read(categoryTypesProvider), _categoryFilter?.id ?? generalCategoryId);
+
+  Map<String, String> _categoryNames() => {for (final c in ref.read(categoryTypesProvider)) c.id: c.name};
 
   List<ReportRow> _buildSummaryRows(List<Account> accounts, DateTimeRange? range, ReportSortOption? sort) {
     final allTx = ref.read(transactionsProvider).value ?? const [];
@@ -119,6 +120,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           debitLabel: resolveDebitLabel(l10n, settings),
           clientLabel: l10n.categoryClient,
           supplierLabel: l10n.categorySupplier,
+          categoryNames: _categoryNames(),
           rows: rows,
         );
   }
@@ -288,25 +290,22 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 const SizedBox(height: 20),
                 Text(l10n.reportsAccountsBreakdown, style: AppTextStyles.title(context).copyWith(fontSize: 15, color: shell.textPrimary)),
                 const SizedBox(height: 10),
-                Row(
+                // "الكل" + one chip per category from إدارة التصنيفات (hidden-from-Home ones included).
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     _FilterChip(
                       label: l10n.reportsFilterAll,
                       selected: _categoryFilter == null,
                       onTap: () => setState(() => _categoryFilter = null),
                     ),
-                    const SizedBox(width: 8),
-                    _FilterChip(
-                      label: l10n.homeTabClients,
-                      selected: _categoryFilter == AccountCategory.client,
-                      onTap: () => setState(() => _categoryFilter = AccountCategory.client),
-                    ),
-                    const SizedBox(width: 8),
-                    _FilterChip(
-                      label: l10n.homeTabSuppliers,
-                      selected: _categoryFilter == AccountCategory.supplier,
-                      onTap: () => setState(() => _categoryFilter = AccountCategory.supplier),
-                    ),
+                    for (final c in ref.watch(assignableCategoriesProvider))
+                      _FilterChip(
+                        label: c.name,
+                        selected: _categoryFilter?.id == c.id,
+                        onTap: () => setState(() => _categoryFilter = AccountCategory(c.id)),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),

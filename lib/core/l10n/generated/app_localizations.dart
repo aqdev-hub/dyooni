@@ -536,6 +536,72 @@ abstract class AppLocalizations {
   /// **'التصنيفات'**
   String get drawerCategories;
 
+  /// No description provided for @categoriesScreenTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدارة التصنيفات'**
+  String get categoriesScreenTitle;
+
+  /// No description provided for @categoryAddTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة تصنيف'**
+  String get categoryAddTitle;
+
+  /// No description provided for @categoryEditTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل التصنيف'**
+  String get categoryEditTitle;
+
+  /// No description provided for @categoryNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم التصنيف'**
+  String get categoryNameLabel;
+
+  /// No description provided for @categoryNameRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب اسم التصنيف'**
+  String get categoryNameRequired;
+
+  /// No description provided for @categoryNameDuplicate.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا التصنيف موجود مسبقًا'**
+  String get categoryNameDuplicate;
+
+  /// No description provided for @categoryDeleteInUse.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يمكن حذف تصنيف يحتوي على حسابات'**
+  String get categoryDeleteInUse;
+
+  /// No description provided for @categoryDeleteProtected.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا التصنيف أساسي ولا يمكن حذفه'**
+  String get categoryDeleteProtected;
+
+  /// No description provided for @categoryDeleteLastOne.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجب أن يبقى تصنيف واحد على الأقل للحسابات'**
+  String get categoryDeleteLastOne;
+
+  /// No description provided for @categoryDeleteConfirmBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل تريد حذف هذا التصنيف؟'**
+  String get categoryDeleteConfirmBody;
+
+  /// No description provided for @categoryKeepOneVisible.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجب إبقاء تبويب واحد ظاهرًا على الأقل'**
+  String get categoryKeepOneVisible;
+
   /// No description provided for @drawerCurrencies.
   ///
   /// In ar, this message translates to:

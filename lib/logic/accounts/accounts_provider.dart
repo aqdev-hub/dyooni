@@ -11,8 +11,6 @@ import '../../data/repositories/accounts/accounts_firestore_repository_impl.dart
 import '../../data/remote/firestore/accounts_firestore_datasource.dart';
 import '../auth/auth_provider.dart' show authStateProvider;
 import '../onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
-import '../../data/models/currency_type.dart' show defaultCurrencyId;
-import '../currencies/currencies_provider.dart';
 import '../transactions/transactions_provider.dart';
 
 final accountsLocalDataSourceProvider = Provider<AccountsLocalDataSource>(
@@ -146,43 +144,6 @@ AccountsSummary _summarize(Ref ref, List<Account> accounts) {
   }
   return AccountsSummary(totalCredit: credit, totalDebit: debit, count: accounts.length);
 }
-
-/// The accounts that belong on the SELECTED CURRENCY's page of Home: category-filtered accounts
-/// that have at least one transaction in that currency. An account with no transactions at all
-/// has no currency yet, so it is listed on the default currency's page (otherwise a brand-new
-/// account would vanish until its first entry).
-final currencyAccountsProvider = Provider.autoDispose<List<Account>>((ref) {
-  final accounts = ref.watch(filteredAccountsProvider);
-  final currency = ref.watch(effectiveCurrencyIdProvider);
-  final all = ref.watch(transactionsProvider).value ?? const [];
-  final hasAny = <String>{};
-  final inCurrency = <String>{};
-  for (final t in all) {
-    hasAny.add(t.accountId);
-    if (t.currency == currency) inCurrency.add(t.accountId);
-  }
-  return accounts
-      .where((a) => inCurrency.contains(a.id) || (currency == defaultCurrencyId && !hasAny.contains(a.id)))
-      .toList();
-});
-
-/// Totals of [currencyAccountsProvider] in the selected currency ONLY — the Home bottom bar. A
-/// sum across currencies would be meaningless (500 USD + 500 YER is not 1000 of anything).
-final currencyAccountsSummaryProvider = Provider.autoDispose<AccountsSummary>((ref) {
-  final accounts = ref.watch(currencyAccountsProvider);
-  final currency = ref.watch(effectiveCurrencyIdProvider);
-  var credit = 0.0;
-  var debit = 0.0;
-  for (final account in accounts) {
-    final balance = ref.watch(accountCurrencyBalanceProvider((accountId: account.id, currency: currency)));
-    if (balance >= 0) {
-      credit += balance;
-    } else {
-      debit += -balance;
-    }
-  }
-  return AccountsSummary(totalCredit: credit, totalDebit: debit, count: accounts.length);
-});
 
 /// Multi-select state for the Home account list's long-press "تحديد"/"تحديد الكل" flow (see
 /// EntityAction in view/widgets/shared/entity_actions_sheet.dart). Deliberately NOT persisted and

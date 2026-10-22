@@ -15,6 +15,7 @@ import '../../data/models/account.dart';
 import '../../data/models/general_settings.dart';
 import '../../data/models/transaction.dart';
 import '../accounts/accounts_provider.dart';
+import '../categories/categories_provider.dart';
 import '../currencies/currencies_provider.dart';
 import '../settings/general_settings_provider.dart';
 import '../transactions/transactions_provider.dart';
@@ -1483,7 +1484,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// transaction is then attached to that new account, never a mismatched or placeholder one.
   ///
   /// DISCLOSED SIMPLIFICATION: a voice command never states whether the person is a "عميل" or
-  /// "مورد" — a newly-created account defaults to [AccountCategory.client], the same default the
+  /// "مورد" — a newly-created account defaults to the default category (normally "العملاء"), the same default the
   /// manual Add Account form starts on. The person can reclassify it afterwards from that
   /// account's own edit screen if it should actually be a supplier.
   Future<void> confirm() async {
@@ -1499,7 +1500,7 @@ class VoiceController extends StateNotifier<VoiceState> {
       account = Account(
         id: _uuid.v4(),
         name: accountName,
-        category: AccountCategory.client,
+        category: _ref.read(defaultAccountCategoryProvider),
         createdDate: draft.date,
       );
       await _ref.read(accountsProvider.notifier).addAccount(account);

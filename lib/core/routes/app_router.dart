@@ -5,6 +5,7 @@ import '../../data/models/account.dart';
 import '../../view/screens/accounts/account_details_screen.dart';
 import '../../view/screens/accounts/add_account_screen.dart';
 import '../../view/screens/auth/login_screen.dart';
+import '../../view/screens/categories/categories_screen.dart';
 import '../../view/screens/currencies/currencies_screen.dart';
 import '../../view/screens/auth/signup_screen.dart';
 import '../../view/screens/home/home_screen.dart';
@@ -43,6 +44,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/contact-us', builder: (_, __) => const ContactUsScreen()),
       GoRoute(path: '/about', builder: (_, __) => const AboutScreen()),
       GoRoute(path: '/currencies', builder: (_, __) => const CurrenciesScreen()),
+      GoRoute(path: '/categories', builder: (_, __) => const CategoriesScreen()),
       GoRoute(
         path: '/account-details',
         builder: (_, state) => AccountDetailsScreen(account: state.extra! as Account),

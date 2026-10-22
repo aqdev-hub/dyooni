@@ -177,7 +177,7 @@ void main() {
     expect(find.text('أحمد محمد'), findsOneWidget);
     expect(find.text('سالم علي'), findsOneWidget);
 
-    await tester.tap(find.text(l10n.homeTabSuppliers));
+    await tester.tap(find.text('الموردين'));
     await tester.pumpAndSettle();
 
     expect(find.text('أحمد محمد'), findsNothing);

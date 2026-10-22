@@ -9,6 +9,7 @@ import 'package:dyooni/data/models/transaction.dart';
 import 'package:dyooni/data/repositories/accounts/accounts_repository.dart';
 import 'package:dyooni/data/repositories/transactions/transactions_repository.dart';
 import 'package:dyooni/logic/accounts/accounts_provider.dart';
+import 'package:dyooni/logic/accounts/currency_accounts_provider.dart';
 import 'package:dyooni/logic/currencies/currencies_provider.dart';
 import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import 'package:dyooni/logic/transactions/transactions_provider.dart';

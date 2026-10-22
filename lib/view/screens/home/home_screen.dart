@@ -11,6 +11,9 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/currency_type.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/accounts/currency_accounts_provider.dart';
+import '../../../logic/categories/categories_provider.dart';
+import '../../../data/models/category_type.dart';
 import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/drive_backup_controller.dart';
@@ -182,6 +185,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final categoryFiltered = ref.watch(currencyAccountsProvider);
     final summary = ref.watch(currencyAccountsSummaryProvider);
     final currencyId = ref.watch(effectiveCurrencyIdProvider);
+    final categoryTypes = ref.watch(categoryTypesProvider);
+    final categoryTabs = ref.watch(categoryTabsProvider);
+    final activeCategory = ref.watch(effectiveCategoryProvider);
     final currencies = ref.watch(currencyTypesProvider);
     final currencyName = currencyNameOf(currencies, currencyId);
     final selectionMode = ref.watch(accountSelectionModeProvider);
@@ -210,8 +216,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               )
             else
               _Header(
+                title: categoryNameOf(categoryTypes, activeCategory?.id ?? generalCategoryId),
                 searchController: _searchController,
                 onQueryChanged: (v) => setState(() => _query = v),
+              ),
+            // One tab per VISIBLE category from "إدارة التصنيفات". Hidden when only one is visible.
+            if (categoryTabs.length > 1)
+              _CategoryTabs(
+                tabs: [for (final t in categoryTabs) (id: t?.id ?? generalCategoryId, name: categoryNameOf(categoryTypes, t?.id ?? generalCategoryId))],
+                activeId: activeCategory?.id ?? generalCategoryId,
+                onSelect: (id) => ref.read(selectedCategoryProvider.notifier).state =
+                    id == generalCategoryId ? null : AccountCategory(id),
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
@@ -333,9 +348,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.searchController, required this.onQueryChanged});
+class _CategoryTabs extends StatelessWidget {
+  const _CategoryTabs({required this.tabs, required this.activeId, required this.onSelect});
 
+  final List<({String id, String name})> tabs;
+  final String activeId;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = context.shellColors;
+    return Container(
+      height: 42,
+      color: shell.surface,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        itemCount: tabs.length,
+        itemBuilder: (context, i) {
+          final tab = tabs[i];
+          final active = tab.id == activeId;
+          return InkWell(
+            onTap: () => onSelect(tab.id),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: active ? shell.accent : Colors.transparent, width: 3)),
+              ),
+              child: Text(
+                tab.name,
+                style: AppTextStyles.body(context).copyWith(
+                  color: active ? shell.accent : shell.textSecondary,
+                  fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({required this.title, required this.searchController, required this.onQueryChanged});
+
+  final String title;
   final TextEditingController searchController;
   final ValueChanged<String> onQueryChanged;
 
@@ -359,7 +418,7 @@ class _Header extends StatelessWidget {
             children: [
               Builder(builder: (context) => IconButton(icon: Icon(Icons.menu_rounded, color: shell.accent, size: 21), onPressed: () => Scaffold.of(context).openDrawer())),
               const SizedBox(width: 6),
-              Text(l10n.homeTabGeneral, style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+              Text(title, style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
               const SizedBox(width: 12),
               Expanded(
                 child: Container(

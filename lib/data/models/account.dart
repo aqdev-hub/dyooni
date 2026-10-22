@@ -3,8 +3,33 @@
 /// legacy JSON parsing and Transaction reference this same enum.
 enum AccountDirection { credit, debit }
 
-/// "عميل" vs "مورد" — drives the Home screen's tab filter (عملاء / موردين / عام).
-enum AccountCategory { client, supplier }
+/// Which category an account belongs to (عملاء / موردين / any the person adds in drawer → التصنيفات).
+///
+/// Deliberately NOT an `enum` any more: categories are now managed by the person, so the set is
+/// open. It is a thin wrapper over the category's [id]; the two built-in ids keep their old
+/// spelling ('client', 'supplier') so every account saved before this change still loads, and
+/// `AccountCategory.client` / `.supplier` keep working wherever they were used. The names the
+/// person SEES live in the category list (logic/categories/categories_provider.dart), never here.
+class AccountCategory {
+  const AccountCategory(this.id);
+
+  final String id;
+
+  /// Same value as [id] — kept because older code read `category.name` (it was an enum).
+  String get name => id;
+
+  static const client = AccountCategory('client');
+  static const supplier = AccountCategory('supplier');
+
+  @override
+  bool operator ==(Object other) => other is AccountCategory && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() => 'AccountCategory($id)';
+}
 
 /// A person/entity — NOT a balance. Balance and transaction count are always derived from that
 /// account's Transactions (see logic/transactions/transactions_provider.dart), never stored here.
@@ -44,7 +69,7 @@ class Account {
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
-        'category': category.name,
+        'category': category.id,
         'createdDate': createdDate.toIso8601String(),
         'details': details,
         'phone': phone,
@@ -58,7 +83,7 @@ class Account {
         name: json['name'] as String,
         // Defaults to `client` for any account saved before this field existed, so old local
         // data doesn't crash on load — see accounts_local_datasource.dart.
-        category: AccountCategory.values.byName((json['category'] as String?) ?? 'client'),
+        category: AccountCategory((json['category'] as String?) ?? 'client'),
         createdDate: DateTime.parse(
           (json['createdDate'] ?? json['date']) as String, // 'date' = pre-refactor key, see below
         ),

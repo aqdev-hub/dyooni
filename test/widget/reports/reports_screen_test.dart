@@ -98,7 +98,7 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
-    await tester.tap(find.text(l10n.homeTabSuppliers));
+    await tester.tap(find.text('الموردين'));
     await tester.pumpAndSettle();
 
     expect(find.text('أحمد محمد'), findsNothing);

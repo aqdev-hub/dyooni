@@ -239,6 +239,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerCategories => 'Categories';
 
   @override
+  String get categoriesScreenTitle => 'Manage categories';
+
+  @override
+  String get categoryAddTitle => 'Add category';
+
+  @override
+  String get categoryEditTitle => 'Edit category';
+
+  @override
+  String get categoryNameLabel => 'Category name';
+
+  @override
+  String get categoryNameRequired => 'Enter a category name';
+
+  @override
+  String get categoryNameDuplicate => 'This category already exists';
+
+  @override
+  String get categoryDeleteInUse => 'A category that has accounts cannot be deleted';
+
+  @override
+  String get categoryDeleteProtected => 'This category is built in and cannot be deleted';
+
+  @override
+  String get categoryDeleteLastOne => 'At least one category must remain for accounts';
+
+  @override
+  String get categoryDeleteConfirmBody => 'Delete this category?';
+
+  @override
+  String get categoryKeepOneVisible => 'At least one tab must stay visible';
+
+  @override
   String get drawerCurrencies => 'Currencies';
 
   @override

@@ -237,6 +237,39 @@ class AppLocalizationsAr extends AppLocalizations {
   String get drawerCategories => 'التصنيفات';
 
   @override
+  String get categoriesScreenTitle => 'إدارة التصنيفات';
+
+  @override
+  String get categoryAddTitle => 'إضافة تصنيف';
+
+  @override
+  String get categoryEditTitle => 'تعديل التصنيف';
+
+  @override
+  String get categoryNameLabel => 'اسم التصنيف';
+
+  @override
+  String get categoryNameRequired => 'اكتب اسم التصنيف';
+
+  @override
+  String get categoryNameDuplicate => 'هذا التصنيف موجود مسبقًا';
+
+  @override
+  String get categoryDeleteInUse => 'لا يمكن حذف تصنيف يحتوي على حسابات';
+
+  @override
+  String get categoryDeleteProtected => 'هذا التصنيف أساسي ولا يمكن حذفه';
+
+  @override
+  String get categoryDeleteLastOne => 'يجب أن يبقى تصنيف واحد على الأقل للحسابات';
+
+  @override
+  String get categoryDeleteConfirmBody => 'هل تريد حذف هذا التصنيف؟';
+
+  @override
+  String get categoryKeepOneVisible => 'يجب إبقاء تبويب واحد ظاهرًا على الأقل';
+
+  @override
   String get drawerCurrencies => 'العملات';
 
   @override
