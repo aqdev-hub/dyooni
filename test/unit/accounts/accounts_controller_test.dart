@@ -9,9 +9,17 @@ import 'package:dyooni/data/repositories/transactions/transactions_repository.da
 import 'package:dyooni/logic/accounts/accounts_provider.dart';
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 
-class MockAccountsRepository extends Mock implements AccountsRepository {}
+class MockAccountsRepository extends Mock implements AccountsRepository {
+  // The controllers subscribe to watchAccounts() in build(); an unstubbed Mock returns null for
+  // it and the whole provider fails. An empty stream = "no live updates", which is what tests want.
+  @override
+  Stream<List<Account>> watchAccounts() => const Stream.empty();
+}
 
-class MockTransactionsRepository extends Mock implements TransactionsRepository {}
+class MockTransactionsRepository extends Mock implements TransactionsRepository {
+  @override
+  Stream<List<Transaction>> watchTransactions() => const Stream.empty();
+}
 
 class _FakeAccount extends Fake implements Account {}
 

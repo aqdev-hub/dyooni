@@ -18,9 +18,17 @@ import 'package:dyooni/logic/settings/personal_data_provider.dart';
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 import 'package:dyooni/view/screens/reports/reports_screen.dart';
 
-class MockAccountsRepository extends Mock implements AccountsRepository {}
+class MockAccountsRepository extends Mock implements AccountsRepository {
+  // The controllers subscribe to watchAccounts() in build(); an unstubbed Mock returns null for
+  // it and the whole provider fails. An empty stream = "no live updates", which is what tests want.
+  @override
+  Stream<List<Account>> watchAccounts() => const Stream.empty();
+}
 
-class MockTransactionsRepository extends Mock implements TransactionsRepository {}
+class MockTransactionsRepository extends Mock implements TransactionsRepository {
+  @override
+  Stream<List<Transaction>> watchTransactions() => const Stream.empty();
+}
 
 class MockPersonalDataRepository extends Mock implements PersonalDataRepository {}
 
@@ -96,7 +104,6 @@ void main() {
 
     await tester.pumpWidget(_wrap(accountsRepo, txRepo, personalDataRepo, prefs));
     await tester.pumpAndSettle();
-    final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
     await tester.tap(find.text('الموردين'));
     await tester.pumpAndSettle();

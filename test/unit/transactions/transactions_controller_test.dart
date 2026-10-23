@@ -7,7 +7,10 @@ import 'package:dyooni/data/models/transaction.dart';
 import 'package:dyooni/data/repositories/transactions/transactions_repository.dart';
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 
-class MockTransactionsRepository extends Mock implements TransactionsRepository {}
+class MockTransactionsRepository extends Mock implements TransactionsRepository {
+  @override
+  Stream<List<Transaction>> watchTransactions() => const Stream.empty();
+}
 
 class _FakeTransaction extends Fake implements Transaction {}
 

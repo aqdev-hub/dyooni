@@ -150,7 +150,7 @@ class _CategoryRow extends StatelessWidget {
               const SizedBox(width: 16),
               Switch(
                 value: visible,
-                activeColor: shell.accent,
+                activeThumbColor: shell.accent,
                 onChanged: onToggle,
               ),
             ],
@@ -302,7 +302,7 @@ class _CategoryEditorDialogState extends ConsumerState<_CategoryEditorDialog> {
         ),
         TextButton(
           onPressed: _busy ? null : _save,
-          child: Text(l10n.save, style: TextStyle(color: shell.accent, fontWeight: FontWeight.w700)),
+          child: Text(l10n.saveButton, style: TextStyle(color: shell.accent, fontWeight: FontWeight.w700)),
         ),
       ],
     );

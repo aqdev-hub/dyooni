@@ -13,18 +13,17 @@ import 'package:dyooni/logic/categories/categories_provider.dart';
 import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 
-class MockAccountsRepository extends Mock implements AccountsRepository {}
+class MockAccountsRepository extends Mock implements AccountsRepository {
+  // The controllers subscribe to watchAccounts() in build(); an unstubbed Mock returns null for
+  // it and the whole provider fails. An empty stream = "no live updates", which is what tests want.
+  @override
+  Stream<List<Account>> watchAccounts() => const Stream.empty();
+}
 
-class MockTransactionsRepository extends Mock implements TransactionsRepository {}
-
-Transaction _tx(String id, String accountId, double amount, String currency, AccountDirection direction) => Transaction(
-      id: id,
-      accountId: accountId,
-      amount: amount,
-      currency: currency,
-      direction: direction,
-      date: DateTime(2026, 1, 1),
-    );
+class MockTransactionsRepository extends Mock implements TransactionsRepository {
+  @override
+  Stream<List<Transaction>> watchTransactions() => const Stream.empty();
+}
 
 Account _account(String id, [AccountCategory category = AccountCategory.client]) =>
     Account(id: id, name: 'حساب $id', category: category, createdDate: DateTime(2026, 1, 1));

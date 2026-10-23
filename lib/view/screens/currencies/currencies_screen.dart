@@ -182,7 +182,8 @@ class _CurrencyEditorDialogState extends ConsumerState<_CurrencyEditorDialog> {
       }
       if (mounted) Navigator.of(context).pop();
     } on CurrencyNameException catch (e) {
-      if (mounted) setState(() {
+      if (!mounted) return;
+      setState(() {
         _busy = false;
         _error = _nameErrorText(l10n, e.error);
       });

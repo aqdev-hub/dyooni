@@ -63,7 +63,9 @@ class ArabicNumberParser {
     final b = StringBuffer();
     for (final unit in token.runes) {
       final ch = String.fromCharCode(unit);
-      if ((unit >= 0x064B && unit <= 0x0652) || unit == 0x0670 || unit == 0x0640) continue;
+      if ((unit >= 0x064B && unit <= 0x0652) || unit == 0x0670 || unit == 0x0640) {
+        continue;
+      }
       switch (ch) {
         case 'أ':
         case 'إ':
@@ -159,7 +161,9 @@ class ArabicNumberParser {
 
   static bool _isNumberLike(String w) {
     bool known(String x) => _units.containsKey(x) || _hundreds.containsKey(x) || _multipliers.containsKey(x);
-    if (_digitsToken.hasMatch(w) || known(w) || _currencyWords.contains(w)) return true;
+    if (_digitsToken.hasMatch(w) || known(w) || _currencyWords.contains(w)) {
+      return true;
+    }
     return w.length > 1 && w.startsWith('و') && known(w.substring(1));
   }
 
@@ -183,7 +187,9 @@ class ArabicNumberParser {
   /// left after removing the Latin ones, so it never qualifies.
   static bool isCorruptCandidate(String raw) {
     var s = raw;
-    if (s.length > 1 && s.startsWith('و')) s = s.substring(1);
+    if (s.length > 1 && s.startsWith('و')) {
+      s = s.substring(1);
+    }
     final stripped = s.replaceAll(_latin, '');
     if (stripped.isEmpty) return false; // pure Latin (e.g. "usd") or empty — not our business
     return RegExp(r'^[أإآاءؤئ]{1,3}$').hasMatch(stripped);
@@ -192,17 +198,29 @@ class ArabicNumberParser {
   static _Tok _classify(List<String> tokens, int i, _Tok? prev) {
     final raw = tokens[i];
     final t = normalizeWord(raw);
-    if (_digitsToken.hasMatch(t)) return _Tok(_Kind.value, double.parse(t));
-    if (t == 'و') return const _Tok(_Kind.connector);
+    if (_digitsToken.hasMatch(t)) {
+      return _Tok(_Kind.value, double.parse(t));
+    }
+    if (t == 'و') {
+      return const _Tok(_Kind.connector);
+    }
 
     _Tok? lookup(String w) {
       final u = _units[w];
-      if (u != null) return _Tok(_Kind.value, u);
+      if (u != null) {
+        return _Tok(_Kind.value, u);
+      }
       final h = _hundreds[w];
-      if (h != null) return _Tok(_Kind.value, h);
+      if (h != null) {
+        return _Tok(_Kind.value, h);
+      }
       final m = _multipliers[w];
-      if (m != null) return _Tok(_Kind.multiplier, m);
-      if (w == 'نصف' || w == 'نص') return const _Tok(_Kind.half);
+      if (m != null) {
+        return _Tok(_Kind.multiplier, m);
+      }
+      if (w == 'نصف' || w == 'نص') {
+        return const _Tok(_Kind.half);
+      }
       return null;
     }
 
@@ -222,16 +240,26 @@ class ArabicNumberParser {
         prev != null && prev.kind == _Kind.value && prev.value >= 3 && prev.value <= 9;
     final formalHundred = t == 'مائه' || t == 'مئه';
     final bareHundred = t == 'ميه' || t == 'مايه' || t == 'وميه' || t == 'ومايه';
-    if (afterUnit && (formalHundred || bareHundred)) return const _Tok(_Kind.hundredMultiplier);
-    if (bareHundred) return const _Tok(_Kind.other);
+    if (afterUnit && (formalHundred || bareHundred)) {
+      return const _Tok(_Kind.hundredMultiplier);
+    }
+    if (bareHundred) {
+      return const _Tok(_Kind.other);
+    }
 
     final direct = lookup(t);
-    if (direct != null) return direct;
+    if (direct != null) {
+      return direct;
+    }
     if (t.length > 1 && t.startsWith('و')) {
       final stripped = lookup(t.substring(1));
-      if (stripped != null) return stripped;
+      if (stripped != null) {
+        return stripped;
+      }
     }
-    if (isCorruptCandidate(raw)) return const _Tok(_Kind.corrupt);
+    if (isCorruptCandidate(raw)) {
+      return const _Tok(_Kind.corrupt);
+    }
     if (_numberNoiseWords.contains(t) && _touchesNumberContext(tokens, i, prev)) {
       return const _Tok(_Kind.corrupt);
     }
@@ -271,10 +299,14 @@ class ArabicNumberParser {
       // ("… عليه إلا ريال"): a number WAS spoken there, we just can't read it → uncertain.
       final nextWord = e + 1 < tokens.length ? normalizeWord(tokens[e + 1]) : '';
       final noiseBeforeCurrency = kinds.contains(_Kind.corrupt) && _currencyWords.contains(nextWord);
-      if (s <= e && (hasNumber || noiseBeforeCurrency)) runs.add((s, e));
+      if (s <= e && (hasNumber || noiseBeforeCurrency)) {
+        runs.add((s, e));
+      }
       i = j + 1;
     }
-    if (runs.isEmpty) return const AmountExtraction.none();
+    if (runs.isEmpty) {
+      return const AmountExtraction.none();
+    }
 
     var chosen = runs.first;
     for (final r in runs) {

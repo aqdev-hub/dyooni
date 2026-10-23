@@ -13,7 +13,10 @@ import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPre
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 import 'package:dyooni/view/screens/transactions/add_transaction_screen.dart';
 
-class MockTransactionsRepository extends Mock implements TransactionsRepository {}
+class MockTransactionsRepository extends Mock implements TransactionsRepository {
+  @override
+  Stream<List<Transaction>> watchTransactions() => const Stream.empty();
+}
 
 /// mocktail needs a stand-in instance for every custom type used with `any()`; it is only passed
 /// around, never inspected.

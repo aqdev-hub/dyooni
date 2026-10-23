@@ -52,7 +52,7 @@ class TranscriptCleaner {
   static const _arabicIndic = '٠١٢٣٤٥٦٧٨٩';
   static const _easternIndic = '۰۱۲۳۴۵۶۷۸۹';
 
-  static final RegExp _invisible = RegExp('[​-‏‪-‮⁦-⁩﻿]');
+  static final RegExp _invisible = RegExp('[\\u200B-\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFEFF]');
   static final RegExp _bracketed = RegExp(r'[\[\(\{][^\]\)\}]*[\]\)\}]');
   static final RegExp _digitSeparator = RegExp(r'(?<=\d)([.,٫٬\-/])(?=\d)');
   static final RegExp _punctuation = RegExp(r'[.,٫٬،؛;:؟?!"«»“”‘’\x27…*_\-–—/\\|~`^<>=+(){}\[\]]');
