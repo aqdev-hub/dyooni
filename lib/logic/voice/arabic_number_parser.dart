@@ -26,7 +26,8 @@ class AmountExtraction {
       : value = null,
         uncertain = false,
         startToken = -1,
-        endToken = -1;
+        endToken = -1,
+        bare = false;
 
   /// The amount, or `null` when none was found OR when it was heard but is untrustworthy.
   final double? value;
@@ -191,7 +192,10 @@ class ArabicNumberParser {
       s = s.substring(1);
     }
     final stripped = s.replaceAll(_latin, '');
-    if (stripped.isEmpty) return false; // pure Latin (e.g. "usd") or empty — not our business
+    // pure Latin (e.g. "usd") or empty — not our business
+    if (stripped.isEmpty) {
+      return false;
+    }
     return RegExp(r'^[أإآاءؤئ]{1,3}$').hasMatch(stripped);
   }
 
