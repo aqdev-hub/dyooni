@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +12,7 @@ import '../../../logic/voice/voice_provider.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../data/models/general_settings.dart';
 import '../../widgets/home/app_drawer.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/main_bottom_nav.dart';
 import '../../widgets/voice/voice_command_sheet.dart';
 import '../../widgets/voice/whisper_model_gate.dart';
@@ -38,13 +38,10 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
   // an autoDispose provider whose own dispose() cancels the recording and frees the engine, so
   // leaving the screen is already handled there.
 
-  void _goHome(BuildContext context) {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go('/home');
-    }
-  }
+  /// The bottom bar behaves like tabs: "الرئيسية" always lands on Home. It used to pop ONE screen,
+  /// so after Home → التقارير → صوتي it went back to التقارير instead of Home (and needed a second
+  /// tap). `go` replaces the whole stack with Home.
+  void _goHome(BuildContext context) => context.go('/home');
 
   Future<void> _showInfo(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
@@ -124,7 +121,7 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
                   gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [palette.bodyTop, palette.bodyBottom]),
                 ),
                 child: CustomPaint(
-                  painter: _WavesPainter(color: palette.wave),
+                  painter: AppWavesPainter(color: palette.wave),
                   child: ref.watch(generalSettingsProvider).when(
                         loading: () => Center(child: CircularProgressIndicator(color: shell.accent)),
                         error: (_, __) => _scrollable(WhisperModelGate(child: _sheet())),
@@ -146,7 +143,8 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
                   unawaited(ref.read(voiceProvider.notifier).startBluetoothMode());
                 }
               },
-              onReports: () => context.push('/reports'),
+              // Tab-like: replace this screen instead of stacking another one on top of it.
+              onReports: () => context.pushReplacement('/reports'),
             ),
           ],
         ),
@@ -166,33 +164,6 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
           ),
         ),
       );
-}
-
-/// Two soft translucent waves along the bottom of the body (reference background flourish).
-class _WavesPainter extends CustomPainter {
-  const _WavesPainter({required this.color});
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    void wave(double baseline, double amplitude, double phase, double alpha) {
-      final path = Path()..moveTo(0, size.height);
-      for (var x = 0.0; x <= size.width; x += 4) {
-        final y = size.height - baseline + amplitude * math.sin((x / size.width) * 2 * math.pi + phase);
-        path.lineTo(x, y);
-      }
-      path
-        ..lineTo(size.width, size.height)
-        ..close();
-      canvas.drawPath(path, Paint()..color = color.withValues(alpha: alpha));
-    }
-
-    wave(size.height * 0.16, 14, 0.4, 0.55);
-    wave(size.height * 0.10, 10, 2.1, 0.45);
-  }
-
-  @override
-  bool shouldRepaint(covariant _WavesPainter oldDelegate) => oldDelegate.color != color;
 }
 
 /// Sets the entry mode once, from INSIDE the model gate — i.e. only once the recognizer's model is

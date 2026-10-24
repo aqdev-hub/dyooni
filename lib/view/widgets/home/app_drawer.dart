@@ -5,7 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
+import '../../../core/constants/legal_links.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/web_launcher.dart';
+import '../../../logic/settings/locale_provider.dart';
 import '../../../logic/auth/auth_provider.dart';
 import '../shared/app_logo.dart';
 import '../shared/app_snackbar.dart';
@@ -57,6 +60,25 @@ class AppDrawer extends ConsumerWidget {
     if (context.mounted) context.go('/login');
   }
 
+  /// A real route is pushed; [LegalLinks.privacyRouteMarker] opens the hosted privacy policy in
+  /// the browser (in the app's current language); `null` is an honest "coming soon".
+  Future<void> _open(BuildContext context, WidgetRef ref, AppLocalizations l10n, String? route) async {
+    if (route == null) {
+      _showComingSoon(context, l10n);
+      return;
+    }
+    if (route == LegalLinks.privacyRouteMarker) {
+      final languageCode = ref.read(localeProvider).languageCode;
+      try {
+        await launchWebPage(Uri.parse(LegalLinks.privacyPolicy(languageCode)));
+      } catch (_) {
+        if (context.mounted) AppSnackBar.showError(context, l10n.unexpectedError);
+      }
+      return;
+    }
+    context.push(route);
+  }
+
   void _showComingSoon(BuildContext context, AppLocalizations l10n) {
     AppSnackBar.showError(context, l10n.comingSoonMessage);
   }
@@ -76,7 +98,6 @@ class AppDrawer extends ConsumerWidget {
     // AboutScreen) — see core/routes/app_router.dart.
     final items = <(IconData, String, String?)>[
       (Icons.workspace_premium_outlined, l10n.drawerAdsRemoval, null),
-      (Icons.chat_outlined, l10n.drawerContactUs, '/contact-us'),
       (Icons.card_giftcard_outlined, l10n.drawerFreePoints, null),
       (Icons.person_outline, l10n.drawerPersonalData, '/personal-data'),
       (Icons.settings_outlined, l10n.drawerSettings, '/general-settings'),
@@ -89,8 +110,10 @@ class AppDrawer extends ConsumerWidget {
       (Icons.dns_outlined, l10n.drawerSendDatabase, null),
       (Icons.share_outlined, l10n.drawerShareApp, null),
       (Icons.star_outline, l10n.drawerRateApp, null),
-      (Icons.privacy_tip_outlined, l10n.drawerPrivacyPolicy, null),
-      (Icons.support_agent_outlined, l10n.drawerSupport, null),
+      (Icons.privacy_tip_outlined, l10n.drawerPrivacyPolicy, LegalLinks.privacyRouteMarker),
+      // "الدعم الفني" and the old "تواصل معنا" were the same thing (WhatsApp / call / email), so
+      // there is one entry now, with the support name.
+      (Icons.support_agent_outlined, l10n.drawerSupport, '/contact-us'),
       (Icons.info_outline_rounded, l10n.drawerAbout, '/about'),
     ];
 
@@ -147,7 +170,7 @@ class AppDrawer extends ConsumerWidget {
                     ListTile(
                       leading: Icon(icon, color: shell.textSecondary, size: 20),
                       title: Text(label, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textPrimary)),
-                      onTap: () => route != null ? context.push(route) : _showComingSoon(context, l10n),
+                      onTap: () => _open(context, ref, l10n, route),
                     ),
                 ],
               ),

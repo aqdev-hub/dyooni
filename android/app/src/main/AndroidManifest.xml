@@ -131,6 +131,11 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Opening web pages (privacy policy) from the app. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
         <!-- يسمح لتطبيق ديوني بالتحقق من وجود تطبيق فيسبوك/Messenger المثبت على الجهاز
              (Android 11+ يتطلب هذا التصريح صراحة بسبب Package Visibility) -->
         <package android:name="com.facebook.katana" />

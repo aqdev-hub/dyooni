@@ -12,6 +12,7 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/voice_palette.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/currency_type.dart';
 import '../../../data/models/personal_data.dart';
@@ -26,6 +27,7 @@ import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/accounts/account_action_icon_row.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/accounts/account_phone_row.dart';
 import '../../widgets/accounts/transaction_table.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
@@ -413,8 +415,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
       }
     }
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       body: SafeArea(
         child: Column(
           children: [
@@ -447,7 +448,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Row(
                   children: [
-                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.white), onPressed: _closeSearch),
+                    IconButton(icon: const Icon(Icons.close_rounded, color: context.voicePalette.headerGold), onPressed: _closeSearch),
                     Expanded(
                       child: Container(
                         height: 36,
@@ -495,23 +496,23 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                 // read right-to-left in RTL, same as Home.
                 child: Row(
                   children: [
-                    IconButton(icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20), onPressed: () => context.pop()),
+                    IconButton(icon: const Icon(Icons.arrow_back_rounded, color: context.voicePalette.headerGold, size: 20), onPressed: () => context.pop()),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         account.name,
-                        style: AppTextStyles.title(context).copyWith(color: Colors.white),
+                        style: AppTextStyles.title(context).copyWith(color: context.voicePalette.headerGold),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    IconButton(icon: const Icon(Icons.search_rounded, color: Colors.white, size: 20), onPressed: _openSearch),
+                    IconButton(icon: const Icon(Icons.search_rounded, color: context.voicePalette.headerGold, size: 20), onPressed: _openSearch),
                     IconButton(
                       icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27),
                       tooltip: l10n.reportsSheetTitle,
                       onPressed: () => _openReportsSheet(context, ref, l10n, transactions),
                     ),
                     PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+                      icon: const Icon(Icons.more_vert_rounded, color: context.voicePalette.headerGold),
                       color: shell.surface,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: shell.border)),
                       onSelected: (value) {

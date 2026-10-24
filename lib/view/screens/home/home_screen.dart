@@ -8,6 +8,7 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/voice_palette.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/currency_type.dart';
 import '../../../logic/accounts/accounts_provider.dart';
@@ -18,6 +19,8 @@ import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/drive_backup_controller.dart';
 import '../../widgets/home/account_list_tile.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
+import '../../widgets/shared/main_bottom_nav.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
 import '../../widgets/shared/app_snackbar.dart';
@@ -36,7 +39,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _searchController = TextEditingController();
   String _query = '';
-  bool _voiceSheetOpen = false;
 
   Future<void> _openAddAccount() => showDialog<void>(
         context: context,
@@ -52,11 +54,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
 
-  Future<void> _openVoiceScreen({required bool bluetoothMode}) async {
-    setState(() => _voiceSheetOpen = true);
-    await context.push('/voice', extra: bluetoothMode);
-    if (mounted) setState(() => _voiceSheetOpen = false);
-  }
+  Future<void> _openVoiceScreen({required bool bluetoothMode}) =>
+      context.push<void>('/voice', extra: bluetoothMode);
 
   void _cancelSelection() {
     ref.read(accountSelectionModeProvider.notifier).state = false;
@@ -194,8 +193,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final selectedIds = ref.watch(selectedAccountIdsProvider);
     final pinMatches = ref.watch(generalSettingsProvider).value?.pinMatchingAccountsOnSearch ?? true;
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       drawer: const AppDrawer(),
       body: SafeArea(
         child: Column(
@@ -335,10 +333,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               addTooltip: l10n.homeAddAccount,
               currencyName: currencyName,
             ),
-            _HomeBottomNav(
+            MainBottomNav(
+              activeTab: MainNavTab.home,
+              onHome: () {},
               onVoice: () => _openVoiceScreen(bluetoothMode: false),
               onVoiceLongPress: () => _openVoiceScreen(bluetoothMode: true),
-              voiceActive: _voiceSheetOpen,
               onReports: () => context.push('/reports'),
             ),
           ],
@@ -416,9 +415,9 @@ class _Header extends StatelessWidget {
         children: [
           Row(
             children: [
-              Builder(builder: (context) => IconButton(icon: Icon(Icons.menu_rounded, color: shell.accent, size: 21), onPressed: () => Scaffold.of(context).openDrawer())),
+              Builder(builder: (context) => IconButton(icon: Icon(Icons.menu_rounded, color: context.voicePalette.headerGold, size: 28), onPressed: () => Scaffold.of(context).openDrawer())),
               const SizedBox(width: 6),
-              Text(title, style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+              Text(title, style: AppTextStyles.title(context).copyWith(color: context.voicePalette.headerGold, fontWeight: FontWeight.w800)),
               const SizedBox(width: 12),
               Expanded(
                 child: Container(
@@ -465,102 +464,6 @@ class _Header extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// New persistent bottom navigation, placed under BottomSummaryBar: Home / Voice / Reports, each
-/// opening its own screen. "Home" is deliberately non-navigating and shown as the active tab —
-/// there's no separate route to push to that isn't this very screen, so it behaves like the
-/// current tab in any standard bottom-nav bar rather than being a dead tap target.
-class _HomeBottomNav extends StatelessWidget {
-  const _HomeBottomNav({
-    required this.onVoice,
-    required this.onVoiceLongPress,
-    required this.voiceActive,
-    required this.onReports,
-  });
-
-  final VoidCallback onVoice;
-  final VoidCallback onVoiceLongPress;
-  final bool voiceActive;
-  final VoidCallback onReports;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final shell = context.shellColors;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: shell.headerBottom,
-        border: Border(top: BorderSide(color: shell.border)),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: _NavItem(icon: Icons.home_rounded, label: l10n.navHome, active: true, onTap: () {}),
-          ),
-          Expanded(
-            child: _NavItem(
-              icon: Icons.mic_none_rounded,
-              assetIcon: 'assets/icons/voice_mic.png',
-              label: l10n.navVoice,
-              active: voiceActive,
-              onTap: onVoice,
-              onLongPress: onVoiceLongPress,
-            ),
-          ),
-          Expanded(
-            child: _NavItem(icon: Icons.picture_as_pdf_outlined, label: l10n.reportsTitle, active: false, onTap: onReports),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({required this.icon, required this.label, required this.active, required this.onTap, this.onLongPress, this.assetIcon});
-  final IconData icon;
-
-  /// When set, drawn instead of [icon] (which remains the fallback if the file is missing).
-  final String? assetIcon;
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  final VoidCallback? onLongPress;
-
-  @override
-  Widget build(BuildContext context) {
-    final shell = context.shellColors;
-    final color = active ? shell.accent : Colors.white70;
-    return InkWell(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (assetIcon != null)
-              Opacity(
-                opacity: active ? 1 : 0.75,
-                child: Image.asset(
-                  assetIcon!,
-                  height: 24,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Icon(icon, size: 22, color: color),
-                ),
-              )
-            else
-              Icon(icon, size: 22, color: color),
-            const SizedBox(height: 2),
-            Text(label, style: AppTextStyles.bodySecondary(context).copyWith(color: color, fontSize: 11)),
-          ],
-        ),
       ),
     );
   }

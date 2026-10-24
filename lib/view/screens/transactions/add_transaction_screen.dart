@@ -28,6 +28,7 @@ import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/shared/amount_in_words.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/account_ceiling_exceeded_dialog.dart';
 import '../../widgets/shared/direction_choice.dart';
@@ -364,7 +365,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       AppSnackBar.showSuccess(context, l10n.transactionSavedSuccessMessage);
       if (keepAdding) {
         _resetForm();
-      } else {
+      } else if (context.canPop()) {
+        // Guarded: with nothing to go back to, pop() throws and would turn a successful save into
+        // an error message.
         context.pop();
       }
     } catch (_) {
@@ -388,7 +391,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       if (!mounted) return;
       ref.read(selectedCurrencyIdProvider.notifier).state = _currencyCode;
       AppSnackBar.showSuccess(context, l10n.transactionUpdatedSuccessMessage);
-      context.pop();
+      if (context.canPop()) {
+        context.pop();
+      }
     } catch (_) {
       if (!mounted) return;
       AppSnackBar.showError(context, l10n.unexpectedError);
@@ -447,8 +452,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final debitLabel = resolveDebitLabel(l10n, settings);
     final showAmountInWords = settings?.showAmountInWordsWhileTyping ?? true;
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(10),

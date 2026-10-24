@@ -87,6 +87,7 @@ void main() {
 
     await tester.enterText(find.byType(TextFormField).first, '300');
     await tester.tap(find.text(l10n.directionCredit));
+    await tester.ensureVisible(find.text(l10n.saveAndExit));
     await tester.tap(find.text(l10n.saveAndExit));
     await tester.pump();
     await tester.pumpAndSettle();

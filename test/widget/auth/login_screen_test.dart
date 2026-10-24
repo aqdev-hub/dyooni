@@ -3,15 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dyooni/core/l10n/generated/app_localizations.dart';
 import 'package:dyooni/data/repositories/auth/auth_repository.dart';
 import 'package:dyooni/logic/auth/auth_provider.dart';
+import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import 'package:dyooni/view/screens/auth/login_screen.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
-Widget _wrap(MockAuthRepository repository) {
+Widget _wrap(MockAuthRepository repository, SharedPreferences prefs) {
   final router = GoRouter(
     initialLocation: '/login',
     routes: [
@@ -22,7 +24,8 @@ Widget _wrap(MockAuthRepository repository) {
   );
 
   return ProviderScope(
-    overrides: [authRepositoryProvider.overrideWithValue(repository)],
+    // LanguageToggleButton (in the login header) reads the saved locale from SharedPreferences.
+    overrides: [authRepositoryProvider.overrideWithValue(repository), sharedPreferencesProvider.overrideWithValue(prefs)],
     child: MaterialApp.router(
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar'), Locale('en')],
@@ -34,11 +37,16 @@ Widget _wrap(MockAuthRepository repository) {
 
 void main() {
   late MockAuthRepository repository;
+  late SharedPreferences prefs;
 
-  setUp(() => repository = MockAuthRepository());
+  setUp(() async {
+    repository = MockAuthRepository();
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+  });
 
   testWidgets('shows the login form and both social buttons (Google + Facebook)', (tester) async {
-    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpWidget(_wrap(repository, prefs));
     await tester.pumpAndSettle();
 
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
@@ -48,7 +56,7 @@ void main() {
   });
 
   testWidgets('shows validation errors when submitting an empty form', (tester) async {
-    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpWidget(_wrap(repository, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -72,7 +80,7 @@ void main() {
       ),
     ).thenAnswer((_) async {});
 
-    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpWidget(_wrap(repository, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -94,7 +102,7 @@ void main() {
       ),
     ).thenThrow(const _FakeInvalidCredentials());
 
-    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpWidget(_wrap(repository, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
@@ -109,10 +117,11 @@ void main() {
   });
 
   testWidgets('tapping "create account" navigates to signup', (tester) async {
-    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpWidget(_wrap(repository, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
+    await tester.ensureVisible(find.text(l10n.createAccount));
     await tester.tap(find.text(l10n.createAccount));
     await tester.pumpAndSettle();
 
@@ -122,10 +131,11 @@ void main() {
   testWidgets('forgot password sends a reset email and shows a success message', (tester) async {
     when(() => repository.sendPasswordResetEmail(any())).thenAnswer((_) async {});
 
-    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpWidget(_wrap(repository, prefs));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
+    await tester.ensureVisible(find.text(l10n.forgotPassword));
     await tester.tap(find.text(l10n.forgotPassword));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).last, 'user@example.com');

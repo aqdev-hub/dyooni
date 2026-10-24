@@ -20,7 +20,7 @@ class MainBottomNav extends StatelessWidget {
     required this.onVoice,
     required this.onReports,
     this.onVoiceLongPress,
-    this.prominent = false,
+    this.prominent = true,
     super.key,
   });
 
@@ -34,8 +34,8 @@ class MainBottomNav extends StatelessWidget {
   /// directly.
   final VoidCallback? onVoiceLongPress;
 
-  /// Larger variant used by the voice screen (reference design): bigger icons/labels, an
-  /// underline under the active tab and the reference navy background. Home keeps the compact bar.
+  /// The voice screen's bar (bigger icons/labels, navy background) — now the one bar every main
+  /// screen shows. `false` keeps the old compact variant.
   final bool prominent;
 
   @override
@@ -93,7 +93,7 @@ class _NavItem extends StatelessWidget {
     required this.active,
     required this.onTap,
     this.onLongPress,
-    this.prominent = false,
+    this.prominent = true,
     this.assetIcon,
   });
   final bool prominent;

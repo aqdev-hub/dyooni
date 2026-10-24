@@ -49,7 +49,9 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
-    await tester.tap(find.text(l10n.drawerContactUs));
+    // The button is below the 800x600 test viewport: scroll it into view before tapping.
+    await tester.ensureVisible(find.text(l10n.drawerSupport));
+    await tester.tap(find.text(l10n.drawerSupport));
     await tester.pumpAndSettle();
 
     expect(find.text('contact-us'), findsOneWidget);

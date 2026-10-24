@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../logic/settings/drive_backup_controller.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
 class DriveBackupScreen extends ConsumerStatefulWidget {
@@ -78,38 +79,11 @@ class _DriveBackupScreenState extends ConsumerState<DriveBackupScreen> {
     final shell = context.shellColors;
     final stateAsync = ref.watch(driveBackupControllerProvider);
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [shell.headerTop, shell.headerBottom],
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
-                    onPressed: () => context.pop(),
-                  ),
-                  Expanded(
-                    child: Text(
-                      l10n.driveBackupScreenTitle,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.title(context).copyWith(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
-              ),
-            ),
+            AppHeaderBar(title: l10n.driveBackupScreenTitle),
             Expanded(
               child: stateAsync.when(
                 data: (state) => SingleChildScrollView(

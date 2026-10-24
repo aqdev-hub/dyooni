@@ -13,6 +13,7 @@ import '../../../logic/categories/categories_provider.dart';
 import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
 /// شاشة "الإعدادات العامة" — مطابقة لهوية ديوني البصرية (نفس AppShellColors المستخدمة في كل
@@ -185,30 +186,11 @@ class _GeneralSettingsScreenState extends ConsumerState<GeneralSettingsScreen> {
     final settingsAsync = ref.watch(generalSettingsProvider);
     final googleEmail = ref.read(googleSignInProvider).currentUser?.email;
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [shell.headerTop, shell.headerBottom]),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-              child: Row(
-                children: [
-                  IconButton(icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18), onPressed: () => context.pop()),
-                  Expanded(
-                    child: Text(
-                      l10n.generalSettingsScreenTitle,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.title(context).copyWith(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
-              ),
-            ),
+            AppHeaderBar(title: l10n.generalSettingsScreenTitle),
             Expanded(
               child: settingsAsync.when(
                 data: (settings) => _Body(settings: settings, googleEmail: googleEmail, screenState: this),

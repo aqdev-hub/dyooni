@@ -12,6 +12,7 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/voice_palette.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/personal_data.dart';
 import '../../../data/models/report_options.dart';
@@ -25,6 +26,7 @@ import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/home/summary_card.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/reports/report_options_sheet.dart';
 import '../../widgets/shared/app_snackbar.dart';
@@ -234,8 +236,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         ? accounts
         : accounts.where((a) => a.category == _categoryFilter).toList();
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       drawer: const AppDrawer(),
       body: SafeArea(
         child: Column(
@@ -253,7 +254,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 children: [
                   Builder(
                     builder: (context) => IconButton(
-                      icon: Icon(Icons.menu_rounded, color: shell.accent, size: 21),
+                      icon: Icon(Icons.menu_rounded, color: context.voicePalette.headerGold, size: 30),
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
                   ),
@@ -261,7 +262,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     child: Text(
                       l10n.reportsTitle,
                       textAlign: TextAlign.center,
-                      style: AppTextStyles.title(context).copyWith(color: shell.accent, fontSize: 17),
+                      style: AppTextStyles.headline(context).copyWith(color: context.voicePalette.headerGold, fontSize: 21, height: 1.3),
                     ),
                   ),
                   const SizedBox(width: 48),
@@ -331,8 +332,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             MainBottomNav(
               activeTab: MainNavTab.reports,
               onHome: () => context.go('/home'),
-              onVoice: () => context.push('/voice'),
-              onVoiceLongPress: () => context.push('/voice', extra: true),
+              // Tab-like: replace this screen (back from voice then returns to Home, not Reports).
+              onVoice: () => context.pushReplacement('/voice'),
+              onVoiceLongPress: () => context.pushReplacement('/voice', extra: true),
               onReports: () {},
             ),
           ],

@@ -26,7 +26,7 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
-    expect(find.text(l10n.contactUsScreenTitle), findsOneWidget);
+    expect(find.text(l10n.drawerSupport), findsOneWidget);
     expect(find.text(l10n.contactUsManagementName), findsOneWidget);
     expect(find.text(l10n.contactUsManagementRole), findsOneWidget);
     expect(find.text(l10n.contactUsDevelopmentName), findsOneWidget);

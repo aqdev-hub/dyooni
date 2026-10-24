@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
@@ -8,6 +7,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/category_type.dart';
 import '../../../logic/categories/categories_provider.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
 /// "إدارة التصنيفات" — opened from the drawer's التصنيفات. The person's own list of account
@@ -41,37 +41,11 @@ class CategoriesScreen extends ConsumerWidget {
     final categories = ref.watch(categoryTypesProvider);
     final usage = ref.watch(categoryUsageProvider);
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [shell.headerTop, shell.headerBottom],
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
-                    onPressed: () => context.pop(),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      l10n.categoriesScreenTitle,
-                      style: AppTextStyles.title(context).copyWith(color: Colors.white),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            AppHeaderBar(title: l10n.categoriesScreenTitle),
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 96),

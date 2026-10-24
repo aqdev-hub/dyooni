@@ -57,6 +57,7 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
     await tester.enterText(find.byType(TextFormField).first, 'اسم جديد');
+    await tester.ensureVisible(find.text(l10n.saveButton));
     await tester.tap(find.text(l10n.saveButton));
     await tester.pump();
     await tester.pumpAndSettle();

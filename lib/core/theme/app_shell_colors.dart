@@ -32,16 +32,18 @@ class AppShellColors extends ThemeExtension<AppShellColors> {
   final Color border;
   final Color badge;
 
+  // Light/dark values follow the voice screen's palette (VoicePalette): the same navy text, the
+  // same soft blue surfaces and borders. Header/nav navy matches the voice screen's bars.
   static const light = AppShellColors(
-    background: Color(0xFFF7F8F8),
+    background: Color(0xFFEEF5FC),
     surface: Color(0xFFFFFFFF),
-    headerTop: Color(0xFF021534),
-    headerBottom: Color(0xFF011433),
-    accent: Color(0xFFCA8906),
-    textPrimary: Color(0xFF06142D),
-    textSecondary: Color(0xFF657083),
-    border: Color(0xFFD8C99F),
-    badge: Color(0xFFCA8906),
+    headerTop: Color(0xFF022345),
+    headerBottom: Color(0xFF021B3A),
+    accent: Color(0xFFC48A12),
+    textPrimary: Color(0xFF0A2247),
+    textSecondary: Color(0xFF4A6285),
+    border: Color(0xFFCFE3F5),
+    badge: Color(0xFFC48A12),
   );
 
   static const dark = AppShellColors(
@@ -52,7 +54,7 @@ class AppShellColors extends ThemeExtension<AppShellColors> {
     accent: Color(0xFFFDC02D),
     textPrimary: Color(0xFFF3F5F8),
     textSecondary: Color(0xFFB5BECD),
-    border: Color(0xFF344359),
+    border: Color(0xFF28415F),
     badge: Color(0xFFFDC02D),
   );
 

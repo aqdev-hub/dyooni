@@ -10,6 +10,7 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
 /// Hand-drawn signature pad. Matches the reference's structure (prompt label → white signing
@@ -77,38 +78,11 @@ class _SignatureCaptureScreenState extends State<SignatureCaptureScreen> {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [shell.headerTop, shell.headerBottom],
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
-                    onPressed: () => context.pop(),
-                  ),
-                  Expanded(
-                    child: Text(
-                      l10n.signatureScreenTitle,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.title(context).copyWith(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
-              ),
-            ),
+            AppHeaderBar(title: l10n.signatureScreenTitle),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16),

@@ -226,7 +226,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.picture_as_pdf_outlined));
+    await tester.tap(find.byIcon(Icons.description_outlined));
     await tester.pumpAndSettle();
 
     expect(find.text('reports'), findsOneWidget);

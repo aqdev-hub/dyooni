@@ -132,10 +132,9 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
-    // The button itself, then the sheet's own copy of the same title once opened.
-    expect(find.text(l10n.reportsSheetTitle), findsOneWidget);
-
-    await tester.tap(find.text(l10n.reportsSheetTitle));
+    // "التقارير" is also the header title and the bottom-nav label, so the button is found by its
+    // icon instead of by text.
+    await tester.tap(find.byIcon(Icons.description_outlined));
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.reportsSheetTitle), findsWidgets);

@@ -30,6 +30,7 @@ import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/shared/amount_in_words.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/account_ceiling_exceeded_dialog.dart';
 import '../../widgets/shared/currency_picker_sheet.dart';
@@ -483,8 +484,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     final showAmountInWords = settings?.showAmountInWordsWhileTyping ?? true;
     final showCeilingField = (settings?.showAccountCeilingOnAdd ?? false) || widget.isEditing;
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(10),

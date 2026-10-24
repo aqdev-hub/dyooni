@@ -6,6 +6,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/app_version.dart';
 import '../../widgets/shared/app_logo.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 
 /// "حول التطبيق" — a static feature/credits page reached from the drawer. Feature copy here is
 /// kept in sync with what is ACTUALLY implemented (see دليل_المشروع_الشامل.md's feature list) —
@@ -29,38 +30,11 @@ class AboutScreen extends StatelessWidget {
       (Icons.language_rounded, l10n.aboutFeatureBilingualTitle, l10n.aboutFeatureBilingualDesc),
     ];
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [shell.headerTop, shell.headerBottom],
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
-                    onPressed: () => context.pop(),
-                  ),
-                  Expanded(
-                    child: Text(
-                      l10n.aboutScreenTitle,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.title(context).copyWith(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
-              ),
-            ),
+            AppHeaderBar(title: l10n.aboutScreenTitle),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -135,7 +109,7 @@ class AboutScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       icon: const Icon(Icons.chat_outlined),
-                      label: Text(l10n.drawerContactUs, style: AppTextStyles.button(context).copyWith(color: shell.accent)),
+                      label: Text(l10n.drawerSupport, style: AppTextStyles.button(context).copyWith(color: shell.accent)),
                     ),
                   ],
                 ),

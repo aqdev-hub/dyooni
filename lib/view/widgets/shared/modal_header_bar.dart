@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/voice_palette.dart';
 
 class ModalHeaderBar extends StatelessWidget {
   const ModalHeaderBar({required this.title, required this.onClose, super.key});
@@ -22,7 +23,7 @@ class ModalHeaderBar extends StatelessWidget {
             child: Text(
               title,
               textAlign: TextAlign.center,
-              style: AppTextStyles.button(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+              style: AppTextStyles.button(context).copyWith(color: context.voicePalette.headerGold, fontWeight: FontWeight.w800),
             ),
           ),
           Container(

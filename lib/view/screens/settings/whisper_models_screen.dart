@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/voice/whisper_model_provider.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 
 /// "نماذج التعرف المحلي" — opened from الإعدادات. At any time the person can download either
 /// Whisper model, switch the one in use, or delete a model to free space. The model in use keeps
@@ -34,37 +34,11 @@ class WhisperModelsScreen extends ConsumerWidget {
     final downloading = state is WhisperModelDownloading ? state : background;
     final failedMessage = state is WhisperModelFailed ? state.message : backgroundError;
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [shell.headerTop, shell.headerBottom],
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
-                    onPressed: () => context.pop(),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      l10n.whisperModelsTitle,
-                      style: AppTextStyles.title(context).copyWith(color: Colors.white),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            AppHeaderBar(title: l10n.whisperModelsTitle),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(16),

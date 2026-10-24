@@ -12,6 +12,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/personal_data.dart';
 import '../../../logic/settings/personal_data_provider.dart';
 import '../../widgets/shared/app_logo.dart';
+import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
 class PersonalDataScreen extends ConsumerStatefulWidget {
@@ -154,37 +155,11 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
     final shell = context.shellColors;
     final dataAsync = ref.watch(personalDataProvider);
 
-    return Scaffold(
-      backgroundColor: shell.background,
+    return AppScaffold(
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [shell.headerTop, shell.headerBottom],
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
-                    onPressed: () => context.pop(),
-                  ),
-                  Expanded(
-                    child: Text(
-                      l10n.drawerPersonalData,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.title(context).copyWith(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
-              ),
-            ),
+            AppHeaderBar(title: l10n.drawerPersonalData),
             Expanded(
               child: dataAsync.when(
                 data: (data) {
