@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/constants/currencies.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
@@ -17,11 +16,14 @@ import '../../../core/utils/attachment_storage.dart';
 import '../../../core/utils/form_draft_storage.dart';
 import '../../../core/utils/image_rotate.dart';
 import '../../../data/models/account.dart';
+import '../../../data/models/currency_type.dart';
 import '../../../data/models/general_settings.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/accounts/ceiling_check.dart';
+import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
+import '../../../logic/settings/default_choices_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
@@ -59,7 +61,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   final _amountController = TextEditingController();
   final _detailsController = TextEditingController();
 
-  String _currencyCode = currencies.first.code;
+  String _currencyCode = defaultCurrencyId; // set from the selected currency page in initState
   DateTime _date = DateTime.now();
   AccountDirection _direction = AccountDirection.debit; // may be overridden by general settings, see initState
   bool _isSaving = false;
@@ -95,6 +97,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       // logic/settings/general_settings_provider.dart.
       final settings = ref.read(generalSettingsProvider).value;
       if (settings != null) _direction = _resolveDefaultDirection(settings);
+      // A new entry starts in the currency page the person is looking at (Home / Account
+      // Details), so adding from the "أجنبي" page does not silently create a "محلي" entry.
+      _currencyCode = ref.read(newEntryCurrencyIdProvider);
       // ثم نعيد أي مسودة محفوظة (قد تُجاوز الاتجاه الافتراضي أعلاه) — انظر FormDraftStorage.
       _restoreDraftIfAny();
       // Recovers a photo the camera genuinely finished capturing right before Android killed
@@ -109,7 +114,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (saved == null) return;
     _amountController.text = saved['amount'] as String? ?? '';
     _detailsController.text = saved['details'] as String? ?? '';
-    _currencyCode = saved['currencyCode'] as String? ?? currencies.first.code;
+    _currencyCode = saved['currencyCode'] as String? ?? _currencyCode;
     final savedDate = DateTime.tryParse(saved['date'] as String? ?? '');
     if (savedDate != null) _date = savedDate;
     final savedDirection = saved['direction'] as String?;
@@ -195,7 +200,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   /// Reached identically from the currency field itself and from its pencil icon — see
   /// currency_picker_sheet.dart's doc comment for why these used to be two different pickers.
   Future<void> _chooseCurrency() async {
-    final selected = await showCurrencyPickerSheet(context, selectedCode: _currencyCode);
+    final selected = await showCurrencyPickerSheet(
+      context,
+      selectedCode: _currencyCode,
+      options: ref.read(currencyTypesProvider),
+    );
     if (selected != null && mounted) setState(() => _currencyCode = selected);
   }
 
@@ -322,7 +331,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     final account = _findAccount();
     final ceilingCheck = checkAccountCeiling(
-      currentBalance: ref.read(accountBalanceProvider(widget.accountId)),
+      // Balance in THIS entry's currency only — 500 USD owed does not count against a YER ceiling.
+      currentBalance: ref.read(accountCurrencyBalanceProvider((accountId: widget.accountId, currency: _currencyCode))),
       direction: _direction,
       amount: double.parse(_amountController.text.trim()),
       ceiling: account?.ceiling,
@@ -348,6 +358,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         ref.read(generalSettingsProvider.notifier).recordLastUsedDirection(isCredit: _direction == AccountDirection.credit),
       );
       if (!mounted) return;
+      // Follow the entry: show the currency page it was saved in, otherwise it would seem to
+      // have vanished when it differs from the page that was open.
+      ref.read(selectedCurrencyIdProvider.notifier).state = _currencyCode;
       AppSnackBar.showSuccess(context, l10n.transactionSavedSuccessMessage);
       if (keepAdding) {
         _resetForm();
@@ -373,6 +386,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     try {
       await ref.read(transactionsProvider.notifier).updateTransaction(_buildTransaction());
       if (!mounted) return;
+      ref.read(selectedCurrencyIdProvider.notifier).state = _currencyCode;
       AppSnackBar.showSuccess(context, l10n.transactionUpdatedSuccessMessage);
       context.pop();
     } catch (_) {
@@ -497,7 +511,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 child: Align(
                                   alignment: Alignment.center,
                                   child: Text(
-                                    currencies.firstWhere((c) => c.code == _currencyCode).label(l10n),
+                                    currencyNameOf(ref.watch(currencyTypesProvider), _currencyCode),
                                     textAlign: TextAlign.center,
                                     style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
                                   ),

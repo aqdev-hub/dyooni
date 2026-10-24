@@ -536,11 +536,149 @@ abstract class AppLocalizations {
   /// **'التصنيفات'**
   String get drawerCategories;
 
+  /// No description provided for @categoriesScreenTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدارة التصنيفات'**
+  String get categoriesScreenTitle;
+
+  /// No description provided for @categoryAddTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة تصنيف'**
+  String get categoryAddTitle;
+
+  /// No description provided for @categoryEditTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل التصنيف'**
+  String get categoryEditTitle;
+
+  /// No description provided for @categoryNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم التصنيف'**
+  String get categoryNameLabel;
+
+  /// No description provided for @categoryNameRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب اسم التصنيف'**
+  String get categoryNameRequired;
+
+  /// No description provided for @categoryNameDuplicate.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا التصنيف موجود مسبقًا'**
+  String get categoryNameDuplicate;
+
+  /// No description provided for @categoryDeleteInUse.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يمكن حذف تصنيف يحتوي على حسابات'**
+  String get categoryDeleteInUse;
+
+  /// No description provided for @categoryDeleteProtected.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا التصنيف أساسي ولا يمكن حذفه'**
+  String get categoryDeleteProtected;
+
+  /// No description provided for @categoryDeleteLastOne.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجب أن يبقى تصنيف واحد على الأقل للحسابات'**
+  String get categoryDeleteLastOne;
+
+  /// No description provided for @categoryDeleteConfirmBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل تريد حذف هذا التصنيف؟'**
+  String get categoryDeleteConfirmBody;
+
+  /// No description provided for @categoryKeepOneVisible.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجب إبقاء تبويب واحد ظاهرًا على الأقل'**
+  String get categoryKeepOneVisible;
+
   /// No description provided for @drawerCurrencies.
   ///
   /// In ar, this message translates to:
   /// **'العملات'**
   String get drawerCurrencies;
+
+  /// No description provided for @currenciesScreenTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدارة العملات'**
+  String get currenciesScreenTitle;
+
+  /// No description provided for @currencyAddTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة عملة'**
+  String get currencyAddTitle;
+
+  /// No description provided for @currencyEditTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل العملة'**
+  String get currencyEditTitle;
+
+  /// No description provided for @currencyNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم العملة'**
+  String get currencyNameLabel;
+
+  /// No description provided for @currencyNameRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب اسم العملة'**
+  String get currencyNameRequired;
+
+  /// No description provided for @currencyNameDuplicate.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه العملة موجودة مسبقًا'**
+  String get currencyNameDuplicate;
+
+  /// No description provided for @currencyDeleteInUse.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يمكن حذف عملة لها عمليات مسجّلة'**
+  String get currencyDeleteInUse;
+
+  /// No description provided for @currencyDeleteProtected.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه هي العملة الأساسية ولا يمكن حذفها'**
+  String get currencyDeleteProtected;
+
+  /// No description provided for @currencyDeleteConfirmBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل تريد حذف هذه العملة؟'**
+  String get currencyDeleteConfirmBody;
+
+  /// No description provided for @currencySwitchTooltip.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير العملة'**
+  String get currencySwitchTooltip;
+
+  /// No description provided for @currencyNoTransactionsHere.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد عمليات بهذه العملة'**
+  String get currencyNoTransactionsHere;
+
+  /// No description provided for @homeEmptyAccountsInCurrency.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد حسابات بهذه العملة'**
+  String get homeEmptyAccountsInCurrency;
 
   /// No description provided for @drawerLocalBackup.
   ///
@@ -1862,6 +2000,48 @@ abstract class AppLocalizations {
   /// **'تعذّر تجهيز نموذج التعرف الصوتي. التفاصيل أدناه — أعد المحاولة (سيُكمل تلقائيًا من حيث توقف، ولن يعيد التنزيل من الصفر)'**
   String get voiceModelDownloadFailedMessage;
 
+  /// No description provided for @whisperPickTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر دقة التعرف الصوتي'**
+  String get whisperPickTitle;
+
+  /// No description provided for @whisperPickBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'يُحمَّل النموذج مرة واحدة فقط، ثم يعمل الأمر الصوتي بلا إنترنت.'**
+  String get whisperPickBody;
+
+  /// No description provided for @whisperOptionBalancedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'متوازن (موصى به)'**
+  String get whisperOptionBalancedTitle;
+
+  /// No description provided for @whisperOptionBalancedSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حجمه نحو 190 ميجابايت — أسرع في الفهم'**
+  String get whisperOptionBalancedSubtitle;
+
+  /// No description provided for @whisperOptionAccurateTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'دقيق'**
+  String get whisperOptionAccurateTitle;
+
+  /// No description provided for @whisperOptionAccurateSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حجمه نحو 540 ميجابايت — أدق لكنه أبطأ، ويناسب الهاتف القوي'**
+  String get whisperOptionAccurateSubtitle;
+
+  /// No description provided for @whisperDownloadingHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ تحميل نموذج التعرف الصوتي (مرة واحدة فقط) — بعدها يعمل الأمر الصوتي بلا إنترنت'**
+  String get whisperDownloadingHint;
+
   /// No description provided for @voiceRecognitionModeTitle.
   ///
   /// In ar, this message translates to:
@@ -1879,6 +2059,108 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'سحابي'**
   String get voiceRecognitionModeCloud;
+
+  /// No description provided for @generalSettingsDefaultCategoryTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديد التصنيف الافتراضي عند إضافة حساب جديد'**
+  String get generalSettingsDefaultCategoryTitle;
+
+  /// No description provided for @generalSettingsKeepLastCategory.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاحتفاظ بآخر تصنيف'**
+  String get generalSettingsKeepLastCategory;
+
+  /// No description provided for @generalSettingsDefaultCurrencyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديد العملة الافتراضية عند إضافة حساب أو عملية جديدة'**
+  String get generalSettingsDefaultCurrencyTitle;
+
+  /// No description provided for @generalSettingsKeepLastCurrency.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاحتفاظ بآخر عملة'**
+  String get generalSettingsKeepLastCurrency;
+
+  /// No description provided for @whisperModelsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'نماذج التعرف المحلي'**
+  String get whisperModelsTitle;
+
+  /// No description provided for @whisperModelsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك تنزيل أي نموذج في أي وقت، والتبديل بينها، وحذف ما لا تحتاجه لتوفير المساحة.'**
+  String get whisperModelsHint;
+
+  /// No description provided for @whisperModelActive.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد الاستخدام'**
+  String get whisperModelActive;
+
+  /// No description provided for @whisperModelInstalled.
+  ///
+  /// In ar, this message translates to:
+  /// **'محمَّل على الجهاز'**
+  String get whisperModelInstalled;
+
+  /// No description provided for @whisperModelNotInstalled.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير محمَّل'**
+  String get whisperModelNotInstalled;
+
+  /// No description provided for @whisperModelDownload.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنزيل'**
+  String get whisperModelDownload;
+
+  /// No description provided for @whisperModelUse.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدام'**
+  String get whisperModelUse;
+
+  /// No description provided for @whisperModelDelete.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف'**
+  String get whisperModelDelete;
+
+  /// No description provided for @whisperModelCancelDownload.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف التنزيل'**
+  String get whisperModelCancelDownload;
+
+  /// No description provided for @whisperModelDeleteTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف النموذج'**
+  String get whisperModelDeleteTitle;
+
+  /// No description provided for @whisperModelDeleteBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيُحذف ملف النموذج من الجهاز، ويمكنك تنزيله مرة أخرى لاحقًا.'**
+  String get whisperModelDeleteBody;
+
+  /// No description provided for @whisperModelDeleteLastNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا آخر نموذج محمَّل، فسيُطلب منك اختيار نموذج جديد عند استخدام التعرف المحلي.'**
+  String get whisperModelDeleteLastNote;
+
+  /// No description provided for @whisperModelsManageRow.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدارة نماذج التعرف المحلي (تنزيل / تبديل / حذف)'**
+  String get whisperModelsManageRow;
 
   /// No description provided for @openLinkFailedMessage.
   ///
@@ -2432,6 +2714,204 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الختم'**
   String get reportStampLabel;
+
+  /// No description provided for @voiceListeningSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحدث الآن بوضوح وبهدوء\nوستقوم بتسجيل كلامك بدقة'**
+  String get voiceListeningSubtitle;
+
+  /// No description provided for @voiceStopLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف'**
+  String get voiceStopLabel;
+
+  /// No description provided for @voiceTipText.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكد من التحدث بوضوح وتأنٍّ\nللحصول على أفضل نتيجة للتسجيل'**
+  String get voiceTipText;
+
+  /// No description provided for @voiceProcessingSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري استخراج بيانات الدين'**
+  String get voiceProcessingSubtitle;
+
+  /// No description provided for @voiceStepAnalyze.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحليل النص'**
+  String get voiceStepAnalyze;
+
+  /// No description provided for @voiceStepExtract.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخراج المعلومات'**
+  String get voiceStepExtract;
+
+  /// No description provided for @voiceStepValidate.
+  ///
+  /// In ar, this message translates to:
+  /// **'التحقق من البيانات'**
+  String get voiceStepValidate;
+
+  /// No description provided for @voiceClarifyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أحتاج إلى توضيح'**
+  String get voiceClarifyTitle;
+
+  /// No description provided for @voiceClarifySubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'من فضلك أكمل المعلومة'**
+  String get voiceClarifySubtitle;
+
+  /// No description provided for @voiceQuestionDirection.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما هو النوع؟'**
+  String get voiceQuestionDirection;
+
+  /// No description provided for @voiceQuestionDirectionHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(هل الدين له أم عليه؟)'**
+  String get voiceQuestionDirectionHint;
+
+  /// No description provided for @voiceQuestionAmount.
+  ///
+  /// In ar, this message translates to:
+  /// **'كم المبلغ؟'**
+  String get voiceQuestionAmount;
+
+  /// No description provided for @voiceQuestionAmountHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(قل المبلغ فقط، مثل: خمسة آلاف ومئتين)'**
+  String get voiceQuestionAmountHint;
+
+  /// No description provided for @voiceQuestionAmountUncertain.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم أتأكد من المبلغ'**
+  String get voiceQuestionAmountUncertain;
+
+  /// No description provided for @voiceQuestionAmountUncertainHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(قل المبلغ فقط مرة أخرى)'**
+  String get voiceQuestionAmountUncertainHint;
+
+  /// No description provided for @voiceQuestionAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'من هو صاحب الحساب؟'**
+  String get voiceQuestionAccount;
+
+  /// No description provided for @voiceQuestionAccountHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(قل الاسم الأول والأخير)'**
+  String get voiceQuestionAccountHint;
+
+  /// No description provided for @voiceQuestionAccountName.
+  ///
+  /// In ar, this message translates to:
+  /// **'أكمل اسم الحساب'**
+  String get voiceQuestionAccountName;
+
+  /// No description provided for @voiceQuestionAccountNameHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(الاسم يتكون من اسمين على الأقل)'**
+  String get voiceQuestionAccountNameHint;
+
+  /// No description provided for @voiceQuestionSameAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل تقصد هذا الحساب؟'**
+  String get voiceQuestionSameAccount;
+
+  /// No description provided for @voiceQuestionSameAccountHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(الحساب الموجود: {name})'**
+  String voiceQuestionSameAccountHint(String name);
+
+  /// No description provided for @voiceQuestionCurrency.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما هي العملة؟'**
+  String get voiceQuestionCurrency;
+
+  /// No description provided for @voiceQuestionCurrencyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(ريال يمني، سعودي، دولار، درهم…)'**
+  String get voiceQuestionCurrencyHint;
+
+  /// No description provided for @voiceQuestionNoSpeech.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم ألتقط أي صوت'**
+  String get voiceQuestionNoSpeech;
+
+  /// No description provided for @voiceQuestionNoSpeechHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'(حاول التحدث بوضوح)'**
+  String get voiceQuestionNoSpeechHint;
+
+  /// No description provided for @voiceYes.
+  ///
+  /// In ar, this message translates to:
+  /// **'نعم'**
+  String get voiceYes;
+
+  /// No description provided for @voiceNo.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا'**
+  String get voiceNo;
+
+  /// No description provided for @voiceConfirmYes.
+  ///
+  /// In ar, this message translates to:
+  /// **'نعم'**
+  String get voiceConfirmYes;
+
+  /// No description provided for @voiceConfirmSave.
+  ///
+  /// In ar, this message translates to:
+  /// **'(إحفظ)'**
+  String get voiceConfirmSave;
+
+  /// No description provided for @voiceSummaryTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تلخيص العملية:'**
+  String get voiceSummaryTitle;
+
+  /// No description provided for @voiceNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم'**
+  String get voiceNameLabel;
+
+  /// No description provided for @voiceYouCanSay.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك قول:'**
+  String get voiceYouCanSay;
+
+  /// No description provided for @voiceYouCanSayExamples.
+  ///
+  /// In ar, this message translates to:
+  /// **'"نعم" أو "احفظ" أو "عدل المبلغ إلى 3500"'**
+  String get voiceYouCanSayExamples;
 }
 
 class _AppLocalizationsDelegate

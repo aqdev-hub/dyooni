@@ -7,7 +7,12 @@ import 'package:dyooni/data/models/transaction.dart';
 import 'package:dyooni/data/repositories/transactions/transactions_repository.dart';
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 
-class MockTransactionsRepository extends Mock implements TransactionsRepository {}
+class MockTransactionsRepository extends Mock implements TransactionsRepository {
+  @override
+  Stream<List<Transaction>> watchTransactions() => const Stream.empty();
+}
+
+class _FakeTransaction extends Fake implements Transaction {}
 
 void main() {
   late MockTransactionsRepository repository;
@@ -37,6 +42,10 @@ void main() {
     direction: AccountDirection.credit,
     date: DateTime(2026, 1, 3),
   );
+
+  setUpAll(() {
+    registerFallbackValue(_FakeTransaction());
+  });
 
   setUp(() {
     repository = MockTransactionsRepository();

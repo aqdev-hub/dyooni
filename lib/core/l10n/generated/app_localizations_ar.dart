@@ -237,7 +237,76 @@ class AppLocalizationsAr extends AppLocalizations {
   String get drawerCategories => 'التصنيفات';
 
   @override
+  String get categoriesScreenTitle => 'إدارة التصنيفات';
+
+  @override
+  String get categoryAddTitle => 'إضافة تصنيف';
+
+  @override
+  String get categoryEditTitle => 'تعديل التصنيف';
+
+  @override
+  String get categoryNameLabel => 'اسم التصنيف';
+
+  @override
+  String get categoryNameRequired => 'اكتب اسم التصنيف';
+
+  @override
+  String get categoryNameDuplicate => 'هذا التصنيف موجود مسبقًا';
+
+  @override
+  String get categoryDeleteInUse => 'لا يمكن حذف تصنيف يحتوي على حسابات';
+
+  @override
+  String get categoryDeleteProtected => 'هذا التصنيف أساسي ولا يمكن حذفه';
+
+  @override
+  String get categoryDeleteLastOne => 'يجب أن يبقى تصنيف واحد على الأقل للحسابات';
+
+  @override
+  String get categoryDeleteConfirmBody => 'هل تريد حذف هذا التصنيف؟';
+
+  @override
+  String get categoryKeepOneVisible => 'يجب إبقاء تبويب واحد ظاهرًا على الأقل';
+
+  @override
   String get drawerCurrencies => 'العملات';
+
+  @override
+  String get currenciesScreenTitle => 'إدارة العملات';
+
+  @override
+  String get currencyAddTitle => 'إضافة عملة';
+
+  @override
+  String get currencyEditTitle => 'تعديل العملة';
+
+  @override
+  String get currencyNameLabel => 'اسم العملة';
+
+  @override
+  String get currencyNameRequired => 'اكتب اسم العملة';
+
+  @override
+  String get currencyNameDuplicate => 'هذه العملة موجودة مسبقًا';
+
+  @override
+  String get currencyDeleteInUse => 'لا يمكن حذف عملة لها عمليات مسجّلة';
+
+  @override
+  String get currencyDeleteProtected => 'هذه هي العملة الأساسية ولا يمكن حذفها';
+
+  @override
+  String get currencyDeleteConfirmBody => 'هل تريد حذف هذه العملة؟';
+
+  @override
+  String get currencySwitchTooltip => 'تغيير العملة';
+
+  @override
+  String get currencyNoTransactionsHere => 'لا توجد عمليات بهذه العملة';
+
+  @override
+  String get homeEmptyAccountsInCurrency => 'لا توجد حسابات بهذه العملة';
 
   @override
   String get drawerLocalBackup => 'حفظ واسترجاع البيانات من الجهاز';
@@ -938,6 +1007,34 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر تجهيز نموذج التعرف الصوتي. التفاصيل أدناه — أعد المحاولة (سيُكمل تلقائيًا من حيث توقف، ولن يعيد التنزيل من الصفر)';
 
   @override
+  String get whisperPickTitle =>
+      'اختر دقة التعرف الصوتي';
+
+  @override
+  String get whisperPickBody =>
+      'يُحمَّل النموذج مرة واحدة فقط، ثم يعمل الأمر الصوتي بلا إنترنت.';
+
+  @override
+  String get whisperOptionBalancedTitle =>
+      'متوازن (موصى به)';
+
+  @override
+  String get whisperOptionBalancedSubtitle =>
+      'حجمه نحو 190 ميجابايت — أسرع في الفهم';
+
+  @override
+  String get whisperOptionAccurateTitle =>
+      'دقيق';
+
+  @override
+  String get whisperOptionAccurateSubtitle =>
+      'حجمه نحو 540 ميجابايت — أدق لكنه أبطأ، ويناسب الهاتف القوي';
+
+  @override
+  String get whisperDownloadingHint =>
+      'جارٍ تحميل نموذج التعرف الصوتي (مرة واحدة فقط) — بعدها يعمل الأمر الصوتي بلا إنترنت';
+
+  @override
   String get voiceRecognitionModeTitle => 'طريقة التعرف الصوتي';
 
   @override
@@ -945,6 +1042,57 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get voiceRecognitionModeCloud => 'سحابي';
+
+  @override
+  String get generalSettingsDefaultCategoryTitle => 'تحديد التصنيف الافتراضي عند إضافة حساب جديد';
+
+  @override
+  String get generalSettingsKeepLastCategory => 'الاحتفاظ بآخر تصنيف';
+
+  @override
+  String get generalSettingsDefaultCurrencyTitle => 'تحديد العملة الافتراضية عند إضافة حساب أو عملية جديدة';
+
+  @override
+  String get generalSettingsKeepLastCurrency => 'الاحتفاظ بآخر عملة';
+
+  @override
+  String get whisperModelsTitle => 'نماذج التعرف المحلي';
+
+  @override
+  String get whisperModelsHint => 'يمكنك تنزيل أي نموذج في أي وقت، والتبديل بينها، وحذف ما لا تحتاجه لتوفير المساحة.';
+
+  @override
+  String get whisperModelActive => 'قيد الاستخدام';
+
+  @override
+  String get whisperModelInstalled => 'محمَّل على الجهاز';
+
+  @override
+  String get whisperModelNotInstalled => 'غير محمَّل';
+
+  @override
+  String get whisperModelDownload => 'تنزيل';
+
+  @override
+  String get whisperModelUse => 'استخدام';
+
+  @override
+  String get whisperModelDelete => 'حذف';
+
+  @override
+  String get whisperModelCancelDownload => 'إيقاف التنزيل';
+
+  @override
+  String get whisperModelDeleteTitle => 'حذف النموذج';
+
+  @override
+  String get whisperModelDeleteBody => 'سيُحذف ملف النموذج من الجهاز، ويمكنك تنزيله مرة أخرى لاحقًا.';
+
+  @override
+  String get whisperModelDeleteLastNote => 'هذا آخر نموذج محمَّل، فسيُطلب منك اختيار نموذج جديد عند استخدام التعرف المحلي.';
+
+  @override
+  String get whisperModelsManageRow => 'إدارة نماذج التعرف المحلي (تنزيل / تبديل / حذف)';
 
   @override
   String get openLinkFailedMessage =>
@@ -1258,4 +1406,105 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reportStampLabel => 'الختم';
+
+  @override
+  String get voiceListeningSubtitle => 'تحدث الآن بوضوح وبهدوء\nوستقوم بتسجيل كلامك بدقة';
+
+  @override
+  String get voiceStopLabel => 'إيقاف';
+
+  @override
+  String get voiceTipText => 'تأكد من التحدث بوضوح وتأنٍّ\nللحصول على أفضل نتيجة للتسجيل';
+
+  @override
+  String get voiceProcessingSubtitle => 'جاري استخراج بيانات الدين';
+
+  @override
+  String get voiceStepAnalyze => 'تحليل النص';
+
+  @override
+  String get voiceStepExtract => 'استخراج المعلومات';
+
+  @override
+  String get voiceStepValidate => 'التحقق من البيانات';
+
+  @override
+  String get voiceClarifyTitle => 'أحتاج إلى توضيح';
+
+  @override
+  String get voiceClarifySubtitle => 'من فضلك أكمل المعلومة';
+
+  @override
+  String get voiceQuestionDirection => 'ما هو النوع؟';
+
+  @override
+  String get voiceQuestionDirectionHint => '(هل الدين له أم عليه؟)';
+
+  @override
+  String get voiceQuestionAmount => 'كم المبلغ؟';
+
+  @override
+  String get voiceQuestionAmountHint => '(قل المبلغ فقط، مثل: خمسة آلاف ومئتين)';
+
+  @override
+  String get voiceQuestionAmountUncertain => 'لم أتأكد من المبلغ';
+
+  @override
+  String get voiceQuestionAmountUncertainHint => '(قل المبلغ فقط مرة أخرى)';
+
+  @override
+  String get voiceQuestionAccount => 'من هو صاحب الحساب؟';
+
+  @override
+  String get voiceQuestionAccountHint => '(قل الاسم الأول والأخير)';
+
+  @override
+  String get voiceQuestionAccountName => 'أكمل اسم الحساب';
+
+  @override
+  String get voiceQuestionAccountNameHint => '(الاسم يتكون من اسمين على الأقل)';
+
+  @override
+  String get voiceQuestionSameAccount => 'هل تقصد هذا الحساب؟';
+
+  @override
+  String voiceQuestionSameAccountHint(String name) {
+    return '(الحساب الموجود: ${name})';
+  }
+
+  @override
+  String get voiceQuestionCurrency => 'ما هي العملة؟';
+
+  @override
+  String get voiceQuestionCurrencyHint => '(ريال يمني، سعودي، دولار، درهم…)';
+
+  @override
+  String get voiceQuestionNoSpeech => 'لم ألتقط أي صوت';
+
+  @override
+  String get voiceQuestionNoSpeechHint => '(حاول التحدث بوضوح)';
+
+  @override
+  String get voiceYes => 'نعم';
+
+  @override
+  String get voiceNo => 'لا';
+
+  @override
+  String get voiceConfirmYes => 'نعم';
+
+  @override
+  String get voiceConfirmSave => '(إحفظ)';
+
+  @override
+  String get voiceSummaryTitle => 'تلخيص العملية:';
+
+  @override
+  String get voiceNameLabel => 'الاسم';
+
+  @override
+  String get voiceYouCanSay => 'يمكنك قول:';
+
+  @override
+  String get voiceYouCanSayExamples => '"نعم" أو "احفظ" أو "عدل المبلغ إلى 3500"';
 }

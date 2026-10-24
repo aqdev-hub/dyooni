@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/currencies.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../data/models/currency_type.dart';
 
 /// The ONE currency picker for the whole app. Previously tapping the currency FIELD opened
 /// Flutter's own default [DropdownButton] menu, while tapping the pencil icon next to it opened
@@ -14,7 +14,16 @@ import '../../../core/theme/app_text_styles.dart';
 /// Deliberately width-constrained (max 300) and centered rather than stretching edge-to-edge —
 /// a currency list this short doesn't need the full screen width, and letting it stretch was
 /// what made the sheet feel oversized. Row heights are also denser than a default `ListTile`.
-Future<String?> showCurrencyPickerSheet(BuildContext context, {required String selectedCode}) {
+///
+/// The options are the person's own currencies (drawer → العملات), passed in by the caller. When
+/// [counts] is given (the Account Details switcher) each row also shows how many transactions the
+/// account has in that currency.
+Future<String?> showCurrencyPickerSheet(
+  BuildContext context, {
+  required String selectedCode,
+  required List<CurrencyType> options,
+  Map<String, int>? counts,
+}) {
   final l10n = AppLocalizations.of(context)!;
   final shell = context.shellColors;
 
@@ -43,26 +52,34 @@ Future<String?> showCurrencyPickerSheet(BuildContext context, {required String s
                     style: AppTextStyles.button(context).copyWith(color: shell.accent, fontWeight: FontWeight.w800, fontSize: 14),
                   ),
                 ),
-                for (final currency in currencies)
-                  ListTile(
-                    dense: true,
-                    visualDensity: const VisualDensity(vertical: -3),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-                    title: Text(
-                      currency.label(l10n),
-                      textAlign: TextAlign.end,
-                      style: AppTextStyles.bodySecondary(context).copyWith(
-                        color: shell.textPrimary,
-                        fontWeight: currency.code == selectedCode ? FontWeight.w800 : FontWeight.w400,
-                      ),
-                    ),
-                    trailing: Icon(
-                      currency.code == selectedCode ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
-                      size: 18,
-                      color: currency.code == selectedCode ? shell.accent : shell.textSecondary,
-                    ),
-                    onTap: () => Navigator.of(context).pop(currency.code),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    children: [
+                      for (final currency in options)
+                        ListTile(
+                          dense: true,
+                          visualDensity: const VisualDensity(vertical: -3),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                          title: Text(
+                            counts == null ? currency.name : '${currency.name}  (${counts[currency.id] ?? 0})',
+                            textAlign: TextAlign.end,
+                            style: AppTextStyles.bodySecondary(context).copyWith(
+                              color: shell.textPrimary,
+                              fontWeight: currency.id == selectedCode ? FontWeight.w800 : FontWeight.w400,
+                            ),
+                          ),
+                          trailing: Icon(
+                            currency.id == selectedCode ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
+                            size: 18,
+                            color: currency.id == selectedCode ? shell.accent : shell.textSecondary,
+                          ),
+                          onTap: () => Navigator.of(context).pop(currency.id),
+                        ),
+                    ],
                   ),
+                ),
                 const SizedBox(height: 6),
               ],
             ),

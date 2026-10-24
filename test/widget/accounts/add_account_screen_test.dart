@@ -15,9 +15,21 @@ import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPre
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 import 'package:dyooni/view/screens/accounts/add_account_screen.dart';
 
-class MockAccountsRepository extends Mock implements AccountsRepository {}
+class MockAccountsRepository extends Mock implements AccountsRepository {
+  // The controllers subscribe to watchAccounts() in build(); an unstubbed Mock returns null for
+  // it and the whole provider fails. An empty stream = "no live updates", which is what tests want.
+  @override
+  Stream<List<Account>> watchAccounts() => const Stream.empty();
+}
 
-class MockTransactionsRepository extends Mock implements TransactionsRepository {}
+class MockTransactionsRepository extends Mock implements TransactionsRepository {
+  @override
+  Stream<List<Transaction>> watchTransactions() => const Stream.empty();
+}
+
+class _FakeAccount extends Fake implements Account {}
+
+class _FakeTransaction extends Fake implements Transaction {}
 
 Widget _wrap(MockAccountsRepository accountsRepo, MockTransactionsRepository txRepo, SharedPreferences prefs) {
   final router = GoRouter(
@@ -47,6 +59,11 @@ void main() {
   late MockAccountsRepository accountsRepo;
   late MockTransactionsRepository txRepo;
   late SharedPreferences prefs;
+
+  setUpAll(() {
+    registerFallbackValue(_FakeAccount());
+    registerFallbackValue(_FakeTransaction());
+  });
 
   setUp(() async {
     accountsRepo = MockAccountsRepository();
@@ -134,7 +151,7 @@ void main() {
     final fields = find.byType(TextFormField);
     await tester.enterText(fields.at(0), 'مورد الأجهزة');
     await tester.enterText(fields.at(1), '1200');
-    await tester.tap(find.text(l10n.categorySupplier));
+    await tester.tap(find.text('الموردين'));
     await tester.tap(find.text(l10n.saveButton));
     await tester.pump();
     await tester.pumpAndSettle();

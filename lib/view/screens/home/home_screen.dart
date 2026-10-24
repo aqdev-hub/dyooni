@@ -9,13 +9,19 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
+import '../../../data/models/currency_type.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/accounts/currency_accounts_provider.dart';
+import '../../../logic/categories/categories_provider.dart';
+import '../../../data/models/category_type.dart';
+import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/drive_backup_controller.dart';
 import '../../widgets/home/account_list_tile.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
 import '../../widgets/shared/app_snackbar.dart';
+import '../../widgets/shared/currency_picker_sheet.dart';
 import '../../widgets/shared/entity_actions_sheet.dart';
 import '../../widgets/shared/selection_toolbar.dart';
 import '../accounts/add_account_screen.dart';
@@ -176,8 +182,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
     final accountsAsync = ref.watch(accountsProvider);
-    final categoryFiltered = ref.watch(filteredAccountsProvider);
-    final summary = ref.watch(accountsSummaryProvider);
+    final categoryFiltered = ref.watch(currencyAccountsProvider);
+    final summary = ref.watch(currencyAccountsSummaryProvider);
+    final currencyId = ref.watch(effectiveCurrencyIdProvider);
+    final categoryTypes = ref.watch(categoryTypesProvider);
+    final categoryTabs = ref.watch(categoryTabsProvider);
+    final activeCategory = ref.watch(effectiveCategoryProvider);
+    final currencies = ref.watch(currencyTypesProvider);
+    final currencyName = currencyNameOf(currencies, currencyId);
     final selectionMode = ref.watch(accountSelectionModeProvider);
     final selectedIds = ref.watch(selectedAccountIdsProvider);
     final pinMatches = ref.watch(generalSettingsProvider).value?.pinMatchingAccountsOnSearch ?? true;
@@ -204,8 +216,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               )
             else
               _Header(
+                title: categoryNameOf(categoryTypes, activeCategory?.id ?? generalCategoryId),
                 searchController: _searchController,
                 onQueryChanged: (v) => setState(() => _query = v),
+              ),
+            // One tab per VISIBLE category from "إدارة التصنيفات". Hidden when only one is visible.
+            if (categoryTabs.length > 1)
+              _CategoryTabs(
+                tabs: [for (final t in categoryTabs) (id: t?.id ?? generalCategoryId, name: categoryNameOf(categoryTypes, t?.id ?? generalCategoryId))],
+                activeId: activeCategory?.id ?? generalCategoryId,
+                onSelect: (id) => ref.read(selectedCategoryProvider.notifier).state =
+                    id == generalCategoryId ? null : AccountCategory(id),
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
@@ -217,6 +238,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   const SizedBox(width: 6),
                   Icon(Icons.people_outline, size: 18, color: shell.accent),
+                  const SizedBox(width: 10),
+                  // The currency page: Home lists only the accounts that have entries in this
+                  // currency, with their figures in it. Tap to switch page.
+                  InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () async {
+                      final selected = await showCurrencyPickerSheet(context, selectedCode: currencyId, options: currencies);
+                      if (selected != null) ref.read(selectedCurrencyIdProvider.notifier).state = selected;
+                    },
+                    child: Tooltip(
+                      message: l10n.currencySwitchTooltip,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: shell.accent.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: shell.accent),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.attach_money_rounded, size: 16, color: shell.accent),
+                            const SizedBox(width: 2),
+                            Text(
+                              currencyName,
+                              style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                   const Spacer(),
                   Text(
                     l10n.homeSortNewest,
@@ -242,7 +295,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 padding: const EdgeInsets.only(top: 40),
                                 child: Center(
                                   child: Text(
-                                    l10n.homeEmptyAccounts,
+                                    currencyId == defaultCurrencyId ? l10n.homeEmptyAccounts : l10n.homeEmptyAccountsInCurrency,
                                     textAlign: TextAlign.center,
                                     style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
                                   ),
@@ -256,6 +309,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               for (final account in filtered.reversed)
                                 AccountListTile(
                                   account: account,
+                                  currencyId: currencyId,
                                   onTap: () => context.push('/account-details', extra: account),
                                   onLongPressAction: (action) => _handleAccountAction(account, action, filtered),
                                 ),
@@ -274,7 +328,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 },
               ),
             ),
-            BottomSummaryBar(totalCredit: summary.totalCredit, totalDebit: summary.totalDebit, onAdd: _openAddAccount, addTooltip: l10n.homeAddAccount),
+            BottomSummaryBar(
+              totalCredit: summary.totalCredit,
+              totalDebit: summary.totalDebit,
+              onAdd: _openAddAccount,
+              addTooltip: l10n.homeAddAccount,
+              currencyName: currencyName,
+            ),
             _HomeBottomNav(
               onVoice: () => _openVoiceScreen(bluetoothMode: false),
               onVoiceLongPress: () => _openVoiceScreen(bluetoothMode: true),
@@ -288,9 +348,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.searchController, required this.onQueryChanged});
+class _CategoryTabs extends StatelessWidget {
+  const _CategoryTabs({required this.tabs, required this.activeId, required this.onSelect});
 
+  final List<({String id, String name})> tabs;
+  final String activeId;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = context.shellColors;
+    return Container(
+      height: 42,
+      color: shell.surface,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        itemCount: tabs.length,
+        itemBuilder: (context, i) {
+          final tab = tabs[i];
+          final active = tab.id == activeId;
+          return InkWell(
+            onTap: () => onSelect(tab.id),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: active ? shell.accent : Colors.transparent, width: 3)),
+              ),
+              child: Text(
+                tab.name,
+                style: AppTextStyles.body(context).copyWith(
+                  color: active ? shell.accent : shell.textSecondary,
+                  fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({required this.title, required this.searchController, required this.onQueryChanged});
+
+  final String title;
   final TextEditingController searchController;
   final ValueChanged<String> onQueryChanged;
 
@@ -314,7 +418,7 @@ class _Header extends StatelessWidget {
             children: [
               Builder(builder: (context) => IconButton(icon: Icon(Icons.menu_rounded, color: shell.accent, size: 21), onPressed: () => Scaffold.of(context).openDrawer())),
               const SizedBox(width: 6),
-              Text(l10n.homeTabGeneral, style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+              Text(title, style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
               const SizedBox(width: 12),
               Expanded(
                 child: Container(
@@ -402,6 +506,7 @@ class _HomeBottomNav extends StatelessWidget {
           Expanded(
             child: _NavItem(
               icon: Icons.mic_none_rounded,
+              assetIcon: 'assets/icons/voice_mic.png',
               label: l10n.navVoice,
               active: voiceActive,
               onTap: onVoice,
@@ -418,8 +523,11 @@ class _HomeBottomNav extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.icon, required this.label, required this.active, required this.onTap, this.onLongPress});
+  const _NavItem({required this.icon, required this.label, required this.active, required this.onTap, this.onLongPress, this.assetIcon});
   final IconData icon;
+
+  /// When set, drawn instead of [icon] (which remains the fallback if the file is missing).
+  final String? assetIcon;
   final String label;
   final bool active;
   final VoidCallback onTap;
@@ -437,7 +545,18 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 22, color: color),
+            if (assetIcon != null)
+              Opacity(
+                opacity: active ? 1 : 0.75,
+                child: Image.asset(
+                  assetIcon!,
+                  height: 24,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Icon(icon, size: 22, color: color),
+                ),
+              )
+            else
+              Icon(icon, size: 22, color: color),
             const SizedBox(height: 2),
             Text(label, style: AppTextStyles.bodySecondary(context).copyWith(color: color, fontSize: 11)),
           ],

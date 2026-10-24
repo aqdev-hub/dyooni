@@ -9,6 +9,7 @@ import '../../data/models/account.dart';
 import '../../data/repositories/accounts/accounts_repository.dart';
 import '../../data/repositories/accounts/accounts_firestore_repository_impl.dart';
 import '../../data/remote/firestore/accounts_firestore_datasource.dart';
+import '../auth/auth_provider.dart' show authStateProvider;
 import '../onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import '../transactions/transactions_provider.dart';
 
@@ -17,12 +18,18 @@ final accountsLocalDataSourceProvider = Provider<AccountsLocalDataSource>(
 );
 
 final accountsRepositoryProvider = Provider<AccountsRepository>(
-  (ref) => AccountsFirestoreRepositoryImpl(
+  (ref) {
+    // Rebuilt on every sign-in/sign-out: the repository captures the signed-in uid, so without
+    // this a repository created BEFORE login kept a null uid (and cached a "no signed-in user"
+    // error) for the whole session.
+    ref.watch(authStateProvider);
+    return AccountsFirestoreRepositoryImpl(
     AccountsFirestoreDataSource(FirebaseFirestore.instance, FirebaseAuth.instance),
     ref.watch(accountsLocalDataSourceProvider),
     ref.watch(sharedPreferencesProvider),
     FirebaseAuth.instance.currentUser?.uid,
-  ),
+    );
+  },
 );
 
 final accountsProvider = AsyncNotifierProvider<AccountsController, List<Account>>(
@@ -34,7 +41,7 @@ class AccountsController extends AsyncNotifier<List<Account>> {
 
   @override
   Future<List<Account>> build() async {
-    final repository = ref.read(accountsRepositoryProvider);
+    final repository = ref.watch(accountsRepositoryProvider);
     final initial = await repository.getAccounts();
     _subscription = repository.watchAccounts().listen(
       (accounts) => state = AsyncData(accounts),

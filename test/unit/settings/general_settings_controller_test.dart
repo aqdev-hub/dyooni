@@ -106,4 +106,31 @@ void main() {
 
     expect((await freshContainer.read(generalSettingsProvider.future)).voiceRecognitionMode, VoiceRecognitionMode.cloud);
   });
+
+  test('default category and currency start as "keep last" and persist when chosen', () async {
+    final first = await container.read(generalSettingsProvider.future);
+    expect(first.defaultCategoryId, isNull);
+    expect(first.defaultCurrencyId, isNull);
+
+    final notifier = container.read(generalSettingsProvider.notifier);
+    await notifier.setDefaultCategory('supplier');
+    await notifier.setDefaultCurrency('FOREIGN');
+    await notifier.recordLastUsedCategory('client');
+
+    final prefs = await SharedPreferences.getInstance();
+    final fresh = ProviderContainer(overrides: [sharedPreferencesProvider.overrideWithValue(prefs)]);
+    addTearDown(fresh.dispose);
+    final result = await fresh.read(generalSettingsProvider.future);
+    expect(result.defaultCategoryId, 'supplier');
+    expect(result.defaultCurrencyId, 'FOREIGN');
+    expect(result.lastUsedCategoryId, 'client');
+
+    // Choosing "keep last" again clears the default but keeps the remembered last category.
+    await fresh.read(generalSettingsProvider.notifier).setDefaultCategory(null);
+    await fresh.read(generalSettingsProvider.notifier).setDefaultCurrency(null);
+    final cleared = fresh.read(generalSettingsProvider).value!;
+    expect(cleared.defaultCategoryId, isNull);
+    expect(cleared.defaultCurrencyId, isNull);
+    expect(cleared.lastUsedCategoryId, 'client');
+  });
 }

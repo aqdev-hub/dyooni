@@ -61,6 +61,8 @@ class XlsxReportService {
     required String clientLabel,
     required String supplierLabel,
     required List<ReportRow> rows,
+    // id → the person's own category name (from إدارة التصنيفات). Falls back to the two built-ins.
+    Map<String, String> categoryNames = const {},
   }) {
     final workbook = Excel.createExcel();
     final sheet = workbook['Report'];
@@ -78,7 +80,7 @@ class XlsxReportService {
         rowIndex,
         [
           row.account.name,
-          row.account.category.name == 'client' ? clientLabel : supplierLabel,
+          categoryNames[row.account.category.id] ?? (row.account.category.id == 'client' ? clientLabel : supplierLabel),
           row.balance.abs().toStringAsFixed(0),
           isCredit ? creditLabel : debitLabel,
           row.transactionCount.toString(),

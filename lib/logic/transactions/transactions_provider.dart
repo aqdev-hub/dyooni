@@ -11,6 +11,7 @@ import '../../data/models/transaction.dart';
 import '../../data/repositories/transactions/transactions_repository.dart';
 import '../../data/repositories/transactions/transactions_firestore_repository_impl.dart';
 import '../../data/remote/firestore/transactions_firestore_datasource.dart';
+import '../auth/auth_provider.dart' show authStateProvider;
 import '../onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 
 final transactionsLocalDataSourceProvider = Provider<TransactionsLocalDataSource>(
@@ -18,12 +19,18 @@ final transactionsLocalDataSourceProvider = Provider<TransactionsLocalDataSource
 );
 
 final transactionsRepositoryProvider = Provider<TransactionsRepository>(
-  (ref) => TransactionsFirestoreRepositoryImpl(
+  (ref) {
+    // Rebuilt on every sign-in/sign-out: the repository captures the signed-in uid, so without
+    // this a repository created BEFORE login kept a null uid (and cached a "no signed-in user"
+    // error) for the whole session.
+    ref.watch(authStateProvider);
+    return TransactionsFirestoreRepositoryImpl(
     TransactionsFirestoreDataSource(FirebaseFirestore.instance, FirebaseAuth.instance),
     ref.watch(transactionsLocalDataSourceProvider),
     ref.watch(sharedPreferencesProvider),
     FirebaseAuth.instance.currentUser?.uid,
-  ),
+    );
+  },
 );
 
 final transactionsProvider = AsyncNotifierProvider<TransactionsController, List<Transaction>>(
@@ -35,7 +42,7 @@ class TransactionsController extends AsyncNotifier<List<Transaction>> {
 
   @override
   Future<List<Transaction>> build() async {
-    final repository = ref.read(transactionsRepositoryProvider);
+    final repository = ref.watch(transactionsRepositoryProvider);
     final initial = await repository.getTransactions();
     _subscription = repository.watchTransactions().listen(
       (transactions) => state = AsyncData(transactions),

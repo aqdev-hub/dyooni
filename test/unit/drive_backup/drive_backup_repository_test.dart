@@ -48,6 +48,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(<String, String>{});
+    registerFallbackValue(snapshot);
   });
 
   setUp(() {

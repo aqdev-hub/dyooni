@@ -1,32 +1,40 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/voice/bluetooth_audio_route_service.dart';
-import '../../core/voice/offline_speech_engine.dart';
 import '../../core/voice/speech_engine.dart';
 import '../../core/voice/system_speech_engine.dart';
-import '../../core/voice/vosk_model_provider.dart';
 import '../../core/voice/voice_output_service.dart';
+import '../../core/voice/whisper_model_provider.dart';
+import '../../core/voice/whisper_speech_engine.dart';
 import '../../data/models/account.dart';
 import '../../data/models/general_settings.dart';
 import '../../data/models/transaction.dart';
 import '../accounts/accounts_provider.dart';
+import '../categories/categories_provider.dart';
+import '../currencies/currencies_provider.dart';
 import '../settings/general_settings_provider.dart';
 import '../transactions/transactions_provider.dart';
+import 'arabic_number_parser.dart';
+import 'transcript_cleaner.dart';
 import 'voice_command_parser.dart';
 
-/// Built once the Vosk model has finished loading (see vosk_model_provider.dart /
-/// VoskModelGate) — `as VoskModelReady` is safe here specifically because every screen that can
-/// reach this provider is already gated behind [voskModelControllerProvider] being in the
-/// `VoskModelReady` state; if that ever stops being true, this throws loudly instead of silently
-/// listening with a broken engine.
-final offlineSpeechEngineProvider = Provider<OfflineSpeechEngine>((ref) {
-  final modelState = ref.watch(voskModelControllerProvider);
-  final model = (modelState as VoskModelReady).model;
-  final engine = OfflineSpeechEngine(model: model);
+/// Local recognition (Whisper). The engine looks the model files up when recording starts, so
+/// creating it never depends on the model being downloaded — the previous Vosk provider cast the
+/// model state at construction time and crashed ("VoskModelIdle is not a subtype of
+/// VoskModelReady") whenever the person switched to local mode before the model was ready.
+final whisperSpeechEngineProvider = Provider<WhisperSpeechEngine>((ref) {
+  final engine = WhisperSpeechEngine(
+    modelFiles: () {
+      final state = ref.read(whisperModelControllerProvider);
+      return state is WhisperModelReady ? state.files : null;
+    },
+    cleanTranscript: (raw) => TranscriptCleaner.clean(raw, prompt: whisperInitialPrompt),
+  );
   ref.onDispose(engine.dispose);
   return engine;
 });
@@ -42,7 +50,7 @@ final systemSpeechEngineProvider = Provider<SystemSpeechEngine>((ref) {
 final speechEngineProvider = Provider<SpeechEngine>((ref) {
   final mode = ref.watch(generalSettingsProvider).value?.voiceRecognitionMode ?? VoiceRecognitionMode.local;
   return switch (mode) {
-    VoiceRecognitionMode.local => ref.watch(offlineSpeechEngineProvider),
+    VoiceRecognitionMode.local => ref.watch(whisperSpeechEngineProvider),
     VoiceRecognitionMode.cloud => ref.watch(systemSpeechEngineProvider),
   };
 });
@@ -68,6 +76,17 @@ final voiceRecognitionLanguageProvider = StateProvider.autoDispose<String>((ref)
 
 final voiceProvider = StateNotifierProvider.autoDispose<VoiceController, VoiceState>((ref) {
   return VoiceController(ref);
+});
+
+/// Whether the voice screen is showing the confirmation stage (the header swaps its title and
+/// icon then). Safe to watch from the screen itself: creating the controller no longer depends on
+/// the local model being ready.
+final voiceIsConfirmingProvider = Provider.autoDispose<bool>((ref) {
+  return ref.watch(
+    voiceProvider.select(
+      (s) => s.status == VoiceStatus.awaitingConfirmation || s.status == VoiceStatus.confirmationListening,
+    ),
+  );
 });
 
 enum VoiceStatus {
@@ -103,6 +122,8 @@ class VoiceState {
     this.errorCode,
     this.bluetoothMode = false,
     this.clarifyingField,
+    this.suggestedAccount,
+    this.processingStep = 0,
   });
 
   final VoiceStatus status;
@@ -138,6 +159,15 @@ class VoiceState {
   /// existing draft) even though both arrive through the exact same `listening` status.
   final String? clarifyingField;
 
+  /// An EXISTING account whose name is very close to what was just heard — set while the
+  /// `'sameAccount'` question ("هل تقصد الحساب …؟") is pending.
+  final Account? suggestedAccount;
+
+  /// Real progress of the `processing` status: 0 = turning audio into text (the recognizer is
+  /// finalising), 1 = extracting name/amount/direction, 2 = validating against saved accounts.
+  /// Driven by what the controller is actually doing — never by a timer.
+  final int processingStep;
+
   VoiceState copyWith({
     VoiceStatus? status,
     String? transcript,
@@ -150,6 +180,9 @@ class VoiceState {
     String? errorCode,
     bool? bluetoothMode,
     String? clarifyingField,
+    Account? suggestedAccount,
+    int? processingStep,
+    bool clearSuggestedAccount = false,
     bool clearDraft = false,
     bool clearAccount = false,
     bool clearError = false,
@@ -167,6 +200,8 @@ class VoiceState {
         errorCode: clearError ? null : errorCode ?? this.errorCode,
         bluetoothMode: bluetoothMode ?? this.bluetoothMode,
         clarifyingField: clearClarifyingField ? null : clarifyingField ?? this.clarifyingField,
+        suggestedAccount: clearSuggestedAccount ? null : suggestedAccount ?? this.suggestedAccount,
+        processingStep: processingStep ?? this.processingStep,
       );
 }
 
@@ -175,10 +210,16 @@ class VoiceState {
 /// kept separate from [draft] because re-matching a spoken account name against the real account
 /// list needs [VoiceController._matchAccount], which this pure parsing step has no access to.
 class _VoiceEditResult {
-  const _VoiceEditResult({this.draft, this.accountNameHint});
+  const _VoiceEditResult({this.draft, this.accountNameHint, this.field, this.needsAmount = false});
   final VoiceCommandDraft? draft;
   final String? accountNameHint;
-  bool get isEmpty => draft == null && accountNameHint == null;
+
+  /// Which field was edited: `'amount'`, `'name'`, `'details'`, `'direction'` or `'date'`.
+  final String? field;
+
+  /// The person asked to change the amount but the new amount was unclear/garbled.
+  final bool needsAmount;
+  bool get isEmpty => draft == null && accountNameHint == null && !needsAmount;
 }
 
 class VoiceController extends StateNotifier<VoiceState> {
@@ -192,10 +233,33 @@ class VoiceController extends StateNotifier<VoiceState> {
   VoiceOutputService get _voiceOutput => _ref.read(voiceOutputServiceProvider);
   StreamSubscription<String>? _partialSubscription;
   StreamSubscription<String>? _finalSubscription;
+  StreamSubscription<SpeechEngineError>? _errorSubscription;
+  StreamSubscription<void>? _activitySubscription;
   Timer? _bluetoothMonitor;
   Timer? _speechSilenceTimer;
   final _uuid = const Uuid();
   int _session = 0;
+
+  /// How many consecutive NETWORK-class errors (see speech_engine.dart's
+  /// [SpeechEngineErrorType.network]) the current listening attempt has silently absorbed and
+  /// retried. THIS is the fix for "a medium/good-but-not-excellent connection means the app
+  /// hears nothing": those errors used to be swallowed with no action at all (see the old
+  /// `SystemSpeechEngine`'s `onError: (_) {}`), so the person just waited out the full silence
+  /// timeout and was told — wrongly — that they hadn't said anything. Each retry restarts the
+  /// recognizer with a short growing backoff; the person is never shown anything is wrong unless
+  /// every retry in a row fails, exactly mirroring the same silent-retry philosophy already used
+  /// for the Vosk model download (see vosk_model_provider.dart's `_downloadWithRetries`).
+  static const _maxNetworkRetries = 4;
+  int _networkRetryCount = 0;
+
+
+  /// `true` once the person has answered (or no question was needed) for the account-name
+  /// similarity check of the CURRENT command — prevents asking "same account?" twice.
+  bool _nameDecided = false;
+
+  /// Which field the last voice edit changed — consumed by the next confirmation speech so it can
+  /// say "تم تعديل المبلغ إلى …" instead of a generic message.
+  String? _lastEditedField;
 
   static const _speechEndAfter = Duration(seconds: 2);
   static const _noSpeechAfter = Duration(seconds: 8);
@@ -219,10 +283,114 @@ class VoiceController extends StateNotifier<VoiceState> {
   void _bindEngine() {
     _partialSubscription?.cancel();
     _finalSubscription?.cancel();
+    _errorSubscription?.cancel();
+    _activitySubscription?.cancel();
     _engine = _ref.read(speechEngineProvider);
     _partialSubscription = _engine.partialResults.listen(_onPartial);
     _finalSubscription = _engine.finalResults.listen(_onFinal);
+    _errorSubscription = _engine.errors.listen(_onEngineError);
+    _activitySubscription = _engine.speechActivity.listen(_onSpeechActivity);
   }
+
+  /// Batch engines (Whisper) produce no live text, so "the person is still talking" arrives as
+  /// this audio-activity signal instead. It restarts the same end-of-speech timer a live partial
+  /// transcript would.
+  void _onSpeechActivity(void _) {
+    if (state.status == VoiceStatus.listening ||
+        state.status == VoiceStatus.bluetoothListeningCommand ||
+        state.status == VoiceStatus.confirmationListening) {
+      _armSpeechEndTimer();
+    }
+  }
+
+  /// Stops the engine and returns its result, or `null` after showing a recognition error when the
+  /// engine FAILED (a batch engine can fail while decoding). Without this a failure inside
+  /// `stop()` would leave the screen on "processing" forever.
+  Future<(String, String?)?> _stopEngineSafely() async {
+    try {
+      return await _engine.stop();
+    } catch (e) {
+      debugPrint('[voice] engine stop failed: $e');
+      ++_session;
+      _clearSpeechEndTimer();
+      state = state.copyWith(status: VoiceStatus.error, errorCode: e is SpeechEngineException ? e.code : 'recognition');
+      return null;
+    }
+  }
+
+  /// Routes a structured recognizer error (see speech_engine.dart). Only NETWORK-class errors
+  /// are acted on here — everything else (genuine silence, permission problems) is left to the
+  /// existing silence-timeout / permission-check paths, which already handle those correctly.
+  void _onEngineError(SpeechEngineError error) {
+    if (error.type == SpeechEngineErrorType.network) {
+      unawaited(_retryAfterNetworkBlip());
+    }
+  }
+
+  /// Silently restarts the SAME listening step after a connectivity error — never surfaced to
+  /// the person unless [_maxNetworkRetries] consecutive attempts all fail, at which point (and
+  /// only then) a real, honest error is shown instead of the misleading "no speech captured".
+  /// A stray error that arrives after the session already moved on (e.g. the person already
+  /// confirmed and the engine is idle) is ignored — this only ever resurrects an ACTIVE listen.
+  Future<void> _retryAfterNetworkBlip() async {
+    final listening = state.status == VoiceStatus.listening ||
+        state.status == VoiceStatus.bluetoothListeningCommand ||
+        state.status == VoiceStatus.confirmationListening;
+    if (!listening) return;
+
+    if (_networkRetryCount >= _maxNetworkRetries) {
+      _networkRetryCount = 0;
+      state = state.copyWith(status: VoiceStatus.error, errorCode: 'network');
+      return;
+    }
+    _networkRetryCount++;
+    final keptTranscript = state.transcript;
+    final wasConfirmationListening = state.status == VoiceStatus.confirmationListening;
+    try {
+      await _engine.cancel();
+    } catch (_) {
+      // Best effort — the restart below is what actually matters.
+    }
+    await Future<void>.delayed(Duration(milliseconds: 300 * _networkRetryCount));
+    // The session may have moved on (person cancelled, screen closed) while we waited.
+    final stillListening = state.status == VoiceStatus.listening ||
+        state.status == VoiceStatus.bluetoothListeningCommand ||
+        (wasConfirmationListening && state.status == VoiceStatus.confirmationListening);
+    if (!stillListening) return;
+    try {
+      await _startEngine();
+      state = state.copyWith(transcript: keptTranscript);
+      _armSpeechEndTimer(_noSpeechAfter);
+    } catch (_) {
+      // Another error event (or the outer silence timeout) will take it from here.
+    }
+  }
+
+  /// The recognizer must be listening within this time or it is treated as stuck.
+  static const _engineStartTimeout = Duration(seconds: 6);
+
+  /// Starts the engine with a HARD time limit. Reported symptom: the screen stayed on "listening"
+  /// for minutes and never failed, succeeded or asked anything — that is `start()` never
+  /// returning (so the silence timer was never even armed). Now a start that does not complete in
+  /// [_engineStartTimeout] releases the engine and tries exactly once more; if that also times
+  /// out the exception reaches the caller, which shows a real error instead of waiting forever.
+  Future<void> _startEngine() async {
+    try {
+      await _engine.start().timeout(_engineStartTimeout);
+    } on TimeoutException {
+      debugPrint('[voice] engine start timed out - releasing and retrying once');
+      try {
+        await _engine.release().timeout(const Duration(seconds: 3));
+      } catch (_) {
+        // Best effort — the retry below is what matters.
+      }
+      await _engine.start().timeout(_engineStartTimeout);
+    }
+  }
+
+  /// A timeout means the recognizer itself is stuck ("recognition"); anything else here is the
+  /// permission/availability failure the old code assumed for every exception.
+  String _startFailureCode(Object error) => error is TimeoutException ? 'recognition' : 'permission';
 
   /// Provider changes are intentionally limited to idle state. This releases the old engine
   /// before rebinding streams, so a single utterance can never be split between recognizers.
@@ -230,47 +398,111 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (state.status != VoiceStatus.idle) return;
     final current = _ref.read(generalSettingsProvider).value?.voiceRecognitionMode ?? VoiceRecognitionMode.local;
     if (current == mode) return;
+    // Free the microphone and native recognizer of the engine being left BEFORE the other one is
+    // used. Root cause of "cloud hears nothing after a local session": the old engine's native
+    // resources were never released on a switch, so the OS recognizer started against a busy or
+    // stale audio path and its error was ignored.
+    final leaving = _engine;
+    try {
+      await leaving.release();
+    } catch (_) {
+      // Releasing is best effort; the new engine below re-initialises itself anyway.
+    }
     await _ref.read(generalSettingsProvider.notifier).setVoiceRecognitionMode(mode);
     _bindEngine();
   }
 
   // ─────────────────────────── Phrase builders (all spoken aloud) ───────────────────────────
 
+  /// Spoken currency names — the raw code ("LOCAL", "YER") must never reach the speech engine.
+  String _currencySpoken(String code, String languageCode) {
+    if (languageCode == 'en') {
+      return switch (code) {
+        'YER' => 'Yemeni rial',
+        'USD' => 'US dollars',
+        'SAR' => 'Saudi riyals',
+        'AED' => 'dirhams',
+        'EGP' => 'Egyptian pounds',
+        'KWD' => 'dinars',
+        _ => 'local currency',
+      };
+    }
+    return switch (code) {
+      'YER' => 'ريال يمني',
+      'USD' => 'دولار',
+      'SAR' => 'ريال سعودي',
+      'AED' => 'درهم',
+      'EGP' => 'جنيه',
+      'KWD' => 'دينار',
+      _ => 'محلي',
+    };
+  }
+
+  String _formatAmount(double amount) =>
+      amount == amount.roundToDouble() ? amount.toStringAsFixed(0) : amount.toStringAsFixed(2);
+
   /// [accountName] is a plain string rather than an [Account] — by the time this is spoken,
   /// there may not be a real matched account yet at all (see [VoiceState.account]'s doc comment
   /// on what a `null` match means once confirmation is reached: a new account will be created).
-  String _confirmationSpeech(VoiceCommandDraft draft, String accountName, String languageCode, {bool editApplied = false}) {
-    final amountText = draft.amount!.toStringAsFixed(0);
+  /// [editedField] (see [_VoiceEditResult.field]) switches to the "تم تعديل …" wording.
+  String _confirmationSpeech(VoiceCommandDraft draft, String accountName, String languageCode, {String? editedField}) {
+    final amountText = _formatAmount(draft.amount!);
+    final currency = _currencySpoken(draft.currency, languageCode);
+    final isDebit = draft.direction == AccountDirection.debit;
     if (languageCode == 'en') {
-      final prefix = editApplied ? 'Updated. ' : '';
-      final directionWord = draft.direction == AccountDirection.debit ? 'as a debit for' : 'as a credit for';
+      if (editedField != null) {
+        final what = switch (editedField) {
+          'amount' => 'The amount is now $amountText $currency',
+          'name' => 'The account is now $accountName',
+          'details' => 'The details are now ${draft.details ?? 'empty'}',
+          'direction' => 'The type is now ${isDebit ? 'debit' : 'credit'}',
+          _ => 'The date is now ${draft.date.year}-${draft.date.month}-${draft.date.day}',
+        };
+        return '$what. Would you like to save or edit?';
+      }
+      final directionWord = isDebit ? 'as a debit for' : 'as a credit for';
       final details = draft.details != null ? ', details ${draft.details}' : '';
-      return "${prefix}I'll add $amountText ${draft.currency} $directionWord $accountName$details. Should I save it?";
+      return "I'll add $amountText $currency $directionWord $accountName$details. Would you like to save or edit?";
     }
-    final prefix = editApplied ? 'تم التعديل. ' : '';
-    final directionWord = draft.direction == AccountDirection.debit ? 'على' : 'لـ';
+    if (editedField != null) {
+      final what = switch (editedField) {
+        'amount' => 'تم تعديل المبلغ إلى $amountText $currency',
+        'name' => 'تم تعديل الحساب إلى $accountName',
+        'details' => draft.details == null ? 'تم حذف التفاصيل' : 'تم تعديل التفاصيل إلى ${draft.details}',
+        'direction' => 'تم تعديل النوع إلى ${isDebit ? 'عليه' : 'له'}',
+        _ => 'تم تعديل التاريخ إلى ${draft.date.year}-${draft.date.month}-${draft.date.day}',
+      };
+      return '$what، هل تريد الحفظ أو التعديل؟';
+    }
+    final directionWord = isDebit ? 'على' : 'لـ';
     final details = draft.details != null ? '، التفاصيل ${draft.details}' : '';
-    return '$prefixسأضيف $directionWord $accountName مبلغ $amountText ${draft.currency}$details. هل تريد الحفظ؟';
+    return 'سأضيف $directionWord $accountName مبلغ $amountText $currency$details. هل تريد الحفظ أو التعديل؟';
   }
 
-  String _clarificationSpeech(String field, String languageCode) {
+  /// [detail] carries the one dynamic value some questions need (the suggested account name).
+  String _clarificationSpeech(String field, String languageCode, {String? detail}) {
     if (languageCode == 'en') {
       return switch (field) {
         'amount' => "I couldn't understand the amount. Please say the amount clearly.",
+        'amountUncertain' => "I wasn't sure about the amount. Please say only the amount again.",
         'account' => "I couldn't match an account. Please say the account name clearly.",
         'accountName' =>
           "The account name needs a first and last name. Please say the full account name.",
+        'sameAccount' => 'Do you mean the existing account $detail? Say yes or no.',
         'currency' =>
           "That currency isn't supported. Please say a supported one — Yemeni Rial, Saudi Riyal, "
               "US Dollar, Dirham, Pound, or Dinar.",
         'direction' => 'Is this credit or debit? Please say credit or debit.',
+        'editWhat' => 'Please say your edit.',
         _ => "I didn't hear anything. Please try speaking clearly.",
       };
     }
     return switch (field) {
       'amount' => 'لم أتعرف على المبلغ. من فضلك قل المبلغ بوضوح.',
+      'amountUncertain' => 'لم أتأكد من المبلغ. من فضلك قل المبلغ فقط مرة أخرى.',
       'account' => 'لم أتعرف على اسم الحساب. من فضلك قل اسم الحساب بوضوح.',
-      'accountName' => 'اسم الحساب يجب أن يتكون من اسمين على الأقل. من فضلك قل الاسم الكامل.',
+      'accountName' => 'اسم الحساب يجب أن يتكون من اسمين على الأقل. من فضلك أكمل الاسم الناقص.',
+      'sameAccount' => 'هل تقصد الحساب الموجود $detail؟ قل نعم أو لا.',
       'currency' => 'هذه العملة غير مدعومة. من فضلك قل عملة مدعومة، مثل ريال يمني أو سعودي أو دولار أو درهم أو جنيه أو دينار.',
       'direction' => 'لم أفهم هل هذا الدين له أم عليه. من فضلك قل له أو عليه.',
       _ => 'لم ألتقط أي صوت. من فضلك حاول التحدث بوضوح.',
@@ -280,7 +512,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   String _successSpeech(String languageCode) => languageCode == 'en' ? 'Entry saved successfully.' : 'تم حفظ العملية بنجاح.';
 
   String _notUnderstoodSpeech(String languageCode) =>
-      languageCode == 'en' ? "I didn't understand. Say yes to save, or edit to change something." : 'لم أفهم. قل نعم للحفظ، أو عدّل لتغيير شيء.';
+      languageCode == 'en' ? "I didn't understand. Say save, edit, or cancel." : 'لم أفهم. قل حفظ، أو تعديل، أو إلغاء.';
 
   String _askEditSpeech(String languageCode) => languageCode == 'en' ? 'Please say your edit.' : 'من فضلك قل تعديلك.';
 
@@ -296,6 +528,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// Called once when the voice screen opens, for BOTH entry modes.
   void setEntryMode({required bool bluetoothMode}) {
     ++_session;
+    _networkRetryCount = 0;
     state = VoiceState(bluetoothMode: bluetoothMode);
   }
 
@@ -315,10 +548,18 @@ class VoiceController extends StateNotifier<VoiceState> {
     }
     state = state.copyWith(status: VoiceStatus.bluetoothConnected);
     await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!_engine.providesLiveText) {
+      // Wake-word detection reads the recognizer's LIVE text, which a batch engine (Whisper) does
+      // not produce; running it on every sound near the headset would drain the battery. So here
+      // the headset connection goes straight to listening for the command.
+      _startBluetoothMonitor();
+      await _beginListening(bluetoothMode: true);
+      return;
+    }
     state = state.copyWith(status: VoiceStatus.bluetoothWaitingWakeWord);
     _startBluetoothMonitor();
     try {
-      await _engine.start();
+      await _startEngine();
     } catch (_) {
       state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'recognition');
     }
@@ -337,8 +578,11 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   Future<void> _beginListening({required bool bluetoothMode}) async {
     final session = ++_session;
+    _networkRetryCount = 0;
     state = VoiceState(status: VoiceStatus.preparing, bluetoothMode: bluetoothMode);
-    if (!await _engine.hasPermission()) {
+    // Bounded too: a recognizer whose initialisation never answers must not freeze the screen.
+    final granted = await _engine.hasPermission().timeout(const Duration(seconds: 8), onTimeout: () => false);
+    if (!granted) {
       state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
       return;
     }
@@ -348,14 +592,14 @@ class VoiceController extends StateNotifier<VoiceState> {
       clearError: true,
     );
     try {
-      await _engine.start();
+      await _startEngine();
       if (session != _session) {
         await _engine.cancel();
         return;
       }
       _armSpeechEndTimer(_noSpeechAfter);
-    } catch (_) {
-      state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+    } catch (e) {
+      state = state.copyWith(status: VoiceStatus.error, errorCode: _startFailureCode(e));
     }
   }
 
@@ -402,6 +646,10 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (state.status == VoiceStatus.listening ||
         state.status == VoiceStatus.bluetoothListeningCommand ||
         state.status == VoiceStatus.confirmationListening) {
+      // A real partial result arrived — the connection is clearly fine again, so forgive any
+      // earlier retried network blip for this session instead of letting it count toward the
+      // next unrelated listen.
+      _networkRetryCount = 0;
       state = state.copyWith(transcript: text);
       _armSpeechEndTimer();
       return;
@@ -426,6 +674,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// fires and moves the dialogue forward immediately — no button, no delay beyond the analysis
   /// itself, matching "بمجرد أن ينتهي المستخدم من التحدث يرد مباشرة".
   void _onFinal(String text) {
+    _networkRetryCount = 0;
     if (state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand) {
       state = state.copyWith(transcript: text);
       _armSpeechEndTimer();
@@ -447,11 +696,29 @@ class VoiceController extends StateNotifier<VoiceState> {
     }
   }
 
+  bool _finishingConfirmation = false;
+
   Future<void> _finishVoiceConfirmation(String text) async {
+    // A batch engine decodes inside stop() for seconds; a second trigger (timer + tap) during that
+    // time must not stop it again and read the empty second result as "not understood".
+    if (_finishingConfirmation) return;
+    _finishingConfirmation = true;
     _clearSpeechEndTimer();
-    final (_, confirmationRecordingPath) = await _engine.stop();
+    final session = _session;
+    (String, String?)? stopped;
+    try {
+      stopped = await _stopEngineSafely();
+    } finally {
+      _finishingConfirmation = false;
+    }
+    if (stopped == null) return;
+    final (engineText, confirmationRecordingPath) = stopped;
     await _deleteRecording(confirmationRecordingPath);
-    final effective = text.trim().isNotEmpty ? text : state.transcript;
+    if (session != _session) return;
+    // The text passed in comes from a live recognizer; a batch engine only has its text now.
+    final effective = text.trim().isNotEmpty
+        ? text
+        : (engineText.trim().isNotEmpty ? engineText : state.transcript);
     if (effective.trim().isEmpty) {
       await _confirmationNotUnderstood();
       return;
@@ -477,14 +744,19 @@ class VoiceController extends StateNotifier<VoiceState> {
     _clearSpeechEndTimer();
     final current = state;
     final session = _session;
-    state = state.copyWith(status: VoiceStatus.processing);
+    state = state.copyWith(status: VoiceStatus.processing, processingStep: 0);
 
-    final (engineTranscript, recordingPath) = await _engine.stop();
+    final stopped = await _stopEngineSafely();
+    if (stopped == null) return;
+    final (engineTranscript, recordingPath) = stopped;
     if (session != _session || state.status != VoiceStatus.processing) {
       await _deleteRecording(recordingPath);
       return;
     }
-    final effectiveTranscript = _chooseMoreCompleteTranscript(current.transcript, engineTranscript);
+    final effectiveTranscript = _pickBestTranscript(
+      _chooseMoreCompleteTranscript(current.transcript, engineTranscript),
+      _engine.lastAlternatives,
+    );
 
     if (effectiveTranscript.trim().isEmpty) {
       await _deleteRecording(recordingPath);
@@ -500,17 +772,27 @@ class VoiceController extends StateNotifier<VoiceState> {
         clearError: true,
       );
       try {
-        await _engine.start();
+        await _startEngine();
         _armSpeechEndTimer(_noSpeechAfter);
-      } catch (_) {
-        state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+      } catch (e) {
+        state = state.copyWith(status: VoiceStatus.error, errorCode: _startFailureCode(e));
       }
       return;
     }
 
-    final draft = _ref.read(voiceCommandParserProvider).parse(effectiveTranscript);
+    state = state.copyWith(processingStep: 1);
+    var draft = _ref.read(voiceCommandParserProvider).parse(effectiveTranscript);
+    if (_amountDoubtedByAlternatives(effectiveTranscript, _engine.lastAlternatives)) {
+      // Same audio, different hypotheses about the number → the recognizer itself is not sure.
+      // Ask for the amount instead of saving a guess.
+      draft = draft.withUncertainAmount();
+    }
+    state = state.copyWith(processingStep: 2);
+    _nameDecided = false;
+    _lastEditedField = null;
     final account = _matchAccount(draft.accountName, effectiveTranscript);
     state = state.copyWith(
+      transcript: effectiveTranscript,
       draft: draft,
       account: account,
       clearAccount: account == null,
@@ -528,8 +810,10 @@ class VoiceController extends StateNotifier<VoiceState> {
     final session = _session;
     final field = current.clarifyingField;
     final draft = current.draft;
-    state = state.copyWith(status: VoiceStatus.processing);
-    final (engineTranscript, recordingPath) = await _engine.stop();
+    state = state.copyWith(status: VoiceStatus.processing, processingStep: 0);
+    final stopped = await _stopEngineSafely();
+    if (stopped == null) return;
+    final (engineTranscript, recordingPath) = stopped;
     if (session != _session || state.status != VoiceStatus.processing) {
       await _deleteRecording(recordingPath);
       return;
@@ -553,10 +837,10 @@ class VoiceController extends StateNotifier<VoiceState> {
         clearError: true,
       );
       try {
-        await _engine.start();
+        await _startEngine();
         _armSpeechEndTimer(_noSpeechAfter);
-      } catch (_) {
-        state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+      } catch (e) {
+        state = state.copyWith(status: VoiceStatus.error, errorCode: _startFailureCode(e));
       }
       return;
     }
@@ -565,8 +849,22 @@ class VoiceController extends StateNotifier<VoiceState> {
     var updatedAccount = current.account;
     switch (field) {
       case 'amount':
-        final reparsed = _ref.read(voiceCommandParserProvider).parse(effective);
-        if (reparsed.amount != null) updatedDraft = draft.copyWith(amount: reparsed.amount);
+        // The answer is JUST an amount phrase — evaluated by the same number engine as a full
+        // command. Cloud alternatives are tried too, so one garbled hypothesis doesn't force a
+        // re-ask when another one is clean. An uncertain/garbled answer changes nothing, and
+        // _advanceAfterParsing asks again.
+        final parser = _ref.read(voiceCommandParserProvider);
+        for (final candidate in [effective, ..._engine.lastAlternatives]) {
+          final extraction = parser.parseAmount(candidate);
+          if (extraction.value != null) {
+            updatedDraft = draft.copyWith(amount: extraction.value);
+            final explicitCurrency = _explicitCurrency(candidate);
+            if (explicitCurrency != null) {
+              updatedDraft = updatedDraft.copyWith(currency: explicitCurrency);
+            }
+            break;
+          }
+        }
       case 'account':
         // The person restated the whole account name — try matching it against an existing
         // account first; if none matches, keep the freshly-spoken name as-is (a brand-new
@@ -575,11 +873,26 @@ class VoiceController extends StateNotifier<VoiceState> {
         updatedAccount = matched;
         updatedDraft = draft.copyWith(accountName: matched?.name ?? effective.trim());
       case 'accountName':
-        // The person is only adding the missing last name — merge it the same way as 'account'
-        // above rather than treating it as a brand-new, unrelated command.
-        final matched = _matchAccount(effective, effective);
+        // FIX: the person was only ever asked for this because the FIRST attempt already had a
+        // partial name (e.g. just "عبدالقدوس") that failed the two-word minimum — see
+        // VoiceCommandParser.hasFullName, the same rule add_account_screen.dart enforces
+        // manually. The previous version of this branch replaced the name OUTRIGHT with
+        // whatever was said next, which silently DISCARDED the part already understood: saying
+        // only the missing last name ("محمد") produced the account name "محمد" alone — still a
+        // single word, so it failed the same check again and looped forever asking the same
+        // question. The fix: APPEND the new answer to whatever name fragment is already on the
+        // draft, so "عبدالقدوس" + "محمد" becomes "عبدالقدوس محمد" — exactly completing the name
+        // instead of replacing it. If the person instead restates the FULL name on their own
+        // (common when asked to "say the account name clearly"), the combined string still
+        // matches correctly against the saved account list below.
+        final existingFragment = (draft.accountName ?? '').trim();
+        final spoken = effective.trim();
+        final combinedName = existingFragment.isEmpty
+            ? spoken
+            : (spoken.toLowerCase().contains(existingFragment.toLowerCase()) ? spoken : '$existingFragment $spoken');
+        final matched = _matchAccount(combinedName, combinedName);
         updatedAccount = matched;
-        updatedDraft = draft.copyWith(accountName: matched?.name ?? effective.trim());
+        updatedDraft = draft.copyWith(accountName: matched?.name ?? combinedName);
       case 'currency':
         final reparsedCurrency = _ref.read(voiceCommandParserProvider).parse(effective);
         if (!reparsedCurrency.currencyUnsupported) {
@@ -588,12 +901,19 @@ class VoiceController extends StateNotifier<VoiceState> {
         // If still unsupported, currencyUnsupported stays true on `draft` unchanged, and
         // _advanceAfterParsing below will simply ask again.
       case 'direction':
-        final lower = effective.toLowerCase();
-        if (['عليه', 'على', 'مدين', 'دين', 'عنده', 'تسلف', 'استلف', 'مديون', 'debit'].any(lower.contains)) {
-          updatedDraft = draft.copyWith(direction: AccountDirection.debit);
-        } else if (['له', 'دائن', 'سدد', 'سلم', 'سلّم', 'وصل', 'رجع', 'ارجع', 'credit'].any(lower.contains)) {
-          updatedDraft = draft.copyWith(direction: AccountDirection.credit);
+        final spokenDirection = _ref.read(voiceCommandParserProvider).parseDirection(effective);
+        if (spokenDirection != null) updatedDraft = draft.copyWith(direction: spokenDirection);
+      case 'sameAccount':
+        final answer = _yesNo(effective);
+        final suggested = current.suggestedAccount;
+        if (answer == true && suggested != null) {
+          updatedAccount = suggested;
+          updatedDraft = draft.copyWith(accountName: suggested.name);
+          _nameDecided = true;
+        } else if (answer == false) {
+          _nameDecided = true; // a genuinely different person — a new account will be created.
         }
+        // No clear yes/no → still undecided; _advanceAfterParsing simply asks again.
     }
 
     state = state.copyWith(
@@ -602,45 +922,51 @@ class VoiceController extends StateNotifier<VoiceState> {
       clearAccount: updatedAccount == null,
       recordingPath: current.recordingPath,
       clearClarifyingField: true,
+      clearSuggestedAccount: true,
     );
     await _advanceAfterParsing(draft: updatedDraft, account: updatedAccount);
   }
 
-  /// Amount → currency → account name → full-name check → direction, in that order. Every
-  /// branch SPEAKS its question (or the confirmation summary) and then immediately starts
-  /// listening again on its own — the person never has to touch anything to move the dialogue
-  /// forward. Reaching the final `else` no longer requires an EXISTING account match — see
-  /// [VoiceState.account]'s doc comment: a `null` match at this point simply means a brand-new
-  /// account will be created from [VoiceCommandDraft.accountName] once the person confirms.
+  /// Name (missing / one word) → "same account?" check → direction → amount → currency, then
+  /// confirmation. The order follows what the person is most likely to be able to repair by
+  /// voice: who it is, which side, then the number. Only the UNCLEAR field is ever asked about —
+  /// everything already understood stays on the draft. Every branch SPEAKS its question and then
+  /// listens again on its own. A `null` [VoiceState.account] at confirmation simply means a
+  /// brand-new account will be created from [VoiceCommandDraft.accountName].
   Future<void> _advanceAfterParsing({required VoiceCommandDraft draft, required Account? account}) async {
     final accountName = draft.accountName;
-    if (draft.amount == null) {
-      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'amount', clarifyingField: 'amount');
-      await _speakThenListenForClarification('amount');
-    } else if (draft.currencyUnsupported) {
-      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'currency', clarifyingField: 'currency');
-      await _speakThenListenForClarification('currency');
-    } else if (accountName == null) {
-      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'account', clarifyingField: 'account');
-      await _speakThenListenForClarification('account');
+    if (accountName == null) {
+      await _ask('account', 'account');
     } else if (!VoiceCommandParser.hasFullName(accountName)) {
-      // A name was heard, but it's only a single word (e.g. just "عبدالقدوس") — per the same
-      // rule the manual Add Account form enforces, an account needs a first AND a last name.
-      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'accountName', clarifyingField: 'accountName');
-      await _speakThenListenForClarification('accountName');
+      // A name was heard, but it's only a single word — an account needs a first AND last name.
+      await _ask('accountName', 'accountName');
+    } else if (account == null && !_nameDecided && _similarAccount(accountName) != null) {
+      final similar = _similarAccount(accountName)!;
+      state = state.copyWith(suggestedAccount: similar);
+      await _ask('sameAccount', 'sameAccount', detail: similar.name);
     } else if (draft.direction == null) {
-      state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: 'direction', clarifyingField: 'direction');
-      await _speakThenListenForClarification('direction');
+      await _ask('direction', 'direction');
+    } else if (draft.amount == null) {
+      await _ask('amount', draft.amountUncertain ? 'amountUncertain' : 'amount');
+    } else if (draft.currencyUnsupported) {
+      await _ask('currency', 'currency');
     } else {
       state = state.copyWith(status: VoiceStatus.awaitingConfirmation, clearError: true, clearClarifyingField: true);
       await _speakThenListenForConfirmation();
     }
   }
 
-  Future<void> _speakThenListenForClarification(String field) async {
+  /// [field] is the dialogue slot being filled; [speechKey] picks the exact wording (the amount
+  /// slot has a distinct "I wasn't sure" phrasing for garbled numbers).
+  Future<void> _ask(String field, String speechKey, {String? detail}) async {
+    state = state.copyWith(status: VoiceStatus.needsClarification, errorCode: field, clarifyingField: field);
+    await _speakThenListenForClarification(speechKey, detail: detail);
+  }
+
+  Future<void> _speakThenListenForClarification(String field, {String? detail}) async {
     final session = _session;
     _clearSpeechEndTimer();
-    await _speak(_clarificationSpeech(field, _ref.read(voiceRecognitionLanguageProvider)));
+    await _speak(_clarificationSpeech(field, _ref.read(voiceRecognitionLanguageProvider), detail: detail));
     if (session != _session) return;
     state = state.copyWith(
       status: state.bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
@@ -650,28 +976,30 @@ class VoiceController extends StateNotifier<VoiceState> {
       // timestamp so the recording metadata remains associated with the first command.
     );
     try {
-      await _engine.start();
+      await _startEngine();
       _armSpeechEndTimer(_noSpeechAfter);
-    } catch (_) {
-      state = state.copyWith(status: VoiceStatus.error, errorCode: 'permission');
+    } catch (e) {
+      state = state.copyWith(status: VoiceStatus.error, errorCode: _startFailureCode(e));
     }
   }
 
-  Future<void> _speakThenListenForConfirmation({bool editApplied = false}) async {
+  Future<void> _speakThenListenForConfirmation() async {
     final session = _session;
     _clearSpeechEndTimer();
     final draft = state.draft;
     final accountName = state.account?.name ?? draft?.accountName;
     if (draft == null || accountName == null || draft.amount == null || draft.direction == null) return;
     final languageCode = _ref.read(voiceRecognitionLanguageProvider);
-    await _speak(_confirmationSpeech(draft, accountName, languageCode, editApplied: editApplied));
+    final editedField = _lastEditedField;
+    _lastEditedField = null;
+    await _speak(_confirmationSpeech(draft, accountName, languageCode, editedField: editedField));
     if (session != _session) return;
     state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
     try {
-      await _engine.start();
+      await _startEngine();
       _armSpeechEndTimer(_noSpeechAfter);
-    } catch (_) {
-      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
+    } catch (e) {
+      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: _startFailureCode(e));
     }
   }
 
@@ -695,45 +1023,88 @@ class VoiceController extends StateNotifier<VoiceState> {
   Future<void> _handleVoiceConfirmation(String spoken) async {
     final draft = state.draft;
     if (draft == null) return;
+    final tokens = _speechTokens(spoken);
 
-    final edit = _tryParseEdit(spoken, draft);
-    if (edit != null && !edit.isEmpty) {
-      await _applyEditAndReconfirm(edit);
-      return;
-    }
-
-    final normalized = spoken.toLowerCase().replaceAll('أ', 'ا');
-    const yesWords = {'نعم', 'ايوه', 'ايوا', 'صحيح', 'احفظ', 'موافق', 'تمام', 'yes', 'correct', 'save', 'ok'};
-    const noWords = {'الغ', 'إلغاء', 'الغاء', 'لا', 'cancel', 'no'};
-    const editWords = {'تعديل', 'عدل', 'غير', 'edit', 'change'};
-
-    if (yesWords.any(normalized.contains)) {
-      await confirm();
-      return;
-    }
-    if (noWords.any(normalized.contains)) {
+    // 1. Cancel is checked FIRST and acts immediately — never gated behind another question.
+    const strongCancel = {'الغ', 'الغاء', 'الغي', 'الغيه', 'cancel', 'توقف', 'كنسل'};
+    const weakCancel = {'لا', 'no', 'رجوع'};
+    if (tokens.any(strongCancel.contains) || (tokens.length <= 2 && tokens.any(weakCancel.contains))) {
       await _cancelWithSpeech();
       return;
     }
-    if (editWords.any(normalized.contains)) {
+
+    // 2. A fully-specified edit ("عدل المبلغ إلى خمسة ألف وخمسمائة") — applied directly.
+    final edit = _tryParseEdit(spoken, draft);
+    if (edit != null && !edit.isEmpty) {
+      await _applyEdit(edit);
+      return;
+    }
+
+    // 3. Save on the FIRST utterance of any ordinary "yes"/"save" word.
+    if (_isYes(tokens)) {
+      await confirm();
+      return;
+    }
+
+    // 4. A bare "تعديل" — ask what to change.
+    const editWords = {'تعديل', 'عدل', 'غير', 'غيير', 'تغيير', 'بدل', 'edit', 'change'};
+    if (tokens.any(editWords.contains)) {
       await _askWhatToEditThenListen();
       return;
     }
     await _confirmationNotUnderstood();
   }
 
-  Future<void> _applyEditAndReconfirm(_VoiceEditResult edit) async {
+  /// Lower-cased tokens with diacritics removed, alef variants unified and ة→ه — used ONLY for
+  /// comparing against small keyword sets (never for text that is stored or shown).
+  List<String> _speechTokens(String text) => [
+        for (final t in text.trim().split(RegExp(r'\s+')))
+          if (t.isNotEmpty) ArabicNumberParser.normalizeWord(t),
+      ];
+
+  static const _yesTokens = {
+    'نعم', 'ايوه', 'ايوا', 'ايه', 'اي', 'صحيح', 'صح', 'موافق', 'تمام', 'اكد', 'تاكيد', 'اوك',
+    'yes', 'correct', 'save', 'ok', 'okay', 'yeah',
+  };
+
+  bool _isYes(List<String> tokens) =>
+      tokens.any((t) => _yesTokens.contains(t) || t.startsWith('حفظ') || t.startsWith('احفظ'));
+
+  /// `true` = yes, `false` = no, `null` = neither (used for the "same account?" question).
+  bool? _yesNo(String text) {
+    final tokens = _speechTokens(text);
+    if (tokens.any(const {'لا', 'no', 'مختلف', 'ليس'}.contains)) return false;
+    if (_isYes(tokens)) return true;
+    return null;
+  }
+
+  Future<void> _applyEdit(_VoiceEditResult edit) async {
     final draft = state.draft;
     if (draft == null) return;
+    if (edit.needsAmount) {
+      // "عدل المبلغ" was said but the new amount was unclear — ask for ONLY the amount.
+      _lastEditedField = 'amount';
+      await _ask('amount', 'amountUncertain');
+      return;
+    }
     var updatedDraft = edit.draft ?? draft;
     var updatedAccount = state.account;
     if (edit.accountNameHint != null) {
       final matched = _matchAccount(edit.accountNameHint, edit.accountNameHint!);
       updatedAccount = matched;
       updatedDraft = updatedDraft.copyWith(accountName: matched?.name ?? edit.accountNameHint);
+      _nameDecided = false;
     }
-    state = state.copyWith(draft: updatedDraft, account: updatedAccount, clearAccount: updatedAccount == null, clearError: true);
-    await _speakThenListenForConfirmation(editApplied: true);
+    _lastEditedField = edit.field;
+    state = state.copyWith(
+      draft: updatedDraft,
+      account: updatedAccount,
+      clearAccount: updatedAccount == null,
+      clearError: true,
+      clearClarifyingField: true,
+      clearSuggestedAccount: true,
+    );
+    await _advanceAfterParsing(draft: updatedDraft, account: updatedAccount);
   }
 
   Future<void> _askWhatToEditThenListen() async {
@@ -743,10 +1114,10 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (session != _session) return;
     state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
     try {
-      await _engine.start();
+      await _startEngine();
       _armSpeechEndTimer(_noSpeechAfter);
-    } catch (_) {
-      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
+    } catch (e) {
+      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: _startFailureCode(e));
     }
   }
 
@@ -769,16 +1140,24 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (session != _session) return;
     state = state.copyWith(status: VoiceStatus.confirmationListening, clearError: true, transcript: '');
     try {
-      await _engine.start();
+      await _startEngine();
       _armSpeechEndTimer(_noSpeechAfter);
-    } catch (_) {
-      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: 'permission');
+    } catch (e) {
+      state = state.copyWith(status: VoiceStatus.awaitingConfirmation, errorCode: _startFailureCode(e));
     }
   }
 
+  /// Cancel is immediate: the screen resets FIRST, the spoken "تم الإلغاء" follows without
+  /// blocking anything.
   Future<void> _cancelWithSpeech() async {
-    await _speak(_cancelledSpeech(_ref.read(voiceRecognitionLanguageProvider)));
+    ++_session;
+    _clearSpeechEndTimer();
+    _nameDecided = false;
+    _lastEditedField = null;
+    final path = state.recordingPath;
     state = const VoiceState();
+    unawaited(_deleteRecording(path));
+    unawaited(_speak(_cancelledSpeech(_ref.read(voiceRecognitionLanguageProvider))));
   }
 
   Future<void> _deleteRecording(String? path) async {
@@ -801,77 +1180,229 @@ class VoiceController extends StateNotifier<VoiceState> {
     return liveTrimmed.isNotEmpty ? liveTrimmed : finalTrimmed;
   }
 
-  /// Best-effort natural-language edit parser for the confirmation step. Deliberately
-  /// pattern/keyword based rather than a full NLU model — it recognizes the field being
-  /// mentioned (المبلغ / التفاصيل / الحساب / النوع) plus a new value near it. Returns `null` (not
-  /// an empty result) when [text] doesn't look like an edit at all, so the caller falls through
-  /// to yes/no/cancel handling instead of misfiring on an unrelated sentence.
+  /// Edit parser for the confirmation step. It looks for the FIELD word the person named (المبلغ /
+  /// الاسم·الحساب / التفاصيل / النوع / التاريخ) and takes the value that follows it, so all of
+  /// these work in one sentence: "عدل المبلغ إلى خمسة ألف وخمسمائة"، "غير الاسم إلى أحمد علي"،
+  /// "تعديل التفاصيل حق كهرباء"، "عدل النوع له"، "غير التاريخ إلى أمس" — with or without the edit
+  /// verb (after a bare "تعديل" the person just says "المبلغ خمسة ألف"). When several field words
+  /// occur, the FIRST one wins. Returns `null` when the text names no field at all, so the caller
+  /// falls through to yes/cancel handling instead of misfiring on an unrelated sentence.
   _VoiceEditResult? _tryParseEdit(String text, VoiceCommandDraft draft) {
-    final normalized = text.trim();
-    if (normalized.isEmpty) return null;
-    final lower = normalized.toLowerCase();
+    final raw = text.trim().split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+    if (raw.isEmpty) return null;
+    final norm = [for (final t in raw) ArabicNumberParser.normalizeWord(t)];
 
-    if (normalized.contains('المبلغ') || normalized.contains('القيمة')) {
-      final amountMatch = RegExp(r'(\d+(?:[.,]\d+)?)').firstMatch(normalized);
-      if (amountMatch != null) {
-        final newAmount = double.tryParse(amountMatch.group(1)!.replaceAll(',', '.'));
-        if (newAmount != null) return _VoiceEditResult(draft: draft.copyWith(amount: newAmount));
-      }
-      // Do not limit editing to digits. The same Arabic number parser used for a new command
-      // also understands speech-engine output such as "ثلاثة آلاف".
-      final spokenAmount = _ref.read(voiceCommandParserProvider).parse(normalized).amount;
-      if (spokenAmount != null) return _VoiceEditResult(draft: draft.copyWith(amount: spokenAmount));
-    }
-
-    final detailsMatch = RegExp(r'التفاصيل\s+(?:الى|إلى)?\s*(.+)').firstMatch(normalized);
-    if (detailsMatch != null) {
-      final newDetails = detailsMatch.group(1)?.trim();
-      if (newDetails != null && newDetails.isNotEmpty) {
-        return _VoiceEditResult(draft: draft.copyWith(details: newDetails));
-      }
-    }
-
-    final mentionsDirectionContext =
-        normalized.contains('النوع') || normalized.contains('اجعل') || normalized.contains('خلي') || normalized.contains('خله');
-    if (mentionsDirectionContext || lower.contains('debit') || lower.contains('credit')) {
-      if (normalized.contains('عليه') || lower.contains('debit')) {
-        return _VoiceEditResult(draft: draft.copyWith(direction: AccountDirection.debit));
-      }
-      if (normalized.contains('له') || lower.contains('credit')) {
-        return _VoiceEditResult(draft: draft.copyWith(direction: AccountDirection.credit));
+    const fields = <String, Set<String>>{
+      'amount': {'المبلغ', 'مبلغ', 'القيمه', 'قيمه', 'الرقم', 'السعر'},
+      'name': {'الاسم', 'اسم', 'الحساب', 'حساب', 'صاحب'},
+      'details': {'التفاصيل', 'تفاصيل', 'الملاحظات', 'ملاحظات', 'البيان', 'بيان', 'الوصف'},
+      'direction': {'النوع', 'نوع', 'الاتجاه'},
+      'date': {'التاريخ', 'تاريخ'},
+    };
+    String? field;
+    var fieldIndex = -1;
+    for (var i = 0; i < norm.length && field == null; i++) {
+      for (final entry in fields.entries) {
+        if (entry.value.contains(norm[i])) {
+          field = entry.key;
+          fieldIndex = i;
+          break;
+        }
       }
     }
 
-    final accountMatch = RegExp(r'الحساب\s+(?:الى|إلى)?\s*(.+)').firstMatch(normalized);
-    if (accountMatch != null) {
-      final name = accountMatch.group(1)?.trim();
-      if (name != null && name.isNotEmpty) return _VoiceEditResult(accountNameHint: name);
+    const connectors = {'الى', 'ل', 'لي', 'يصير', 'يكون', 'خله', 'خلي', 'اجعله', 'اجعل', 'هو', 'يبقى', 'بدل', 'من'};
+    List<String> valueTokens(int from) {
+      var i = from;
+      while (i < raw.length && connectors.contains(norm[i])) {
+        i++;
+      }
+      return raw.sublist(i);
     }
 
+    final parser = _ref.read(voiceCommandParserProvider);
+    switch (field) {
+      case 'amount':
+      {
+        final valueText = valueTokens(fieldIndex + 1).join(' ');
+        final extraction = parser.parseAmount(valueText);
+        final value = extraction.value;
+        if (value == null) return const _VoiceEditResult(needsAmount: true);
+        var updated = draft.copyWith(amount: value);
+        final explicitCurrency = _explicitCurrency(valueText);
+        if (explicitCurrency != null) updated = updated.copyWith(currency: explicitCurrency);
+        return _VoiceEditResult(draft: updated, field: 'amount');
+      }
+      case 'name':
+      {
+        final words = valueTokens(fieldIndex + 1).take(4).toList();
+        if (words.isEmpty) return null;
+        return _VoiceEditResult(accountNameHint: words.join(' '), field: 'name');
+      }
+      case 'details':
+      {
+        final value = valueTokens(fieldIndex + 1).join(' ').trim();
+        if (value.isEmpty) return null;
+        return _VoiceEditResult(draft: draft.copyWith(details: value), field: 'details');
+      }
+      case 'direction':
+      {
+        final direction = parser.parseDirection(valueTokens(fieldIndex + 1).join(' '));
+        if (direction == null) return null;
+        return _VoiceEditResult(draft: draft.copyWith(direction: direction), field: 'direction');
+      }
+      case 'date':
+      {
+        final valueText = valueTokens(fieldIndex + 1).join(' ');
+        if (valueText.isEmpty) return null;
+        return _VoiceEditResult(draft: draft.copyWith(date: parser.parse(valueText).date), field: 'date');
+      }
+    }
+
+    // No field word: a bare direction edit such as "خله عليه" / "اجعله له".
+    const directionVerbs = {'خله', 'خلي', 'اجعله', 'اجعل', 'غير', 'عدل', 'تعديل'};
+    if (norm.any(directionVerbs.contains)) {
+      final direction = parser.parseDirection(text);
+      if (direction != null && direction != draft.direction) {
+        return _VoiceEditResult(draft: draft.copyWith(direction: direction), field: 'direction');
+      }
+    }
     return null;
   }
 
-  /// Tries to match [parsedName] (falling back to the whole [transcript]) against an existing
-  /// account. Prefers an EXACT match (trimmed, case-insensitive) first — that's what "the
-  /// account already exists" really means, not just a name that happens to share a substring.
-  /// Falls back to a substring match only when the STORED name itself looks like a real full
-  /// name (2+ words), so a short, generic first name can never accidentally match an unrelated
-  /// account and silently add the entry to the wrong person.
+  /// A currency the speaker NAMED explicitly (a bare "ريال" does not count — it must never
+  /// silently change the currency of an amount that is only being corrected).
+  String? _explicitCurrency(String text) {
+    if (!RegExp('يمني|سعودي|دولار|درهم|جنيه|دينار|اماراتي|إماراتي|مصري|كويتي').hasMatch(text)) return null;
+    final parsed = _ref.read(voiceCommandParserProvider).parse(text);
+    return parsed.currencyUnsupported ? null : parsed.currency;
+  }
+
+  /// Cloud recognizers return several ranked hypotheses. Keep the first unless a LATER one parses
+  /// strictly better — a readable amount (+4), a two-word name (+2), an explicit direction (+1);
+  /// a garbled amount costs 2. Ties keep the recognizer's own top choice.
+  /// `true` when the chosen transcript's amount is a bare "ألف"/"مليون" while another hypothesis
+  /// of the SAME audio holds a noisy or different number phrase. Example: Vosk's top result is
+  /// "أحمد عليه ألف ريال" but its 2nd is "أحمد عليه إلا ألف ريال" — the person most likely said
+  /// "خمسة ألف" and the best hypothesis simply lost the word. Saving 1000 there is the
+  /// reported "التعويض بألف"; asking is the honest behaviour.
+  bool _amountDoubtedByAlternatives(String chosen, List<String> alternatives) {
+    if (alternatives.length < 2) return false;
+    final parser = _ref.read(voiceCommandParserProvider);
+    final main = parser.parseAmount(chosen);
+    if (main.value == null || !main.bare) return false;
+    for (final candidate in alternatives) {
+      if (candidate == chosen) continue;
+      final other = parser.parseAmount(candidate);
+      if (other.uncertain) return true;
+      if (other.value != null && other.value != main.value) return true;
+    }
+    return false;
+  }
+
+  String _pickBestTranscript(String primary, List<String> alternatives) {
+    if (alternatives.length < 2) return primary;
+    final parser = _ref.read(voiceCommandParserProvider);
+    int score(String text) {
+      final d = parser.parse(text);
+      var v = 0;
+      if (d.amount != null) {
+        // A bare "ألف" is what is left when the number word before it was dropped, so it must
+        // never beat a hypothesis that kept the uncertainty — that was the silent "1000".
+        v += parser.parseAmount(text).bare ? -2 : 4;
+      } else if (d.amountUncertain) {
+        v -= 2;
+      }
+      final name = d.accountName;
+      if (name != null && VoiceCommandParser.hasFullName(name)) v += 2;
+      if (d.direction != null) v += 1;
+      return v;
+    }
+
+    var best = primary;
+    var bestScore = score(primary);
+    for (final candidate in alternatives) {
+      final candidateScore = score(candidate);
+      if (candidateScore > bestScore) {
+        best = candidate;
+        bestScore = candidateScore;
+      }
+    }
+    return best;
+  }
+
+  String _canonicalName(String value) => value
+      .toLowerCase()
+      .replaceAll(RegExp('[أإآ]'), 'ا')
+      .replaceAll('ة', 'ه')
+      .replaceAll('ى', 'ي')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+
+  /// Exact match only (case-, alef- and extra-space-insensitive). A name that is merely CLOSE to a
+  /// saved one is NOT silently merged into it — see [_similarAccount], which makes the dialogue
+  /// ask "هل تقصد الحساب …؟" instead, so two different people can never be fused by a guess.
+  /// The substring pass only fires when the STORED name is itself a full name (2+ words) found
+  /// inside the spoken text.
   Account? _matchAccount(String? parsedName, String transcript) {
     final accounts = _ref.read(accountsProvider).value ?? const <Account>[];
     final candidateRaw = (parsedName ?? transcript).trim();
     if (candidateRaw.isEmpty) return null;
-    final candidate = candidateRaw.toLowerCase();
+    final candidate = _canonicalName(candidateRaw);
 
     for (final account in accounts) {
-      if (account.name.trim().toLowerCase() == candidate) return account;
+      if (_canonicalName(account.name) == candidate) return account;
     }
     for (final account in accounts) {
-      final storedName = account.name.trim().toLowerCase();
-      final looksLikeFullName = storedName.split(RegExp(r'\s+')).length >= 2;
+      final storedName = _canonicalName(account.name);
+      final looksLikeFullName = storedName.split(' ').length >= 2;
       if (looksLikeFullName && candidate.contains(storedName)) return account;
     }
     return null;
+  }
+
+  /// An existing account whose name is very close to [name] but not identical: the same letters
+  /// split differently ("عبد القدوس محمد" vs "عبدالقدوس محمد"), a small spelling difference, or a
+  /// missing leading part ("القدوس محمد" vs "عبدالقدوس محمد"). Closest wins; `null` when nothing
+  /// is close enough to be worth asking about.
+  Account? _similarAccount(String name) {
+    final accounts = _ref.read(accountsProvider).value ?? const <Account>[];
+    final candidate = _canonicalName(name).replaceAll(' ', '');
+    if (candidate.length < 4) return null;
+    Account? best;
+    var bestDistance = 1 << 30;
+    for (final account in accounts) {
+      final stored = _canonicalName(account.name).replaceAll(' ', '');
+      if (stored.isEmpty) continue;
+      if (stored == candidate) {
+        // Same letters, different spacing — the closest possible "not exact" case.
+        return account;
+      }
+      final contained = (candidate.length >= 5 && stored.contains(candidate)) ||
+          (stored.length >= 5 && candidate.contains(stored));
+      final distance = contained ? 1 : _editDistance(candidate, stored);
+      final limit = (stored.length * 0.2).floor().clamp(1, 3);
+      if (distance <= limit && distance < bestDistance) {
+        best = account;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  int _editDistance(String a, String b) {
+    if (a == b) return 0;
+    var previous = List<int>.generate(b.length + 1, (i) => i);
+    for (var i = 1; i <= a.length; i++) {
+      final current = List<int>.filled(b.length + 1, 0)..[0] = i;
+      for (var j = 1; j <= b.length; j++) {
+        final cost = a.codeUnitAt(i - 1) == b.codeUnitAt(j - 1) ? 0 : 1;
+        final best = [previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost].reduce((x, y) => x < y ? x : y);
+        current[j] = best;
+      }
+      previous = current;
+    }
+    return previous[b.length];
   }
 
   // ───────────────────────── Manual tap fallbacks (kept working) ─────────────────────────
@@ -879,20 +1410,70 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// Manual chip-tap fallback (see VoiceCommandSheet's _AccountChoices) — the voice-driven
   /// clarification loop is the primary path now, but tapping still works if recognition fails
   /// repeatedly for a particular name.
+  /// A manual tap must win over whatever the voice loop is doing: stop the question being spoken,
+  /// the open microphone and any pending silence timer, and invalidate the old session so a late
+  /// callback can't act on a question that was just answered by hand.
+  void _interruptForManualChoice() {
+    ++_session;
+    _clearSpeechEndTimer();
+    unawaited(_voiceOutput.stop());
+    unawaited(_engine.cancel());
+  }
+
   void selectAccount(Account account) {
     final draft = state.draft;
     if (draft == null) return;
+    _interruptForManualChoice();
+    _nameDecided = true;
     final updated = draft.copyWith(accountName: account.name);
-    state = state.copyWith(draft: updated, account: account, clearError: true, clearClarifyingField: true);
+    state = state.copyWith(
+      draft: updated,
+      account: account,
+      clearError: true,
+      clearClarifyingField: true,
+      clearSuggestedAccount: true,
+    );
     unawaited(_advanceAfterParsing(draft: updated, account: account));
   }
 
   void selectDirection(AccountDirection direction) {
     final draft = state.draft;
     if (draft == null) return;
+    _interruptForManualChoice();
     final updated = draft.copyWith(direction: direction);
     state = state.copyWith(draft: updated, clearError: true, clearClarifyingField: true);
     unawaited(_advanceAfterParsing(draft: updated, account: state.account));
+  }
+
+  /// Tap on the confirmation's save button: stops the question/listening first, then saves.
+  Future<void> confirmByTap() async {
+    if (state.draft == null) return;
+    _interruptForManualChoice();
+    await confirm();
+  }
+
+  /// Tap answer to "هل تقصد الحساب الموجود …؟": [same] `true` reuses the suggested account,
+  /// `false` keeps the spoken name as a brand-new account.
+  void answerSameAccount({required bool same}) {
+    final draft = state.draft;
+    if (draft == null) return;
+    _interruptForManualChoice();
+    _nameDecided = true;
+    final suggested = state.suggestedAccount;
+    if (same && suggested != null) {
+      final updated = draft.copyWith(accountName: suggested.name);
+      state = state.copyWith(
+        draft: updated,
+        account: suggested,
+        clearError: true,
+        clearClarifyingField: true,
+        clearSuggestedAccount: true,
+      );
+      unawaited(_advanceAfterParsing(draft: updated, account: suggested));
+    } else {
+      state = state.copyWith(clearError: true, clearClarifyingField: true, clearSuggestedAccount: true);
+      unawaited(_advanceAfterParsing(draft: draft, account: state.account));
+    }
   }
 
   // ───────────────────────────────── Saving ─────────────────────────────────
@@ -903,7 +1484,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// transaction is then attached to that new account, never a mismatched or placeholder one.
   ///
   /// DISCLOSED SIMPLIFICATION: a voice command never states whether the person is a "عميل" or
-  /// "مورد" — a newly-created account defaults to [AccountCategory.client], the same default the
+  /// "مورد" — a newly-created account defaults to the default category (normally "العملاء"), the same default the
   /// manual Add Account form starts on. The person can reclassify it afterwards from that
   /// account's own edit screen if it should actually be a supplier.
   Future<void> confirm() async {
@@ -919,7 +1500,7 @@ class VoiceController extends StateNotifier<VoiceState> {
       account = Account(
         id: _uuid.v4(),
         name: accountName,
-        category: AccountCategory.client,
+        category: _ref.read(defaultAccountCategoryProvider),
         createdDate: draft.date,
       );
       await _ref.read(accountsProvider.notifier).addAccount(account);
@@ -944,6 +1525,8 @@ class VoiceController extends StateNotifier<VoiceState> {
           details: draft.details,
           voiceRecording: recording,
         ));
+    // Show the currency page the entry was saved in (Home / Account Details are per currency).
+    _ref.read(selectedCurrencyIdProvider.notifier).state = draft.currency;
     // Mic stops here — state becomes `success` and nothing auto-starts listening again, matching
     // "ثم يتوقف الميكروفون عن التشغيل" from the spec. [startAnother] is the only way back in.
     state = state.copyWith(status: VoiceStatus.success);
@@ -967,6 +1550,7 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   Future<void> cancel() async {
     ++_session;
+    _networkRetryCount = 0;
     _clearSpeechEndTimer();
     _bluetoothMonitor?.cancel();
     await _voiceOutput.stop();
@@ -998,7 +1582,11 @@ class VoiceController extends StateNotifier<VoiceState> {
     _bluetoothMonitor?.cancel();
     _partialSubscription?.cancel();
     _finalSubscription?.cancel();
-    unawaited(_engine.cancel());
+    _errorSubscription?.cancel();
+    _activitySubscription?.cancel();
+    // release() (not just cancel()) so a Whisper model parked in memory is freed when the person
+    // leaves the voice screen.
+    unawaited(_engine.release());
     super.dispose();
   }
 }

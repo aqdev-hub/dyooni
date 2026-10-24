@@ -12,9 +12,17 @@ import 'package:dyooni/data/repositories/backup/backup_repository_impl.dart';
 import 'package:dyooni/data/repositories/settings/personal_data_repository.dart';
 import 'package:dyooni/data/repositories/transactions/transactions_repository.dart';
 
-class MockAccountsRepository extends Mock implements AccountsRepository {}
+class MockAccountsRepository extends Mock implements AccountsRepository {
+  // The controllers subscribe to watchAccounts() in build(); an unstubbed Mock returns null for
+  // it and the whole provider fails. An empty stream = "no live updates", which is what tests want.
+  @override
+  Stream<List<Account>> watchAccounts() => const Stream.empty();
+}
 
-class MockTransactionsRepository extends Mock implements TransactionsRepository {}
+class MockTransactionsRepository extends Mock implements TransactionsRepository {
+  @override
+  Stream<List<Transaction>> watchTransactions() => const Stream.empty();
+}
 
 class MockPersonalDataRepository extends Mock implements PersonalDataRepository {}
 

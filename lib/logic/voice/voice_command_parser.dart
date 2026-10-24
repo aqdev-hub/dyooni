@@ -1,4 +1,5 @@
 import '../../data/models/account.dart';
+import 'arabic_number_parser.dart';
 
 /// Pure, deterministic command parser. It has no plugin/UI dependency, which
 /// makes it safe to test and replace only the STT service later.
@@ -52,23 +53,37 @@ class VoiceCommandParser {
   /// silently drift out of sync with each other.
   static final RegExp _isoDatePattern = RegExp(r'\d{4}[-/]\d{1,2}[-/]\d{1,2}');
 
+  /// Public so the dialogue (amount clarification / amount edit) can parse a bare amount phrase
+  /// such as "خمسة ألف وخمسمائة" with the exact same engine used for full commands.
+  AmountExtraction parseAmount(String text) {
+    final prepared = _prepare(text).replaceAll(_isoDatePattern, ' ');
+    return ArabicNumberParser.extract(_tokens(prepared));
+  }
+
   VoiceCommandDraft parse(String transcript, {DateTime? now}) {
-    final normalized = _normalize(transcript);
-    final words = normalized.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    // See class doc comment point 4 — a stated date must never compete with the real amount for
-    // "first number found in the sentence".
-    final amountSearchText = normalized.replaceAll(_isoDatePattern, ' ');
-    final amount = _amount(amountSearchText);
-    final lower = normalized.toLowerCase();
-    final direction = _direction(words);
+    final prepared = _prepare(transcript);
+    // A stated date must never compete with the real amount (class doc point 4), nor leak into
+    // the name/details — so it is cut out of the text before tokenizing.
+    final withoutDate = prepared.replaceAll(_isoDatePattern, ' ');
+    final rawTokens = _tokens(withoutDate);
+    final extraction = ArabicNumberParser.extract(rawTokens);
+
+    // Latin-noise stripping happens only AFTER the number phrase was located, so the engine can
+    // still see (and refuse to trust) a garbled number such as "أuأ ألف".
+    final cleanTokens = [for (final t in rawTokens) _stripMixedScriptNoise(t)];
+    final cleanedText = cleanTokens.where((t) => t.isNotEmpty).join(' ');
+
+    final lower = cleanedText.toLowerCase();
+    final direction = _direction(cleanTokens.where((t) => t.isNotEmpty).toList());
     final (currencyCode, currencyUnsupported) = _currency(lower);
-    final date = _date(lower, now ?? DateTime.now());
-    final accountName = _accountName(normalized);
-    final details = _details(normalized);
+    final date = _date(prepared.toLowerCase(), now ?? DateTime.now());
+    final accountName = _accountName(cleanTokens, extraction);
+    final details = _details(cleanedText);
     return VoiceCommandDraft(
       transcript: transcript.trim(),
       accountName: accountName,
-      amount: amount,
+      amount: extraction.value,
+      amountUncertain: extraction.uncertain,
       currency: currencyCode,
       currencyUnsupported: currencyUnsupported,
       details: details,
@@ -81,114 +96,42 @@ class VoiceCommandParser {
     );
   }
 
-  static String _normalize(String value) {
-    final cleaned = value
+  /// Direction (له/عليه and colloquial equivalents) found in a short spoken answer, or `null`.
+  /// Exact-token matching — see [_direction].
+  AccountDirection? parseDirection(String text) =>
+      _direction(_tokens(_prepare(text)).map(_stripMixedScriptNoise).where((t) => t.isNotEmpty).toList());
+
+  static List<String> _tokens(String text) =>
+      text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+
+  /// Cosmetic clean-up that must happen BEFORE tokenizing: Arabic-Indic digits → ASCII, Arabic
+  /// decimal/thousands marks, thousands commas ("3,200" is 3200, not 3.2), and a space between
+  /// digits and letters ("3200ريال" → "3200 ريال").
+  static String _prepare(String value) {
+    var s = value
         .replaceAll('،', ' ')
-        .replaceAll('ـ', '') // tatweel/kashida — a purely cosmetic elongation glyph that
-            // sometimes leaks into recognizer output and would otherwise split one word in two.
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .replaceAll('٠', '0')
-        .replaceAll('١', '1')
-        .replaceAll('٢', '2')
-        .replaceAll('٣', '3')
-        .replaceAll('٤', '4')
-        .replaceAll('٥', '5')
-        .replaceAll('٦', '6')
-        .replaceAll('٧', '7')
-        .replaceAll('٨', '8')
-        .replaceAll('٩', '9')
-        .trim();
-    return _stripMixedScriptNoise(cleaned);
+        .replaceAll('ـ', '') // tatweel — would otherwise split one word in two.
+        .replaceAll('٫', '.')
+        .replaceAll('٬', ',');
+    const arabicIndic = '٠١٢٣٤٥٦٧٨٩';
+    for (var i = 0; i < arabicIndic.length; i++) {
+      s = s.replaceAll(arabicIndic[i], '$i');
+    }
+    s = s
+        .replaceAllMapped(RegExp(r'(?<=\d),(?=\d{3}(?!\d))'), (_) => '')
+        .replaceAllMapped(RegExp(r'(?<=\d),(?=\d)'), (_) => '.')
+        .replaceAllMapped(RegExp(r'(\d)([\u0600-\u06FF])'), (m) => '${m[1]} ${m[2]}')
+        .replaceAllMapped(RegExp(r'([\u0600-\u06FF])(\d)'), (m) => '${m[1]} ${m[2]}');
+    return s.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
-  /// See class doc comment point 1. Only tokens that mix Arabic AND Latin letters get their
-  /// Latin letters stripped — a token that is entirely Latin is left exactly as-is.
-  static String _stripMixedScriptNoise(String value) {
+  /// Only tokens that mix Arabic AND Latin letters get their Latin letters stripped — a token
+  /// that is entirely Latin is left exactly as-is. Returns '' when nothing is left.
+  static String _stripMixedScriptNoise(String token) {
     final arabicPattern = RegExp(r'[\u0600-\u06FF]');
     final latinLetterPattern = RegExp('[a-zA-Z]');
-    final cleanedTokens = <String>[];
-    for (final token in value.split(' ')) {
-      if (token.isEmpty) continue;
-      final isMixedScript = arabicPattern.hasMatch(token) && latinLetterPattern.hasMatch(token);
-      final cleaned = isMixedScript ? token.replaceAll(latinLetterPattern, '') : token;
-      if (cleaned.isNotEmpty) cleanedTokens.add(cleaned);
-    }
-    return cleanedTokens.join(' ');
-  }
-
-  static double? _amount(String value) {
-    final match = RegExp(r'(?<![\w.])(\d+(?:[.,]\d+)?)').firstMatch(value);
-    if (match != null) return double.tryParse(match.group(1)!.replaceAll(',', '.'));
-    return _arabicWordsAmount(value);
-  }
-
-  static double? _arabicWordsAmount(String value) {
-    const units = <String, int>{
-      'واحد': 1,
-      'واحدة': 1,
-      'اثنان': 2,
-      'اثنين': 2,
-      'اثنتان': 2,
-      'ثلاثة': 3,
-      'ثلاث': 3,
-      'اربعة': 4,
-      'أربعة': 4,
-      'خمسة': 5,
-      'ستة': 6,
-      'سبعة': 7,
-      'ثمانية': 8,
-      'تسعة': 9,
-      'عشرة': 10,
-      'عشرين': 20,
-      'ثلاثين': 30,
-      'اربعين': 40,
-      'أربعين': 40,
-      'خمسين': 50,
-      'ستين': 60,
-      'سبعين': 70,
-      'ثمانين': 80,
-      'تسعين': 90,
-      'مئة': 100,
-      'مائة': 100,
-      'مئتان': 200,
-      'مائتان': 200,
-      // Hundred-words 300–900 — previously missing entirely, silently dropping the amount for
-      // any command that used one of these (see class doc comment point 3).
-      'ثلاثمائة': 300,
-      'ثلاثمية': 300,
-      'اربعمائة': 400,
-      'أربعمائة': 400,
-      'اربعمية': 400,
-      'أربعمية': 400,
-      'خمسمائة': 500,
-      'خمسمية': 500,
-      'ستمائة': 600,
-      'ستمية': 600,
-      'سبعمائة': 700,
-      'سبعمية': 700,
-      'ثمانمائة': 800,
-      'ثمانمية': 800,
-      'تسعمائة': 900,
-      'تسعمية': 900,
-      // Deliberately NOT included: a bare 'مية'/'ميه' for 100 — see class doc comment point 3.
-      'الفين': 2000,
-      'ألفين': 2000,
-    };
-    var total = 0;
-    var current = 0;
-    var found = false;
-    for (final raw in value.split(' ')) {
-      final word = raw.replaceFirst(RegExp(r'^و'), '');
-      if (word == 'الف' || word == 'ألف' || word == 'الاف' || word == 'آلاف') {
-        total += (current == 0 ? 1 : current) * 1000;
-        current = 0;
-        found = true;
-      } else if (units.containsKey(word)) {
-        current += units[word]!;
-        found = true;
-      }
-    }
-    return found ? (total + current).toDouble() : null;
+    final isMixedScript = arabicPattern.hasMatch(token) && latinLetterPattern.hasMatch(token);
+    return isMixedScript ? token.replaceAll(latinLetterPattern, '') : token;
   }
 
   /// Exact-word matching only — deliberately NOT `.contains()` on the raw string. A substring
@@ -256,39 +199,94 @@ class VoiceCommandParser {
     return DateTime(now.year, now.month, now.day);
   }
 
-  /// Words that legitimately end a name span wherever they appear next — either because they
-  /// introduce the transaction's details, or because they're the amount that always follows the
-  /// name directly in phrasings like "أضف على إبراهيم سعيد 3200 ريال" (no word separates the name
-  /// from the number that follows it, so the digit itself must be a stop point). "حق"/"علشان"/
-  /// "عشان" were added alongside the details anchors below — see class doc comment point 2.
-  static const _nameBoundaryWords = 'تفاصيل|details|في|قيمة|مقابل|بخصوص|حق|علشان|عشان|عليه|له|مدين|دائن';
-
-  /// Ordered strategies — the first one that produces a non-empty name wins. Add a new anchor
-  /// word to strategy A, or a new leading-verb to strategy B, to recognize another phrasing.
-  static String? _accountName(String value) {
-    // Strategy A: an explicit anchor word sits right before the name, e.g. "...حساب محمد...",
-    // "...على إبراهيم سعيد...". The name ends at the next boundary word OR the next digit
-    // (whichever comes first) OR the end of the sentence.
-    final anchored = RegExp(
-      r'(?:حساب|account|الى|إلى|لـ|على|عن)\s+(.+?)(?=\s+\d|\s+(?:' + _nameBoundaryWords + r')|$)',
-      caseSensitive: false,
-    ).firstMatch(value);
-    final anchoredName = _cleanName(anchored?.group(1));
-    if (anchoredName != null) return anchoredName;
-
-    // Strategy B: no anchor word at all — the name sits directly before the direction marker
-    // itself, e.g. "إبراهيم سعيد عليه 3200 ريال". An optional leading command verb ("أضف"/"سجل")
-    // is skipped so it's never swallowed into the captured name.
-    final beforeDirection = RegExp(
-      r'^(?:أضف|سجل|اضافة|أضافة|add|record)?\s*(.+?)\s+(?:عليه|له|مدين|دائن|debit|credit)\b',
-      caseSensitive: false,
-    ).firstMatch(value);
-    return _cleanName(beforeDirection?.group(1));
+  /// Comparison key for structural words: diacritics/tatweel removed and alef variants unified —
+  /// but NOT ى→ي and NOT ة→ه, because "على" (against) and "علي" (a very common NAME) must never
+  /// collapse into one word.
+  static String _key(String token) {
+    final b = StringBuffer();
+    for (final unit in token.runes) {
+      if ((unit >= 0x064B && unit <= 0x0652) || unit == 0x0670 || unit == 0x0640) continue;
+      final ch = String.fromCharCode(unit);
+      b.write(const {'أ': 'ا', 'إ': 'ا', 'آ': 'ا'}[ch] ?? ch.toLowerCase());
+    }
+    return b.toString();
   }
 
-  static String? _cleanName(String? raw) {
-    final name = raw?.trim();
-    return (name == null || name.isEmpty) ? null : name;
+  /// Words that can sit right before a name as an "anchor" ("على إبراهيم سعيد", "لحساب سالم").
+  static const _anchorWords = {
+    'حساب', 'لحساب', 'الحساب', 'للحساب', 'account', 'الى', 'ل', 'على', 'عن',
+  };
+
+  /// Command verbs / polite filler that may open a sentence and must never become part of a name.
+  static const _leadingSkipWords = {
+    'سجل', 'اضف', 'ضيف', 'اضافه', 'قيد', 'اكتب', 'add', 'record', 'لو', 'سمحت', 'لي', 'من',
+    'فضلك', 'ممكن', 'اريد', 'ابغى', 'ابي', 'عايز', 'بدي', 'يا', 'هل', 'حساب', 'لحساب', 'الحساب',
+    'للحساب', 'account', 'الى', 'ل',
+  };
+
+  /// Words that END a name wherever they appear — fillers the speaker (or recognizer) inserts
+  /// ("يعني"), details anchors, direction markers, currency words, date words. Spoken-number
+  /// words end it too (handled separately via the amount phrase marker).
+  static const _nameStopWords = {
+    'يعني', 'هو', 'اللي', 'الذي', 'وهو', 'هذا', 'ده', 'كذا', 'فقط', 'بس', 'مبلغ', 'مبلغا',
+    'بمبلغ', 'وقدره', 'قدره', 'بقيمه', 'بقيمة', 'بتاريخ', 'امس', 'غدا', 'اليوم',
+    'تفاصيل', 'details', 'في', 'قيمة', 'قيمه', 'مقابل', 'بخصوص', 'حق', 'علشان', 'عشان',
+    'عليه', 'له', 'مدين', 'دائن', 'على', 'debit', 'credit', 'owe', 'دين', 'عنده', 'تسلف',
+    'استلف', 'مديون', 'سدد', 'سلم', 'وصل', 'رجع', 'ارجع',
+    'ريال', 'ريالا', 'ريالات', 'دولار', 'درهم', 'جنيه', 'دينار', 'سعودي', 'يمني', 'محلي',
+    'اماراتي', 'مصري', 'كويتي',
+  };
+
+  static const _maxNameWords = 4;
+
+  /// Token-based name extraction. The tokens that belong to the amount phrase are replaced by a
+  /// stop marker first, so a spoken number can NEVER be swallowed into the name (the old regex
+  /// `.+?` happily absorbed "خمسة" / "ألف" / "يعني" into it).
+  ///
+  /// Ordered strategies — the first that yields a non-empty name wins:
+  ///   A. explicit anchor word before the name ("على إبراهيم سعيد", "لحساب سالم");
+  ///   B1. the leading words of the sentence, up to the first stop word
+  ///       ("عبدالقدوس محمد عليه خمسة ألف");
+  ///   B2. the words right after the direction marker ("عليه عبدالقدوس محمد خمسة ألف").
+  static String? _accountName(List<String> tokens, AmountExtraction amount) {
+    final keys = <String>[];
+    for (var i = 0; i < tokens.length; i++) {
+      final inAmount = amount.found && i >= amount.startToken && i <= amount.endToken;
+      keys.add(inAmount || tokens[i].isEmpty ? '§' : _key(tokens[i]));
+    }
+    bool isStop(String k) =>
+        k == '§' || _nameStopWords.contains(k) || RegExp(r'\d').hasMatch(k);
+
+    String? collect(int from) {
+      var i = from;
+      while (i < keys.length && _leadingSkipWords.contains(keys[i]) && !isStop(keys[i])) {
+        i++;
+      }
+      final words = <String>[];
+      while (i < keys.length && !isStop(keys[i]) && words.length < _maxNameWords) {
+        words.add(tokens[i]);
+        i++;
+      }
+      return words.isEmpty ? null : words.join(' ');
+    }
+
+    for (var i = 0; i < keys.length; i++) {
+      if (_anchorWords.contains(keys[i])) {
+        final name = collect(i + 1);
+        if (name != null) return name;
+      }
+    }
+    final leading = collect(0);
+    if (leading != null) return leading;
+
+    const directionKeys = {
+      'عليه', 'له', 'مدين', 'دائن', 'على', 'debit', 'credit', 'دين', 'عنده', 'تسلف', 'استلف',
+      'مديون', 'سدد', 'سلم', 'وصل', 'رجع', 'ارجع',
+    };
+    for (var i = 0; i < keys.length; i++) {
+      if (directionKeys.contains(keys[i])) return collect(i + 1);
+    }
+    return null;
   }
 
   /// Whether [name] has at least two words (a first name and a last name) — the same rule the
@@ -308,7 +306,7 @@ class VoiceCommandParser {
       r'(?:^|\s)(?:تفاصيل|details|قيمة|بخصوص|حق|علشان|عشان|من\s+اجل|من\s+أجل|لـ?مقابل|مقابل)\s+(.+)',
       caseSensitive: false,
     ).firstMatch(value);
-    final details = match?.group(1)?.trim();
+    final details = match?.group(1)?.trim().replaceFirst(RegExp(r'\s+(?:في|بتاريخ)$'), '').trim();
     return details == null || details.isEmpty ? null : details;
   }
 
@@ -326,11 +324,16 @@ class VoiceCommandDraft {
     required this.date,
     required this.type,
     this.currencyUnsupported = false,
+    this.amountUncertain = false,
   });
 
   final String transcript;
   final String? accountName;
   final double? amount;
+
+  /// `true` when an amount WAS spoken but the recognizer garbled it (e.g. "أuأ ألف"), so
+  /// [amount] is deliberately `null` and the dialogue must ask for it again — never guess.
+  final bool amountUncertain;
 
   /// A resolved currency CODE (e.g. `'LOCAL'`, `'YER'`, `'USD'`...) — matches the codes in
   /// core/constants/currencies.dart exactly, so this can be stored on a Transaction and
@@ -350,6 +353,20 @@ class VoiceCommandDraft {
   final DateTime date;
   final String type;
 
+  /// Same draft with the amount cleared and flagged uncertain (the dialogue then asks for it).
+  VoiceCommandDraft withUncertainAmount() => VoiceCommandDraft(
+        transcript: transcript,
+        accountName: accountName,
+        amount: null,
+        amountUncertain: true,
+        currency: currency,
+        currencyUnsupported: currencyUnsupported,
+        details: details,
+        direction: direction,
+        date: date,
+        type: type,
+      );
+
   /// Extended to cover every field the voice-confirmation "قل تعديلك" flow (and the amount/
   /// account/direction/currency clarification loop) can change — see
   /// VoiceController._tryParseEdit and VoiceController._finishClarificationListening, which
@@ -362,16 +379,19 @@ class VoiceCommandDraft {
     String? accountName,
     String? currency,
     bool? currencyUnsupported,
+    bool? amountUncertain,
+    DateTime? date,
   }) =>
       VoiceCommandDraft(
         transcript: transcript,
         accountName: accountName ?? this.accountName,
         amount: amount ?? this.amount,
+        amountUncertain: amount != null ? false : (amountUncertain ?? this.amountUncertain),
         currency: currency ?? this.currency,
         currencyUnsupported: currencyUnsupported ?? this.currencyUnsupported,
         details: details ?? this.details,
         direction: direction ?? this.direction,
-        date: date,
+        date: date ?? this.date,
         type: type,
       );
 }

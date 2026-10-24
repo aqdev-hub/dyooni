@@ -239,7 +239,76 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerCategories => 'Categories';
 
   @override
+  String get categoriesScreenTitle => 'Manage categories';
+
+  @override
+  String get categoryAddTitle => 'Add category';
+
+  @override
+  String get categoryEditTitle => 'Edit category';
+
+  @override
+  String get categoryNameLabel => 'Category name';
+
+  @override
+  String get categoryNameRequired => 'Enter a category name';
+
+  @override
+  String get categoryNameDuplicate => 'This category already exists';
+
+  @override
+  String get categoryDeleteInUse => 'A category that has accounts cannot be deleted';
+
+  @override
+  String get categoryDeleteProtected => 'This category is built in and cannot be deleted';
+
+  @override
+  String get categoryDeleteLastOne => 'At least one category must remain for accounts';
+
+  @override
+  String get categoryDeleteConfirmBody => 'Delete this category?';
+
+  @override
+  String get categoryKeepOneVisible => 'At least one tab must stay visible';
+
+  @override
   String get drawerCurrencies => 'Currencies';
+
+  @override
+  String get currenciesScreenTitle => 'Manage currencies';
+
+  @override
+  String get currencyAddTitle => 'Add currency';
+
+  @override
+  String get currencyEditTitle => 'Edit currency';
+
+  @override
+  String get currencyNameLabel => 'Currency name';
+
+  @override
+  String get currencyNameRequired => 'Enter a currency name';
+
+  @override
+  String get currencyNameDuplicate => 'This currency already exists';
+
+  @override
+  String get currencyDeleteInUse => 'A currency with recorded transactions cannot be deleted';
+
+  @override
+  String get currencyDeleteProtected => 'This is the default currency and cannot be deleted';
+
+  @override
+  String get currencyDeleteConfirmBody => 'Delete this currency?';
+
+  @override
+  String get currencySwitchTooltip => 'Change currency';
+
+  @override
+  String get currencyNoTransactionsHere => 'No transactions in this currency';
+
+  @override
+  String get homeEmptyAccountsInCurrency => 'No accounts in this currency';
 
   @override
   String get drawerLocalBackup => 'Backup & restore from device';
@@ -948,6 +1017,34 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t finish preparing the speech model. See details below — retry resumes automatically, it won\'t restart the download from scratch';
 
   @override
+  String get whisperPickTitle =>
+      'Choose speech recognition quality';
+
+  @override
+  String get whisperPickBody =>
+      'The model downloads once, then voice commands work without internet.';
+
+  @override
+  String get whisperOptionBalancedTitle =>
+      'Balanced (recommended)';
+
+  @override
+  String get whisperOptionBalancedSubtitle =>
+      'About 190 MB — faster';
+
+  @override
+  String get whisperOptionAccurateTitle =>
+      'Accurate';
+
+  @override
+  String get whisperOptionAccurateSubtitle =>
+      'About 540 MB — more accurate but slower, best on a powerful phone';
+
+  @override
+  String get whisperDownloadingHint =>
+      'Downloading the speech model (one time only) — after this, voice commands work offline';
+
+  @override
   String get voiceRecognitionModeTitle => 'Speech recognition mode';
 
   @override
@@ -955,6 +1052,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceRecognitionModeCloud => 'Cloud';
+
+  @override
+  String get generalSettingsDefaultCategoryTitle => 'Default category when adding a new account';
+
+  @override
+  String get generalSettingsKeepLastCategory => 'Keep the last category';
+
+  @override
+  String get generalSettingsDefaultCurrencyTitle => 'Default currency when adding a new account or operation';
+
+  @override
+  String get generalSettingsKeepLastCurrency => 'Keep the last currency';
+
+  @override
+  String get whisperModelsTitle => 'Local recognition models';
+
+  @override
+  String get whisperModelsHint => 'Download any model at any time, switch between them, and delete the ones you do not need to free space.';
+
+  @override
+  String get whisperModelActive => 'In use';
+
+  @override
+  String get whisperModelInstalled => 'Downloaded';
+
+  @override
+  String get whisperModelNotInstalled => 'Not downloaded';
+
+  @override
+  String get whisperModelDownload => 'Download';
+
+  @override
+  String get whisperModelUse => 'Use';
+
+  @override
+  String get whisperModelDelete => 'Delete';
+
+  @override
+  String get whisperModelCancelDownload => 'Stop download';
+
+  @override
+  String get whisperModelDeleteTitle => 'Delete model';
+
+  @override
+  String get whisperModelDeleteBody => 'The model file will be removed from this device. You can download it again later.';
+
+  @override
+  String get whisperModelDeleteLastNote => 'This is the last downloaded model; you will be asked to pick one when you next use local recognition.';
+
+  @override
+  String get whisperModelsManageRow => 'Manage local models (download / switch / delete)';
 
   @override
   String get openLinkFailedMessage =>
@@ -1273,4 +1421,105 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportStampLabel => 'Stamp';
+
+  @override
+  String get voiceListeningSubtitle => 'Speak clearly and calmly now.\nYour words will be recorded accurately.';
+
+  @override
+  String get voiceStopLabel => 'Stop';
+
+  @override
+  String get voiceTipText => 'Speak clearly and unhurriedly\nfor the best recording result';
+
+  @override
+  String get voiceProcessingSubtitle => 'Extracting the debt details';
+
+  @override
+  String get voiceStepAnalyze => 'Analyzing the text';
+
+  @override
+  String get voiceStepExtract => 'Extracting the information';
+
+  @override
+  String get voiceStepValidate => 'Validating the data';
+
+  @override
+  String get voiceClarifyTitle => 'I need a clarification';
+
+  @override
+  String get voiceClarifySubtitle => 'Please complete the missing detail';
+
+  @override
+  String get voiceQuestionDirection => 'Which type is it?';
+
+  @override
+  String get voiceQuestionDirectionHint => '(Is the debt owed to or by them?)';
+
+  @override
+  String get voiceQuestionAmount => 'What is the amount?';
+
+  @override
+  String get voiceQuestionAmountHint => '(Say only the amount, e.g. five thousand two hundred)';
+
+  @override
+  String get voiceQuestionAmountUncertain => 'I was not sure about the amount';
+
+  @override
+  String get voiceQuestionAmountUncertainHint => '(Say only the amount again)';
+
+  @override
+  String get voiceQuestionAccount => 'Who is the account holder?';
+
+  @override
+  String get voiceQuestionAccountHint => '(Say the first and last name)';
+
+  @override
+  String get voiceQuestionAccountName => 'Complete the account name';
+
+  @override
+  String get voiceQuestionAccountNameHint => '(The name needs at least two words)';
+
+  @override
+  String get voiceQuestionSameAccount => 'Do you mean this account?';
+
+  @override
+  String voiceQuestionSameAccountHint(String name) {
+    return '(Existing account: ${name})';
+  }
+
+  @override
+  String get voiceQuestionCurrency => 'Which currency?';
+
+  @override
+  String get voiceQuestionCurrencyHint => '(Yemeni rial, Saudi riyal, dollar, dirham…)';
+
+  @override
+  String get voiceQuestionNoSpeech => 'I did not catch any sound';
+
+  @override
+  String get voiceQuestionNoSpeechHint => '(Try speaking clearly)';
+
+  @override
+  String get voiceYes => 'Yes';
+
+  @override
+  String get voiceNo => 'No';
+
+  @override
+  String get voiceConfirmYes => 'Yes';
+
+  @override
+  String get voiceConfirmSave => '(Save)';
+
+  @override
+  String get voiceSummaryTitle => 'Transaction summary:';
+
+  @override
+  String get voiceNameLabel => 'Name';
+
+  @override
+  String get voiceYouCanSay => 'You can say:';
+
+  @override
+  String get voiceYouCanSayExamples => '"Yes" or "Save" or "Edit the amount to 3500"';
 }

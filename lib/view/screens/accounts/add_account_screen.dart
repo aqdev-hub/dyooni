@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/constants/currencies.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
@@ -18,11 +17,15 @@ import '../../../core/utils/contact_picker.dart';
 import '../../../core/utils/form_draft_storage.dart';
 import '../../../core/utils/image_rotate.dart';
 import '../../../data/models/account.dart';
+import '../../../data/models/currency_type.dart';
 import '../../../data/models/general_settings.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/accounts/ceiling_check.dart';
+import '../../../logic/categories/categories_provider.dart';
+import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
+import '../../../logic/settings/default_choices_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
@@ -63,10 +66,10 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   final _phoneController = TextEditingController();
   final _ceilingController = TextEditingController();
 
-  String _currencyCode = currencies.first.code;
+  String _currencyCode = defaultCurrencyId; // new accounts: set from the selected currency page in initState
   DateTime _date = DateTime.now();
   AccountDirection _direction = AccountDirection.debit; // may be overridden by general settings, see initState
-  AccountCategory _category = AccountCategory.client;
+  AccountCategory _category = AccountCategory.client; // new accounts: set from defaultAccountCategoryProvider in initState
   bool _isSaving = false;
   bool _isRotating = false;
   String? _attachmentPath;
@@ -101,6 +104,10 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       // logic/settings/general_settings_provider.dart. لا معنى لهذا عند التعديل (existing != null).
       final settings = ref.read(generalSettingsProvider).value;
       if (settings != null) _direction = _resolveDefaultDirection(settings);
+      // The new account's first entry starts in the currency page currently shown on Home.
+      // Both come from الإعدادات (default, or "keep last") — see default_choices_provider.dart.
+      _currencyCode = ref.read(newEntryCurrencyIdProvider);
+      _category = ref.read(newAccountCategoryProvider);
       // ثم نعيد أي مسودة محفوظة (قد تُجاوز الاتجاه الافتراضي أعلاه إن كانت المسودة تحمل اتجاهًا
       // مختلفًا اختاره المستخدم قبل خروج غير مقصود من الشاشة) — انظر FormDraftStorage.
       _restoreDraftIfAny();
@@ -119,13 +126,15 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     _amountController.text = saved['amount'] as String? ?? '';
     _detailsController.text = saved['details'] as String? ?? '';
     _phoneController.text = saved['phone'] as String? ?? '';
-    _currencyCode = saved['currencyCode'] as String? ?? currencies.first.code;
+    _currencyCode = saved['currencyCode'] as String? ?? _currencyCode;
     final savedDate = DateTime.tryParse(saved['date'] as String? ?? '');
     if (savedDate != null) _date = savedDate;
     final savedDirection = saved['direction'] as String?;
     if (savedDirection != null) _direction = AccountDirection.values.byName(savedDirection);
     final savedCategory = saved['category'] as String?;
-    if (savedCategory != null) _category = AccountCategory.values.byName(savedCategory);
+    if (savedCategory != null && ref.read(assignableCategoriesProvider).any((c) => c.id == savedCategory)) {
+      _category = AccountCategory(savedCategory);
+    }
     // FIX for the reported camera black-screen/crash bug: a restored draft's attachment path can
     // point to a file the OS has since cleared (most commonly a transient cache location from
     // before this batch's AttachmentStorage fix existed) — silently restoring and later trying
@@ -221,7 +230,11 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   /// Reached identically from the currency field itself and from its pencil icon — see
   /// currency_picker_sheet.dart's doc comment for why these used to be two different pickers.
   Future<void> _chooseCurrency() async {
-    final selected = await showCurrencyPickerSheet(context, selectedCode: _currencyCode);
+    final selected = await showCurrencyPickerSheet(
+      context,
+      selectedCode: _currencyCode,
+      options: ref.read(currencyTypesProvider),
+    );
     if (selected != null && mounted) setState(() => _currencyCode = selected);
   }
 
@@ -438,10 +451,18 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       await ref.read(accountsProvider.notifier).addAccount(account);
       await ref.read(transactionsProvider.notifier).addTransaction(firstTransaction);
       await _clearDraft(); // the safety-net draft has served its purpose — never resurrect it
-      unawaited(
-        ref.read(generalSettingsProvider.notifier).recordLastUsedDirection(isCredit: _direction == AccountDirection.credit),
-      );
+      // One after the other on purpose: each update reads the current settings, so two running
+      // at once could overwrite each other.
+      final settingsNotifier = ref.read(generalSettingsProvider.notifier);
+      final directionIsCredit = _direction == AccountDirection.credit;
+      final categoryId = _category.id;
+      unawaited(() async {
+        await settingsNotifier.recordLastUsedDirection(isCredit: directionIsCredit);
+        await settingsNotifier.recordLastUsedCategory(categoryId);
+      }());
       if (!mounted) return;
+      // Show the currency page the new account was created in, so it is visible on Home.
+      ref.read(selectedCurrencyIdProvider.notifier).state = _currencyCode;
       AppSnackBar.showSuccess(context, l10n.accountSavedSuccessMessage);
       context.pop();
     } catch (_) {
@@ -537,7 +558,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                                   child: Align(
                                     alignment: Alignment.center,
                                     child: Text(
-                                      currencies.firstWhere((c) => c.code == _currencyCode).label(l10n),
+                                      currencyNameOf(ref.watch(currencyTypesProvider), _currencyCode),
                                       textAlign: TextAlign.center,
                                       style: AppTextStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
                                     ),
@@ -614,25 +635,36 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
               const SizedBox(height: 16),
               Text(l10n.categoryLabel, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _CategoryChoiceChip(
-                      label: l10n.categoryClient,
-                      selected: _category == AccountCategory.client,
-                      onTap: () => setState(() => _category = AccountCategory.client),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _CategoryChoiceChip(
-                      label: l10n.categorySupplier,
-                      selected: _category == AccountCategory.supplier,
-                      onTap: () => setState(() => _category = AccountCategory.supplier),
-                    ),
-                  ),
-                ],
-              ),
+              // The choices are the person's own categories from "إدارة التصنيفات" (never "عام",
+              // which means "all"). A category the account already has is always offered.
+              LayoutBuilder(builder: (context, constraints) {
+                final options = ref.watch(assignableCategoriesProvider);
+                // One or two categories share the row equally (the old look); more wrap onto lines.
+                final equalWidth = options.length <= 2 ? (constraints.maxWidth - 10 * (options.length - 1)) / options.length : null;
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    for (final c in options)
+                      equalWidth != null
+                          ? SizedBox(
+                              width: equalWidth,
+                              child: _CategoryChoiceChip(
+                                label: c.name,
+                                selected: _category.id == c.id,
+                                onTap: () => setState(() => _category = AccountCategory(c.id)),
+                              ),
+                            )
+                          : IntrinsicWidth(
+                              child: _CategoryChoiceChip(
+                                label: c.name,
+                                selected: _category.id == c.id,
+                                onTap: () => setState(() => _category = AccountCategory(c.id)),
+                              ),
+                            ),
+                  ],
+                );
+              }),
               const SizedBox(height: 20),
               if (!widget.isEditing)
                 Row(
@@ -694,7 +726,7 @@ class _CategoryChoiceChip extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? shell.accent.withValues(alpha: 0.1) : shell.surface,

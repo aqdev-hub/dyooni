@@ -15,9 +15,17 @@ import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPre
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 import 'package:dyooni/view/screens/accounts/account_details_screen.dart';
 
-class MockAccountsRepository extends Mock implements AccountsRepository {}
+class MockAccountsRepository extends Mock implements AccountsRepository {
+  // The controllers subscribe to watchAccounts() in build(); an unstubbed Mock returns null for
+  // it and the whole provider fails. An empty stream = "no live updates", which is what tests want.
+  @override
+  Stream<List<Account>> watchAccounts() => const Stream.empty();
+}
 
-class MockTransactionsRepository extends Mock implements TransactionsRepository {}
+class MockTransactionsRepository extends Mock implements TransactionsRepository {
+  @override
+  Stream<List<Transaction>> watchTransactions() => const Stream.empty();
+}
 
 final _account = Account(
   id: '1',
@@ -91,8 +99,8 @@ void main() {
   testWidgets('lists each transaction entry for this account in the table', (tester) async {
     when(() => txRepo.getTransactions()).thenAnswer(
       (_) async => [
-        Transaction(id: 't1', accountId: '1', amount: 500, currency: 'SAR', direction: AccountDirection.credit, date: DateTime(2026, 1, 1), details: 'دفعة أولى'),
-        Transaction(id: 't2', accountId: '1', amount: 100, currency: 'SAR', direction: AccountDirection.debit, date: DateTime(2026, 1, 5), details: 'سحب جزئي'),
+        Transaction(id: 't1', accountId: '1', amount: 500, currency: 'LOCAL', direction: AccountDirection.credit, date: DateTime(2026, 1, 1), details: 'دفعة أولى'),
+        Transaction(id: 't2', accountId: '1', amount: 100, currency: 'LOCAL', direction: AccountDirection.debit, date: DateTime(2026, 1, 5), details: 'سحب جزئي'),
       ],
     );
 

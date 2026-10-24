@@ -3,17 +3,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/currencies.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/voice_palette.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/general_settings.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/voice/voice_provider.dart';
-import '../shared/direction_choice.dart';
 
 /// Statuses rendered as "the mic circle + a headline/subtitle pair" (reference states 1–4, plus
 /// the Bluetooth handshake steps until their own dedicated treatment lands). Every other status
@@ -28,13 +29,6 @@ bool _isMicFamily(VoiceStatus status) => const {
       VoiceStatus.bluetoothConnected,
       VoiceStatus.bluetoothWaitingWakeWord,
       VoiceStatus.bluetoothWakeWordDetected,
-      VoiceStatus.bluetoothListeningCommand,
-    }.contains(status);
-
-bool _showsTimer(VoiceStatus status) => const {
-      VoiceStatus.idle,
-      VoiceStatus.listening,
-      VoiceStatus.paused,
       VoiceStatus.bluetoothListeningCommand,
     }.contains(status);
 
@@ -90,183 +84,343 @@ class VoiceCommandSheet extends ConsumerWidget {
     final settings = ref.watch(generalSettingsProvider).value;
     final creditLabel = resolveCreditLabel(l10n, settings);
     final debitLabel = resolveDebitLabel(l10n, settings);
+    final status = state.status;
+    final isRecording = status == VoiceStatus.listening || status == VoiceStatus.bluetoothListeningCommand;
 
+    final Widget content;
+    if (isRecording) {
+      content = _ListeningView(state: state, controller: controller);
+    } else if (_isMicFamily(status)) {
+      content = _IdleView(state: state, controller: controller);
+    } else if (status == VoiceStatus.processing) {
+      content = _ThinkingView(
+        icon: const _AssetIcon(asset: 'assets/icons/voice_brain.png', fallback: Icons.psychology_rounded, size: 135),
+        title: l10n.voiceProcessing,
+        subtitle: l10n.voiceProcessingSubtitle,
+        step: state.processingStep,
+      );
+    } else if (status == VoiceStatus.saving) {
+      content = _ThinkingView(
+        icon: const _AssetIcon(asset: 'assets/icons/voice_saving.png', fallback: Icons.cloud_upload_rounded, size: 120),
+        title: l10n.voiceSavingHint,
+        subtitle: l10n.voiceProcessingSubtitle,
+      );
+    } else if (status == VoiceStatus.needsClarification) {
+      content = _ClarificationView(state: state, controller: controller, creditLabel: creditLabel, debitLabel: debitLabel);
+    } else if (status == VoiceStatus.awaitingConfirmation || status == VoiceStatus.confirmationListening) {
+      content = _ConfirmationView(state: state, controller: controller, creditLabel: creditLabel, debitLabel: debitLabel);
+    } else if (status == VoiceStatus.success) {
+      content = Padding(padding: const EdgeInsets.fromLTRB(20, 28, 20, 20), child: _SuccessCard(state: state, controller: controller));
+    } else {
+      content = Padding(padding: const EdgeInsets.fromLTRB(20, 28, 20, 20), child: _ErrorCard(state: state, controller: controller));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        content,
+        const Spacer(),
+        if (isRecording) const _TipBox() else const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+/// The person's own PNG from `assets/icons/`; if the file is missing the closest Flutter icon is
+/// drawn instead so the screen never breaks. [width]/[height] are the box the image is fitted
+/// into (aspect ratio preserved, nothing cropped).
+class _AssetIcon extends StatelessWidget {
+  const _AssetIcon({required this.asset, required this.fallback, double? size, double? width, double? height})
+      : width = width ?? size,
+        height = height ?? size;
+  final String asset;
+  final IconData fallback;
+  final double? width;
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    final box = (height ?? width ?? 100);
+    return Image.asset(
+      asset,
+      width: width,
+      height: height,
+      fit: BoxFit.contain,
+      // The box is intentionally larger than the visible glyph (see callers), so the Flutter
+      // fallback icon is drawn smaller than the box.
+      errorBuilder: (_, __, ___) => Icon(fallback, size: box * 0.42, color: palette.gold),
+    );
+  }
+}
+
+class _Headline extends StatelessWidget {
+  const _Headline({required this.title, required this.subtitle});
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          if (_isMicFamily(state.status)) ...[
-            if (state.status == VoiceStatus.idle) ...[
-              const _IdleDecoration(),
-              const SizedBox(height: 10),
-            ],
-            _MicHeadline(state: state),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: _resolveMicTap(state, controller),
-              child: _MicCircle(status: state.status),
-            ),
-            const SizedBox(height: 12),
-            if (_showsTimer(state.status)) _RecordingTimer(state: state),
-            if (state.transcript.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              _TranscriptCard(text: state.transcript),
-            ],
-          ] else if (state.status == VoiceStatus.processing) ...[
-            _WorkingIndicator(icon: Icons.psychology_alt_outlined, label: l10n.voiceProcessing),
-          ] else if (state.status == VoiceStatus.saving) ...[
-            _WorkingIndicator(icon: Icons.cloud_upload_outlined, label: l10n.voiceSavingHint),
-          ] else if (state.status == VoiceStatus.needsClarification) ...[
-            _ClarificationCard(state: state, controller: controller, creditLabel: creditLabel, debitLabel: debitLabel),
-          ] else if (state.status == VoiceStatus.awaitingConfirmation || state.status == VoiceStatus.confirmationListening) ...[
-            _ConfirmationCard(state: state, controller: controller, creditLabel: creditLabel, debitLabel: debitLabel),
-          ] else if (state.status == VoiceStatus.success) ...[
-            _SuccessCard(state: state, controller: controller),
-          ] else if (state.status == VoiceStatus.error || state.status == VoiceStatus.bluetoothDisconnected) ...[
-            _ErrorCard(state: state, controller: controller),
-          ],
-          const SizedBox(height: 22),
-          _BottomToolbar(state: state, controller: controller),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.headline(context).copyWith(color: palette.textPrimary, fontSize: 24, height: 1.3),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body(context).copyWith(color: palette.textSecondary, fontSize: 16, height: 1.5),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Small decorative mic + sound-wave glyph shown ONLY above the idle prompt (reference state 1) —
-/// purely cosmetic, matching the reference's top flourish.
+// ───────────────────────────── Stage 1 — idle ─────────────────────────────
+
+class _IdleView extends StatelessWidget {
+  const _IdleView({required this.state, required this.controller});
+  final VoiceState state;
+  final VoiceController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final palette = context.voicePalette;
+    final status = state.status;
+    final isIdle = status == VoiceStatus.idle;
+    final (String title, String subtitle) = switch (status) {
+      VoiceStatus.idle => (l10n.voiceStartListening, l10n.voiceIdleSubtitle),
+      VoiceStatus.preparing => (l10n.voicePreparing, l10n.voiceIdleSubtitle),
+      VoiceStatus.paused => (l10n.voicePausedTitle, l10n.voicePausedHint),
+      VoiceStatus.bluetoothConnecting => (l10n.voiceBluetoothConnecting, l10n.voiceIdleSubtitle),
+      VoiceStatus.bluetoothConnected => (l10n.voiceBluetoothConnected, l10n.voiceIdleSubtitle),
+      VoiceStatus.bluetoothWaitingWakeWord => (l10n.voiceBluetoothWaitingWakeWord, l10n.voiceIdleSubtitle),
+      VoiceStatus.bluetoothWakeWordDetected => (l10n.voiceBluetoothWakeWordDetected, l10n.voiceIdleSubtitle),
+      _ => (l10n.voiceStartListening, l10n.voiceIdleSubtitle),
+    };
+    final isPaused = status == VoiceStatus.paused;
+    final isBusy = status != VoiceStatus.idle && !isPaused;
+
+    return Column(
+      children: [
+        const SizedBox(height: 30),
+        const _IdleDecoration(),
+        const SizedBox(height: 26),
+        _Headline(title: title, subtitle: subtitle),
+        const SizedBox(height: 11),
+        GestureDetector(
+          onTap: _resolveMicTap(state, controller),
+          // Long press = Bluetooth-headset mode (the hint under the button says so). Only while
+          // idle: during a recording a long press must not restart anything.
+          onLongPress: status == VoiceStatus.idle ? controller.startBluetoothMode : null,
+          child: _BigMic(paused: isPaused, busy: isBusy),
+        ),
+        const SizedBox(height: 18),
+        if (isIdle || status == VoiceStatus.preparing)
+          Text(
+            l10n.voiceLongPressHint,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body(context).copyWith(color: palette.textSecondary, fontSize: 14),
+          ),
+        const SizedBox(height: 10),
+        _RecordingTimer(state: state),
+        const SizedBox(height: 12),
+        _PillRow(state: state, controller: controller),
+        if (state.draft != null || isPaused || isBusy) ...[
+          const SizedBox(height: 12),
+          _CancelPill(controller: controller),
+        ],
+        if (state.transcript.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _TranscriptCard(text: state.transcript)),
+        ],
+      ],
+    );
+  }
+}
+
+/// Reference top flourish: a flat gold microphone flanked by two small gold level-bar groups.
 class _IdleDecoration extends StatelessWidget {
   const _IdleDecoration();
 
   @override
   Widget build(BuildContext context) {
-    final shell = context.shellColors;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.graphic_eq_rounded, size: 16, color: shell.accent.withValues(alpha: 0.6)),
-        const SizedBox(width: 6),
-        Icon(Icons.mic_none_rounded, size: 20, color: shell.accent),
-        const SizedBox(width: 6),
-        Icon(Icons.graphic_eq_rounded, size: 16, color: shell.accent.withValues(alpha: 0.6)),
-      ],
+    final palette = context.voicePalette;
+    Widget bars(List<double> heights) => Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            for (final h in heights)
+              Container(
+                width: 3,
+                height: h,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(color: palette.gold, borderRadius: BorderRadius.circular(2)),
+              ),
+          ],
+        );
+    return SizedBox(
+      height: 56,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          bars(const [10, 20, 30, 20, 10]),
+          const SizedBox(width: 12),
+          Icon(Icons.mic_rounded, size: 56, color: palette.gold),
+          const SizedBox(width: 12),
+          bars(const [10, 20, 30, 20, 10]),
+        ],
+      ),
     );
   }
 }
 
-/// Bold headline + gray subtitle pair for the mic-family states — text varies by exactly which
-/// moment we're in (fresh idle / first recording / resumed recording / paused), matching the
-/// reference's distinct copy for each rather than one generic "listening…" label throughout.
-class _MicHeadline extends StatelessWidget {
-  const _MicHeadline({required this.state});
+/// The big navy microphone: soft gold halo (215) → thin gold ring (191) → navy disc (168).
+class _BigMic extends StatelessWidget {
+  const _BigMic({required this.paused, required this.busy});
+
+  /// While paused the button shows "resume" (play) instead of the microphone.
+  final bool paused;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    return SizedBox(
+      width: 215,
+      height: 215,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 215,
+            height: 215,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: palette.goldGlow.withValues(alpha: 0.55)),
+          ),
+          Container(
+            width: 191,
+            height: 191,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: palette.goldGlow.withValues(alpha: 0.35),
+              border: Border.all(color: palette.gold, width: 2),
+            ),
+          ),
+          Container(
+            width: 168,
+            height: 168,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(colors: [palette.micTop, palette.micBottom]),
+              boxShadow: [BoxShadow(color: palette.micBottom.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
+            ),
+            alignment: Alignment.center,
+            child: busy
+                ? const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
+                : paused
+                    ? const Icon(Icons.play_arrow_rounded, size: 84, color: Colors.white)
+                    // The person's own microphone illustration instead of Flutter's mic glyph.
+                    : const _AssetIcon(asset: 'assets/icons/voice_mic.png', fallback: Icons.mic_rounded, width: 78, height: 104),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ───────────────────────────── Stage 2 — listening ─────────────────────────────
+
+class _ListeningView extends StatelessWidget {
+  const _ListeningView({required this.state, required this.controller});
   final VoiceState state;
+  final VoiceController controller;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final shell = context.shellColors;
-    final (String title, String subtitle) = switch (state.status) {
-      VoiceStatus.idle => (l10n.voiceStartListening, l10n.voiceIdleSubtitle),
-      VoiceStatus.preparing => (l10n.voicePreparing, l10n.voiceIdleSubtitle),
-      VoiceStatus.paused => (l10n.voicePausedTitle, l10n.voicePausedHint),
-      VoiceStatus.listening => state.elapsedBeforePause > Duration.zero
-          ? (l10n.voiceRecordingResumedTitle, l10n.voiceContinueSpeakingHint)
-          : (l10n.voiceRecordingTitle, l10n.voiceShortPressHint),
-      VoiceStatus.bluetoothConnecting => (l10n.voiceBluetoothConnecting, l10n.voiceIdleSubtitle),
-      VoiceStatus.bluetoothConnected => (l10n.voiceBluetoothConnected, l10n.voiceIdleSubtitle),
-      VoiceStatus.bluetoothWaitingWakeWord => (l10n.voiceBluetoothWaitingWakeWord, l10n.voiceIdleSubtitle),
-      VoiceStatus.bluetoothWakeWordDetected => (l10n.voiceBluetoothWakeWordDetected, l10n.voiceIdleSubtitle),
-      VoiceStatus.bluetoothListeningCommand => (l10n.voiceListening, l10n.voiceBluetoothListeningCommand),
-      _ => (l10n.voiceStartListening, l10n.voiceIdleSubtitle),
-    };
+    final palette = context.voicePalette;
+    final resumed = state.elapsedBeforePause > Duration.zero;
     return Column(
       children: [
-        Text(title, textAlign: TextAlign.center, style: AppTextStyles.title(context).copyWith(color: shell.textPrimary, fontSize: 18)),
-        const SizedBox(height: 4),
-        Text(subtitle, textAlign: TextAlign.center, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
-      ],
-    );
-  }
-}
-
-/// The one big circle, colored by exactly what's happening: navy at rest, red while actively
-/// recording, orange while paused — matching the reference's three distinct fills (a fourth,
-/// neutral "working" composition is used for processing/saving instead of this circle at all,
-/// see [_WorkingIndicator]).
-class _MicCircle extends StatelessWidget {
-  const _MicCircle({required this.status});
-  final VoiceStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final shell = context.shellColors;
-    final isRecording = status == VoiceStatus.listening || status == VoiceStatus.bluetoothListeningCommand;
-    final isPaused = status == VoiceStatus.paused;
-    final fill = isRecording ? AppColors.voiceListening : (isPaused ? AppColors.voicePaused : AppColors.voiceIdle);
-    final icon = isRecording ? Icons.stop_rounded : (isPaused ? Icons.play_arrow_rounded : Icons.mic_rounded);
-    final isBusy = status == VoiceStatus.preparing ||
-        status == VoiceStatus.bluetoothConnecting ||
-        status == VoiceStatus.bluetoothConnected ||
-        status == VoiceStatus.bluetoothWaitingWakeWord ||
-        status == VoiceStatus.bluetoothWakeWordDetected;
-
-    return Column(
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: 122,
-          height: 122,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: fill,
-            boxShadow: [BoxShadow(color: fill.withValues(alpha: isRecording ? .35 : .18), blurRadius: 20, spreadRadius: 4)],
-          ),
-          alignment: Alignment.center,
-          child: isBusy
-              ? const SizedBox(width: 30, height: 30, child: CircularProgressIndicator(strokeWidth: 2.6, color: Colors.white))
-              : Icon(icon, size: 50, color: Colors.white),
+        const SizedBox(height: 20),
+        const _EarBadge(),
+        const SizedBox(height: 16),
+        _Headline(
+          title: l10n.voiceListening,
+          subtitle: resumed ? l10n.voiceContinueSpeakingHint : l10n.voiceListeningSubtitle,
         ),
-        if (isRecording) ...[
-          const SizedBox(height: 10),
-          _Waveform(color: fill),
+        const SizedBox(height: 14),
+        const _Waveform(),
+        const SizedBox(height: 14),
+        GestureDetector(onTap: controller.stopAndAnalyze, child: const _StopButton()),
+        const SizedBox(height: 8),
+        Text(
+          l10n.voiceStopLabel,
+          style: AppTextStyles.title(context).copyWith(color: palette.stopRed, fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        _RecordingTimer(state: state),
+        const SizedBox(height: 8),
+        _PillRow(state: state, controller: controller),
+        const SizedBox(height: 14),
+        _CancelPill(controller: controller),
+        if (state.transcript.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _TranscriptCard(text: state.transcript)),
         ],
-        if (status == VoiceStatus.idle || status == VoiceStatus.preparing) ...[
-          const SizedBox(height: 10),
-          Text(
-            AppLocalizations.of(context)!.voiceLongPressHint,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 11),
-          ),
-        ],
+        const SizedBox(height: 14),
       ],
     );
   }
 }
 
-/// A row of small bars under the circle while actively recording, echoing the reference's
-/// waveform strip. Purely decorative (fixed heights, not driven by real audio amplitude — doing
-/// that honestly would need a live amplitude stream the current recorder doesn't expose).
-class _Waveform extends StatelessWidget {
-  const _Waveform({required this.color});
-  final Color color;
-
-  static const _heights = [6.0, 12.0, 18.0, 10.0, 16.0, 8.0, 14.0, 20.0, 9.0, 15.0, 7.0, 13.0];
+/// The listening illustration: the person's own PNG (navy disc, gold ear, sound arcs on both
+/// sides) — replaces the earlier version that was assembled from a Container, an image and a
+/// CustomPaint. One image means one asset to restyle and no layout maths to maintain.
+class _EarBadge extends StatelessWidget {
+  const _EarBadge();
 
   @override
   Widget build(BuildContext context) {
+    return const _AssetIcon(asset: 'assets/icons/voice_ear.png', fallback: Icons.hearing_rounded, width: 200, height: 104);
+  }
+}
+
+/// Decorative level bars under the headline (fixed heights — the recorder exposes no live
+/// amplitude stream, and animating fake levels would misrepresent what the microphone hears).
+class _Waveform extends StatelessWidget {
+  const _Waveform();
+
+  static final List<double> _heights = List<double>.generate(43, (i) {
+    final x = (i - 21) / 21;
+    final envelope = 1 - x.abs();
+    const jitter = [1.0, 0.45, 0.8, 0.35, 0.95, 0.55, 0.7];
+    return 4 + 38 * envelope * envelope * jitter[i % jitter.length];
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
     return SizedBox(
-      height: 22,
+      width: 290,
+      height: 44,
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           for (final h in _heights)
             Container(
               width: 3,
               height: h,
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: palette.gold, borderRadius: BorderRadius.circular(2)),
             ),
         ],
       ),
@@ -274,10 +428,82 @@ class _Waveform extends StatelessWidget {
   }
 }
 
-/// Continuously-ticking mm:ss display. Ticks only while actually recording (listening); freezes
-/// at whatever value was reached the instant a pause happens, by construction of how
-/// [VoiceState.elapsedBeforePause] + `recordingStartedAt` combine (see VoiceController.
-/// pauseRecording/resumeRecording).
+class _StopButton extends StatelessWidget {
+  const _StopButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    return Container(
+      width: 82,
+      height: 82,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: palette.stopGlow.withValues(alpha: 0.45)),
+      alignment: Alignment.center,
+      child: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(colors: [palette.stopRed.withValues(alpha: 0.85), palette.stopRed]),
+          boxShadow: [BoxShadow(color: palette.stopRed.withValues(alpha: 0.35), blurRadius: 12, spreadRadius: 1)],
+        ),
+        alignment: Alignment.center,
+        child: Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(5)),
+        ),
+      ),
+    );
+  }
+}
+
+class _TipBox extends StatelessWidget {
+  const _TipBox();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final palette = context.voicePalette;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      // No fixed height any more: the text wraps to 3 lines on narrow phones and was being
+      // cut off. The box now grows to fit, and sits 18 above the bottom bar.
+      constraints: const BoxConstraints(minHeight: 58),
+      decoration: BoxDecoration(
+        color: palette.tipBackground,
+        border: Border.all(color: palette.tipBorder),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              l10n.voiceTipText,
+              style: AppTextStyles.body(context).copyWith(color: palette.textSecondary, fontSize: 12.5, height: 1.6),
+            ),
+          ),
+          Container(width: 1, height: 38, color: palette.tipBorder, margin: const EdgeInsets.symmetric(horizontal: 12)),
+          const SizedBox(
+            width: 56,
+            height: 44,
+            child: OverflowBox(
+              maxWidth: 60,
+              maxHeight: 60,
+              child: _AssetIcon(asset: 'assets/icons/voice_tip_bulb.png', fallback: Icons.lightbulb_rounded, size: 58),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ───────────────────────────── Shared controls ─────────────────────────────
+
+/// mm:ss display (reference: bold navy digits + outlined clock). Ticks only while recording and
+/// freezes at the reached value when paused (see VoiceController.pauseRecording).
 class _RecordingTimer extends StatefulWidget {
   const _RecordingTimer({required this.state});
   final VoiceState state;
@@ -322,7 +548,7 @@ class _RecordingTimerState extends State<_RecordingTimer> {
 
   @override
   Widget build(BuildContext context) {
-    final shell = context.shellColors;
+    final palette = context.voicePalette;
     final startedAt = widget.state.recordingStartedAt;
     final liveElapsed = _isRunning && startedAt != null ? DateTime.now().difference(startedAt) : Duration.zero;
     final total = widget.state.elapsedBeforePause + liveElapsed;
@@ -331,53 +557,198 @@ class _RecordingTimerState extends State<_RecordingTimer> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.schedule_rounded, size: 14, color: shell.textSecondary),
-        const SizedBox(width: 4),
-        Text('$minutes:$seconds', style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontWeight: FontWeight.w600)),
+        Icon(Icons.schedule_outlined, size: 20, color: palette.textPrimary),
+        const SizedBox(width: 6),
+        Text(
+          '$minutes:$seconds',
+          textDirection: TextDirection.ltr,
+          style: AppTextStyles.title(context).copyWith(color: palette.textPrimary, fontSize: 20, fontWeight: FontWeight.w700),
+        ),
       ],
     );
   }
 }
 
-/// The "something is happening in the background" moments (transcribing+understanding, saving) —
-/// a neutral ring + a gold icon, deliberately NOT the mic circle, matching the reference's
-/// distinct visual language for "working" versus "recording".
-///
-/// Disclosed simplification: the reference mocks show transcription and understanding as two
-/// separate sequential cards. In this app both happen synchronously in one parser call with no
-/// real time gap between them — showing two timed screens back to back would mean inventing an
-/// artificial delay purely for show, which is exactly the kind of "make it look like it's working
-/// harder than it is" shortcut this project explicitly rules out. They're combined into one
-/// honest "processing" moment instead.
-class _WorkingIndicator extends StatelessWidget {
-  const _WorkingIndicator({required this.icon, required this.label});
-  final IconData icon;
-  final String label;
+class _PillRow extends StatelessWidget {
+  const _PillRow({required this.state, required this.controller});
+  final VoiceState state;
+  final VoiceController controller;
 
   @override
   Widget build(BuildContext context) {
-    final shell = context.shellColors;
-    return Column(
-      children: [
-        SizedBox(
-          width: 96,
-          height: 96,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              const SizedBox(width: 96, height: 96, child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.voiceProcessing)),
-              Container(
-                width: 74,
-                height: 74,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: shell.surface),
-                child: Icon(icon, size: 34, color: AppColors.voiceProcessing),
-              ),
-            ],
+    final busy = _recognizerBusy(state.status);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Row(
+        children: [
+          Expanded(child: _RecognitionLanguagePill(disabled: busy)),
+          const SizedBox(width: 8),
+          Expanded(child: _RecognitionProviderPill(disabled: busy)),
+          const SizedBox(width: 8),
+          Expanded(child: _PausePill(state: state, controller: controller)),
+        ],
+      ),
+    );
+  }
+}
+
+/// White rounded pill with a light-gold border (reference toolbar buttons).
+class _Pill extends StatelessWidget {
+  const _Pill({required this.icon, required this.label, required this.onTap, this.iconAfterLabel = false});
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool iconAfterLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    final iconWidget = Icon(icon, size: icon == Icons.pause_rounded ? 18 : 20, color: palette.textPrimary);
+    final text = Flexible(
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTextStyles.button(context).copyWith(color: palette.textPrimary, fontSize: 14),
+      ),
+    );
+    return Container(
+      height: 42,
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: palette.pillBorder, width: 1.2),
+        boxShadow: [BoxShadow(color: palette.cardShadow, blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(21),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: iconAfterLabel
+                  ? [text, const SizedBox(width: 6), iconWidget]
+                  : [iconWidget, const SizedBox(width: 6), text],
+            ),
           ),
         ),
-        const SizedBox(height: 14),
-        Text(label, textAlign: TextAlign.center, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
+class _RecognitionLanguagePill extends ConsumerWidget {
+  const _RecognitionLanguagePill({required this.disabled});
+  final bool disabled;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final isArabic = ref.watch(voiceRecognitionLanguageProvider) == 'ar';
+    return _Pill(
+      icon: Icons.language_rounded,
+      label: isArabic ? l10n.voiceLanguageArabic : l10n.voiceLanguageEnglish,
+      onTap: disabled ? null : () => ref.read(voiceRecognitionLanguageProvider.notifier).state = isArabic ? 'en' : 'ar',
+    );
+  }
+}
+
+/// Provider selection (local / cloud) is persisted in general settings and disabled during a
+/// live utterance so one command can never be split across two recognizers.
+class _RecognitionProviderPill extends ConsumerWidget {
+  const _RecognitionProviderPill({required this.disabled});
+  final bool disabled;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final palette = context.voicePalette;
+    final current = ref.watch(generalSettingsProvider).value?.voiceRecognitionMode ?? VoiceRecognitionMode.local;
+    return PopupMenuButton<VoiceRecognitionMode>(
+      enabled: !disabled,
+      color: palette.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      tooltip: l10n.voiceRecognitionModeTitle,
+      onSelected: (mode) => ref.read(voiceProvider.notifier).setRecognitionMode(mode),
+      itemBuilder: (_) => [
+        PopupMenuItem(value: VoiceRecognitionMode.local, child: Text(l10n.voiceRecognitionModeLocal, style: TextStyle(color: palette.textPrimary))),
+        PopupMenuItem(value: VoiceRecognitionMode.cloud, child: Text(l10n.voiceRecognitionModeCloud, style: TextStyle(color: palette.textPrimary))),
       ],
+      child: IgnorePointer(
+        child: _Pill(
+          icon: current == VoiceRecognitionMode.local ? Icons.phone_android_rounded : Icons.cloud_rounded,
+          label: current == VoiceRecognitionMode.local ? l10n.voiceRecognitionModeLocal : l10n.voiceRecognitionModeCloud,
+          onTap: () {},
+        ),
+      ),
+    );
+  }
+}
+
+class _PausePill extends StatelessWidget {
+  const _PausePill({required this.state, required this.controller});
+  final VoiceState state;
+  final VoiceController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isRecording = state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand;
+    final isPaused = state.status == VoiceStatus.paused;
+    return _Pill(
+      icon: isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+      label: isPaused ? l10n.voiceResumeAction : l10n.voicePauseAction,
+      onTap: isRecording ? controller.pauseRecording : (isPaused ? controller.resumeRecording : null),
+      iconAfterLabel: true,
+    );
+  }
+}
+
+/// Red-outlined "إلغاء" pill, aligned to the start edge (reference stage 2).
+class _CancelPill extends StatelessWidget {
+  const _CancelPill({required this.controller});
+  final VoiceController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(start: 16),
+        child: Container(
+          height: 34,
+          decoration: BoxDecoration(
+            color: palette.card,
+            borderRadius: BorderRadius.circular(17),
+            border: Border.all(color: palette.stopRed, width: 1.2),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(17),
+              onTap: controller.cancel,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.cancel_outlined, size: 18, color: palette.stopRed),
+                    const SizedBox(width: 6),
+                    Text(
+                      AppLocalizations.of(context)!.cancel,
+                      style: AppTextStyles.button(context).copyWith(color: palette.stopRed, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -389,26 +760,139 @@ class _TranscriptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final shell = context.shellColors;
+    final palette = context.voicePalette;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: shell.background, border: Border.all(color: shell.border), borderRadius: BorderRadius.circular(12)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(l10n.voiceTranscriptLabel, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
-        const SizedBox(height: 4),
-        Text(text, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary)),
-      ],),
+      decoration: BoxDecoration(
+        color: palette.card,
+        border: Border.all(color: palette.tipBorder),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.voiceTranscriptLabel, style: AppTextStyles.bodySecondary(context).copyWith(color: palette.textSecondary, fontSize: 12)),
+          const SizedBox(height: 4),
+          Text(text, style: AppTextStyles.body(context).copyWith(color: palette.textPrimary)),
+        ],
+      ),
     );
   }
 }
 
-/// Reference state 7 — a question-mark badge, the clarification question, and (for account/
-/// direction ambiguity) the actual choices to resolve it, all inside one bordered card. Now also
-/// covers the 'accountName' (name needs a first AND last word) and 'currency' (unsupported
-/// currency named) clarification codes — both are plain retry prompts, no extra chips needed.
-class _ClarificationCard extends StatelessWidget {
-  const _ClarificationCard({required this.state, required this.controller, required this.creditLabel, required this.debitLabel});
+// ───────────────────────────── Stage 3 — processing ─────────────────────────────
+
+class _ThinkingView extends StatelessWidget {
+  const _ThinkingView({required this.icon, required this.title, required this.subtitle, this.step});
+  final Widget icon;
+  final String title;
+  final String subtitle;
+
+  /// Real progress (see VoiceState.processingStep); `null` hides the step list.
+  final int? step;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final palette = context.voicePalette;
+    Widget ring(double size) => Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: palette.goldSoft, width: 1.6)),
+        );
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        SizedBox(
+          width: 160,
+          height: 160,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [ring(160), ring(124), icon],
+          ),
+        ),
+        const SizedBox(height: 24),
+        _Headline(title: title, subtitle: subtitle),
+        if (step != null) ...[
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 27),
+            child: Column(
+              children: [
+                _StepRow(label: l10n.voiceStepAnalyze, state: _stepState(0, step!)),
+                const SizedBox(height: 6),
+                _StepRow(label: l10n.voiceStepExtract, state: _stepState(1, step!)),
+                const SizedBox(height: 6),
+                _StepRow(label: l10n.voiceStepValidate, state: _stepState(2, step!)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  static _StepState _stepState(int index, int current) =>
+      index < current ? _StepState.done : (index == current ? _StepState.active : _StepState.pending);
+}
+
+enum _StepState { done, active, pending }
+
+class _StepRow extends StatelessWidget {
+  const _StepRow({required this.label, required this.state});
+  final String label;
+  final _StepState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    final Widget indicator = switch (state) {
+      _StepState.done => Container(
+          width: 27,
+          height: 27,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: palette.success),
+          child: const Icon(Icons.check_rounded, size: 18, color: Colors.white),
+        ),
+      _StepState.active => SizedBox(
+          width: 27,
+          height: 27,
+          child: CircularProgressIndicator(strokeWidth: 4, color: palette.textPrimary, backgroundColor: palette.tipBorder),
+        ),
+      _StepState.pending => Container(
+          width: 27,
+          height: 27,
+          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: palette.tipBorder, width: 3)),
+        ),
+    };
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: palette.cardShadow, blurRadius: 10, offset: const Offset(0, 3))],
+      ),
+      child: Row(
+        children: [
+          indicator,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              label,
+              style: AppTextStyles.body(context).copyWith(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ───────────────────────────── Stage 4 — clarification ─────────────────────────────
+
+class _ClarificationView extends StatelessWidget {
+  const _ClarificationView({required this.state, required this.controller, required this.creditLabel, required this.debitLabel});
   final VoiceState state;
   final VoiceController controller;
   final String creditLabel;
@@ -417,44 +901,148 @@ class _ClarificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final shell = context.shellColors;
-    final message = switch (state.errorCode) {
-      'amount' => l10n.voiceNeedAmount,
-      'direction' => l10n.voiceNeedDirection,
-      'noSpeech' => l10n.voiceNoSpeechCaptured,
-      'accountName' => l10n.voiceNeedFullAccountName,
-      'currency' => l10n.voiceCurrencyUnsupported,
-      _ => l10n.voiceNeedAccount,
+    final palette = context.voicePalette;
+    final code = state.errorCode;
+    final (String question, String hint) = switch (code) {
+      'direction' => (l10n.voiceQuestionDirection, l10n.voiceQuestionDirectionHint),
+      'amount' => state.draft?.amountUncertain == true
+          ? (l10n.voiceQuestionAmountUncertain, l10n.voiceQuestionAmountUncertainHint)
+          : (l10n.voiceQuestionAmount, l10n.voiceQuestionAmountHint),
+      'accountName' => (l10n.voiceQuestionAccountName, l10n.voiceQuestionAccountNameHint),
+      'sameAccount' => (
+          l10n.voiceQuestionSameAccount,
+          l10n.voiceQuestionSameAccountHint(state.suggestedAccount?.name ?? ''),
+        ),
+      'currency' => (l10n.voiceQuestionCurrency, l10n.voiceQuestionCurrencyHint),
+      'noSpeech' => (l10n.voiceQuestionNoSpeech, l10n.voiceQuestionNoSpeechHint),
+      _ => (l10n.voiceQuestionAccount, l10n.voiceQuestionAccountHint),
     };
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: shell.surface, border: Border.all(color: shell.border), borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.voiceProcessing.withValues(alpha: 0.14)),
-            child: Icon(state.errorCode == 'noSpeech' ? Icons.mic_off_rounded : Icons.help_outline_rounded, color: AppColors.voiceProcessing, size: 28),
-          ),
+
+    final List<Widget> actions;
+    if (code == 'direction') {
+      actions = [
+        _ChoiceButton(label: debitLabel, primary: true, onTap: () => controller.selectDirection(AccountDirection.debit)),
+        const SizedBox(height: 13),
+        _ChoiceButton(label: creditLabel, primary: false, onTap: () => controller.selectDirection(AccountDirection.credit)),
+      ];
+    } else if (code == 'sameAccount') {
+      actions = [
+        _ChoiceButton(label: l10n.voiceYes, primary: true, onTap: () => controller.answerSameAccount(same: true)),
+        const SizedBox(height: 13),
+        _ChoiceButton(label: l10n.voiceNo, primary: false, onTap: () => controller.answerSameAccount(same: false)),
+      ];
+    } else {
+      actions = [
+        if (code == 'account') ...[
+          _AccountChoices(onSelected: controller.selectAccount),
           const SizedBox(height: 10),
-          Text(message, textAlign: TextAlign.center, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w600)),
-          if (state.errorCode != 'noSpeech' && state.transcript.trim().isNotEmpty) ...[
-            const SizedBox(height: 10),
-            _TranscriptCard(text: state.transcript),
-          ],
-          if (state.errorCode == 'account') ...[
-            const SizedBox(height: 10),
-            _AccountChoices(onSelected: controller.selectAccount),
-          ],
-          if (state.errorCode == 'direction') ...[
-            const SizedBox(height: 10),
-            _DirectionChoices(onSelected: controller.selectDirection, creditLabel: creditLabel, debitLabel: debitLabel),
-          ],
-          const SizedBox(height: 12),
-          OutlinedButton.icon(onPressed: controller.retry, icon: const Icon(Icons.refresh_rounded), label: Text(l10n.voiceRetry)),
         ],
+        _ChoiceButton(label: l10n.voiceRetry, primary: false, icon: Icons.refresh_rounded, onTap: controller.retry),
+      ];
+    }
+
+    return Column(
+      children: [
+        const _ClarifyBadge(),
+        const SizedBox(height: 10),
+        _Headline(title: l10n.voiceClarifyTitle, subtitle: l10n.voiceClarifySubtitle),
+        const SizedBox(height: 22),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 23),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          constraints: const BoxConstraints(minHeight: 87),
+          decoration: BoxDecoration(
+            color: palette.questionBackground,
+            border: Border.all(color: palette.questionBorder),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      question,
+                      style: AppTextStyles.headline(context).copyWith(color: palette.textPrimary, fontSize: 18, height: 1.3),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      hint,
+                      style: AppTextStyles.body(context).copyWith(color: palette.textSecondary, fontSize: 13, height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(Icons.mic_rounded, size: 40, color: palette.textPrimary),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 38),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: actions),
+        ),
+        if (code != 'noSpeech' && state.transcript.trim().isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 23), child: _TranscriptCard(text: state.transcript)),
+        ],
+        const SizedBox(height: 14),
+      ],
+    );
+  }
+}
+
+/// The clarification illustration: the person's own PNG (gold "?" medal with rays).
+class _ClarifyBadge extends StatelessWidget {
+  const _ClarifyBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _AssetIcon(asset: 'assets/icons/voice_clarify.png', fallback: Icons.help_outline_rounded, width: 190, height: 140);
+  }
+}
+
+/// Pill button: gold gradient (primary) or white with a gold outline, with a mic glyph (the
+/// answer can also be spoken) unless [icon] says otherwise.
+class _ChoiceButton extends StatelessWidget {
+  const _ChoiceButton({required this.label, required this.primary, required this.onTap, this.icon = Icons.mic_rounded});
+  final String label;
+  final bool primary;
+  final VoidCallback onTap;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    final foreground = primary ? palette.onGold : palette.textPrimary;
+    return Container(
+      height: primary ? 48 : 44,
+      decoration: BoxDecoration(
+        gradient: primary ? LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [palette.goldButtonTop, palette.goldButtonBottom]) : null,
+        color: primary ? null : palette.card,
+        borderRadius: BorderRadius.circular(24),
+        border: primary ? null : Border.all(color: palette.gold, width: 2),
+        boxShadow: primary ? [BoxShadow(color: palette.goldButtonBottom.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))] : null,
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: onTap,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: primary ? 28 : 24, color: foreground),
+              const SizedBox(width: 14),
+              Text(
+                label,
+                style: AppTextStyles.button(context).copyWith(color: foreground, fontSize: primary ? 18 : 16, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -479,36 +1067,18 @@ class _AccountChoices extends ConsumerWidget {
   }
 }
 
-/// Reuses the same ring-toggle used on Add Transaction/Add Account so this doesn't introduce a
-/// third visual style for the same دائن/مدين choice. Labels are the person's own customized
-/// عبارات (see logic/settings/direction_labels.dart) — never the raw l10n default here.
-class _DirectionChoices extends StatelessWidget {
-  const _DirectionChoices({required this.onSelected, required this.creditLabel, required this.debitLabel});
-  final ValueChanged<AccountDirection> onSelected;
-  final String creditLabel;
-  final String debitLabel;
+// ───────────────────────────── Stage 5 — confirmation ─────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        DirectionChoice(label: creditLabel, color: AppColors.credit, selected: false, onTap: () => onSelected(AccountDirection.credit)),
-        const SizedBox(width: 24),
-        DirectionChoice(label: debitLabel, color: AppColors.debit, selected: false, onTap: () => onSelected(AccountDirection.debit)),
-      ],
-    );
-  }
+String _groupThousands(double amount) {
+  final isWhole = amount == amount.roundToDouble();
+  final text = isWhole ? amount.toStringAsFixed(0) : amount.toStringAsFixed(2);
+  final parts = text.split('.');
+  final grouped = parts.first.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
+  return parts.length > 1 ? '$grouped.${parts[1]}' : grouped;
 }
 
-/// Reference state 8 — a warm gold-tinted card listing what was understood in the exact field
-/// order shown there (name, amount, type, details, date), then the yes/edit actions plus an
-/// optional voice-confirmation mic. The account line now falls back to the SPOKEN name
-/// (`draft.accountName`) whenever no existing account was matched — see [VoiceState.account]'s
-/// doc comment — and an extra note makes it explicit that confirming will create a new account,
-/// rather than silently doing so with no indication anything unusual happened.
-class _ConfirmationCard extends StatelessWidget {
-  const _ConfirmationCard({required this.state, required this.controller, required this.creditLabel, required this.debitLabel});
+class _ConfirmationView extends StatelessWidget {
+  const _ConfirmationView({required this.state, required this.controller, required this.creditLabel, required this.debitLabel});
   final VoiceState state;
   final VoiceController controller;
   final String creditLabel;
@@ -517,100 +1087,214 @@ class _ConfirmationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final shell = context.shellColors;
+    final palette = context.voicePalette;
     final draft = state.draft!;
-    // Safe by construction: this card only renders in awaitingConfirmation/confirmationListening,
-    // and the controller never reaches either status while draft.direction is still null (see
-    // VoiceController._advanceAfterParsing / selectDirection).
+    // Safe by construction: this view only renders in awaitingConfirmation/confirmationListening,
+    // which the controller never reaches while the direction or amount is still missing.
     final direction = draft.direction! == AccountDirection.credit ? creditLabel : debitLabel;
-    final isListeningForConfirmation = state.status == VoiceStatus.confirmationListening;
-    final matchedAccount = state.account;
-    final accountName = matchedAccount?.name ?? draft.accountName!;
-    final isNewAccount = matchedAccount == null;
+    final isListening = state.status == VoiceStatus.confirmationListening;
+    final matched = state.account;
+    final accountName = matched?.name ?? draft.accountName!;
+    final currency = currencies.firstWhere((c) => c.code == draft.currency, orElse: () => currencies.first).label(l10n);
+    final date = '${draft.date.year}-${draft.date.month.toString().padLeft(2, '0')}-${draft.date.day.toString().padLeft(2, '0')}';
+    final statusLine = isListening
+        ? l10n.voiceConfirmationListening
+        : (state.errorCode == 'confirmation' ? l10n.voiceConfirmationNotUnderstood : null);
 
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.gold.withValues(alpha: 0.1),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(children: [
-            Text(l10n.voiceConfirmTitle, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 10),
-            _Line(l10n.voiceAccountLabel, accountName),
-            if (isNewAccount) ...[
-              const SizedBox(height: 2),
-              Text(
-                l10n.voiceAccountWillBeCreated,
-                textAlign: TextAlign.end,
-                style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 11, fontStyle: FontStyle.italic),
-              ),
-            ],
-            _Line(l10n.amountLabel, '${draft.amount!.toStringAsFixed(0)} ${draft.currency}'),
-            _Line(l10n.voiceDirectionLabel, direction),
-            if (draft.details != null) _Line(l10n.detailsLabel, draft.details!),
-            _Line(l10n.dateLabel, '${draft.date.year}-${draft.date.month.toString().padLeft(2, '0')}-${draft.date.day.toString().padLeft(2, '0')}'),
-            const SizedBox(height: 8),
-            Text(l10n.voiceConfirmQuestion, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
-          ]),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          isListeningForConfirmation
-              ? l10n.voiceConfirmationListening
-              : state.errorCode == 'confirmation'
-                  ? l10n.voiceConfirmationNotUnderstood
-                  : l10n.voiceConfirmationHint,
-          textAlign: TextAlign.center,
-          style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: controller.startEdit,
-                icon: const Icon(Icons.edit_rounded, size: 16),
-                label: Text(l10n.voiceEdit),
-              ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(21, 24, 21, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(17, 14, 17, 10),
+            decoration: BoxDecoration(
+              color: palette.summaryBackground,
+              border: Border.all(color: palette.summaryBorder, width: 1.5),
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: isListeningForConfirmation ? null : controller.confirm,
-                style: FilledButton.styleFrom(backgroundColor: AppColors.gold, foregroundColor: shell.headerBottom),
-                icon: const Icon(Icons.check_rounded, size: 18),
-                label: Text(l10n.voiceConfirm),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.person_rounded, size: 30, color: palette.goldButtonBottom),
+                    const SizedBox(width: 10),
+                    Text(l10n.voiceSummaryTitle, style: AppTextStyles.body(context).copyWith(color: palette.textPrimary, fontSize: 13)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                _SummaryRow(label: l10n.voiceNameLabel, value: accountName),
+                if (matched == null)
+                  Text(
+                    l10n.voiceAccountWillBeCreated,
+                    style: AppTextStyles.bodySecondary(context).copyWith(color: palette.textSecondary, fontSize: 11, fontStyle: FontStyle.italic),
+                  ),
+                _SummaryRow(label: l10n.amountLabel, value: '${_groupThousands(draft.amount!)} $currency'),
+                _SummaryRow(label: l10n.voiceDirectionLabel, value: direction),
+                _SummaryRow(label: l10n.detailsLabel, value: draft.details ?? '—'),
+                _SummaryRow(label: l10n.dateLabel, value: date),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          Text(
+            l10n.voiceConfirmQuestion,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.headline(context).copyWith(color: palette.textPrimary, fontSize: 22, height: 1.3),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 78,
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 4,
+                  child: _EditButton(onTap: controller.startEdit),
+                ),
+                const SizedBox(width: 22),
+                Expanded(
+                  flex: 5,
+                  child: _SaveButton(onTap: controller.confirmByTap),
+                ),
+              ],
+            ),
+          ),
+          if (statusLine != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              statusLine,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body(context).copyWith(color: palette.goldButtonBottom, fontSize: 13, fontWeight: FontWeight.w700),
             ),
           ],
-        ),
-        IconButton(
-          onPressed: isListeningForConfirmation ? null : controller.startVoiceConfirmation,
-          icon: Icon(Icons.mic_rounded, color: shell.accent),
-          tooltip: l10n.voiceConfirmationHint,
-        ),
-      ],
+          const SizedBox(height: 12),
+          Text(
+            l10n.voiceYouCanSay,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body(context).copyWith(color: palette.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.voiceYouCanSayExamples,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body(context).copyWith(color: palette.textSecondary, fontSize: 13),
+          ),
+          if (!isListening && state.errorCode == 'permission')
+            Center(
+              child: IconButton(
+                onPressed: controller.startVoiceConfirmation,
+                icon: Icon(Icons.mic_rounded, color: palette.goldButtonBottom),
+                tooltip: l10n.voiceConfirmationHint,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
 
-class _Line extends StatelessWidget {
-  const _Line(this.label, this.value);
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({required this.label, required this.value});
   final String label;
   final String value;
+
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(children: [
-          Text('$label: ', style: AppTextStyles.bodySecondary(context)),
-          Expanded(child: Text(value, textAlign: TextAlign.end, style: AppTextStyles.bodySecondary(context).copyWith(fontWeight: FontWeight.w700))),
-        ]),
-      );
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 92,
+            child: Text('$label:', style: AppTextStyles.body(context).copyWith(color: palette.textPrimary, fontSize: 16)),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTextStyles.headline(context).copyWith(color: palette.textPrimary, fontSize: 20, height: 1.3),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EditButton extends StatelessWidget {
+  const _EditButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: palette.gold, width: 1.5),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.edit_rounded, size: 26, color: palette.textPrimary),
+              const SizedBox(height: 4),
+              Text(
+                AppLocalizations.of(context)!.voiceEdit,
+                style: AppTextStyles.button(context).copyWith(color: palette.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SaveButton extends StatelessWidget {
+  const _SaveButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final palette = context.voicePalette;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [palette.goldDeepTop, palette.goldDeepBottom]),
+        boxShadow: [BoxShadow(color: palette.goldDeepBottom.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))],
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.mic_rounded, size: 34, color: palette.onGold),
+              const SizedBox(width: 10),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(l10n.voiceConfirmYes, style: AppTextStyles.button(context).copyWith(color: palette.onGold, fontSize: 20, fontWeight: FontWeight.w700, height: 1.2)),
+                  Text(l10n.voiceConfirmSave, style: AppTextStyles.button(context).copyWith(color: palette.onGold, fontSize: 17, fontWeight: FontWeight.w700, height: 1.2)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Reference state 10 — green checkmark, then the SHORT-PRESS-ONLY "start another recording"
@@ -628,7 +1312,7 @@ class _SuccessCard extends StatelessWidget {
     final shell = context.shellColors;
     return Column(
       children: [
-        const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 56),
+        const _AssetIcon(asset: 'assets/icons/voice_success.png', fallback: Icons.check_circle_rounded, width: 200, height: 115),
         const SizedBox(height: 10),
         Text(l10n.voiceSaved, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w600)),
         const SizedBox(height: 14),
@@ -663,126 +1347,6 @@ class _ErrorCard extends StatelessWidget {
         const SizedBox(height: 10),
         OutlinedButton.icon(onPressed: controller.retry, icon: const Icon(Icons.refresh_rounded), label: Text(l10n.voiceBluetoothRetry)),
       ],
-    );
-  }
-}
-
-/// The fixed bottom pair shown in every state of the reference: the recognition-language toggle
-/// on one side, and the pause/resume control on the other (idle-styled and disabled whenever
-/// there's nothing to pause or resume).
-class _BottomToolbar extends StatelessWidget {
-  const _BottomToolbar({required this.state, required this.controller});
-  final VoiceState state;
-  final VoiceController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.spaceBetween,
-      children: [
-        _RecognitionLanguageButton(disabled: _recognizerBusy(state.status)),
-        _RecognitionProviderButton(disabled: _recognizerBusy(state.status)),
-        _PauseResumeButton(state: state, controller: controller),
-        if (_recognizerBusy(state.status) || state.draft != null)
-          OutlinedButton.icon(
-            onPressed: controller.cancel,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.error,
-              side: const BorderSide(color: AppColors.error),
-            ),
-            icon: const Icon(Icons.cancel_outlined, size: 16),
-            label: Text(AppLocalizations.of(context)!.cancel),
-          ),
-      ],
-    );
-  }
-}
-
-/// Toggles which language the RECOGNIZER listens for — independent of the app's display
-/// language. Shows the currently-active recognition language; tapping switches to the other one.
-class _RecognitionLanguageButton extends ConsumerWidget {
-  const _RecognitionLanguageButton({required this.disabled});
-  final bool disabled;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final shell = context.shellColors;
-    final language = ref.watch(voiceRecognitionLanguageProvider);
-    final isArabic = language == 'ar';
-
-    return OutlinedButton.icon(
-      onPressed: disabled
-          ? null
-          : () => ref.read(voiceRecognitionLanguageProvider.notifier).state = isArabic ? 'en' : 'ar',
-      style: OutlinedButton.styleFrom(foregroundColor: shell.textPrimary, side: BorderSide(color: shell.border)),
-      icon: const Icon(Icons.language_rounded, size: 16),
-      label: Text(isArabic ? l10n.voiceLanguageArabic : l10n.voiceLanguageEnglish),
-    );
-  }
-}
-
-/// Provider selection is visible at the point of use and persisted in general settings. It is
-/// disabled during a live utterance so one command can never be split across two recognizers.
-class _RecognitionProviderButton extends ConsumerWidget {
-  const _RecognitionProviderButton({required this.disabled});
-  final bool disabled;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final shell = context.shellColors;
-    final current = ref.watch(generalSettingsProvider).value?.voiceRecognitionMode ?? VoiceRecognitionMode.local;
-    return PopupMenuButton<VoiceRecognitionMode>(
-      enabled: !disabled,
-      color: shell.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      tooltip: l10n.voiceRecognitionModeTitle,
-      onSelected: (mode) => ref.read(voiceProvider.notifier).setRecognitionMode(mode),
-      itemBuilder: (_) => [
-        PopupMenuItem(value: VoiceRecognitionMode.local, child: Text(l10n.voiceRecognitionModeLocal, style: TextStyle(color: shell.textPrimary))),
-        PopupMenuItem(value: VoiceRecognitionMode.cloud, child: Text(l10n.voiceRecognitionModeCloud, style: TextStyle(color: shell.textPrimary))),
-      ],
-      child: IgnorePointer(
-        child: OutlinedButton.icon(
-          onPressed: () {},
-          style: OutlinedButton.styleFrom(foregroundColor: shell.textPrimary, side: BorderSide(color: shell.border)),
-          icon: Icon(current == VoiceRecognitionMode.local ? Icons.phone_android_rounded : Icons.cloud_rounded, size: 16),
-          label: Text(current == VoiceRecognitionMode.local ? l10n.voiceRecognitionModeLocal : l10n.voiceRecognitionModeCloud),
-        ),
-      ),
-    );
-  }
-}
-
-/// The right-hand toolbar button: pauses while actively recording, resumes while paused, and is
-/// simply disabled (showing the idle "مؤقت التسجيل" label) at every other moment — there being
-/// nothing to pause or resume outside those two statuses.
-class _PauseResumeButton extends StatelessWidget {
-  const _PauseResumeButton({required this.state, required this.controller});
-  final VoiceState state;
-  final VoiceController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final shell = context.shellColors;
-    final isRecording = state.status == VoiceStatus.listening || state.status == VoiceStatus.bluetoothListeningCommand;
-    final isPaused = state.status == VoiceStatus.paused;
-
-    final (IconData icon, String label, VoidCallback? onTap) = switch (true) {
-      _ when isRecording => (Icons.pause_rounded, l10n.voicePauseAction, controller.pauseRecording),
-      _ when isPaused => (Icons.play_arrow_rounded, l10n.voiceResumeAction, controller.resumeRecording),
-      _ => (Icons.schedule_rounded, l10n.voiceRecordingTimerIdleLabel, null),
-    };
-
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(foregroundColor: shell.textPrimary, side: BorderSide(color: shell.border)),
-      icon: Icon(icon, size: 16),
-      label: Text(label),
     );
   }
 }

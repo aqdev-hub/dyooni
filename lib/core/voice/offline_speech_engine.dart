@@ -24,13 +24,24 @@ import 'wav_file_writer.dart';
 /// call; everything downstream is pure Dart-side fan-out of bytes already captured — no second
 /// consumer ever touches the microphone, so the conflict is structurally impossible, not just
 /// "less likely."
+///
+/// [errors] is intentionally almost always silent here: unlike the cloud engine, this engine has
+/// no network round trip to fail — a "good but not excellent" connection has zero effect on it,
+/// which is exactly why it keeps working offline regardless of signal strength. It only exists so
+/// this class satisfies the shared [SpeechEngine] contract; VoiceController treats a quiet
+/// `errors` stream as "nothing unusual happened", which is the correct, honest default for Vosk.
 class OfflineSpeechEngine implements SpeechEngine {
   OfflineSpeechEngine({required this.model, this.sampleRate = voskSampleRate});
 
   final Model model;
   final int sampleRate;
 
-  final _recorder = AudioRecorder();
+  /// One FRESH [AudioRecorder] per listening session, disposed when the session ends. A recorder
+  /// kept alive for the whole app run keeps native resources (audio focus, the AudioRecord
+  /// object, Bluetooth routing) that the Android system speech recogniser — used by the cloud
+  /// mode — then has to compete with after the user switches modes ("لم ألتقط أي صوت" in cloud
+  /// right after using local). Disposing it guarantees the microphone is fully released.
+  AudioRecorder? _recorder;
   Recognizer? _recognizer;
   WavFileWriter? _wavWriter;
   StreamSubscription<Uint8List>? _micSubscription;
@@ -38,8 +49,18 @@ class OfflineSpeechEngine implements SpeechEngine {
   Future<void>? _stopping;
   final List<String> _finalSegments = <String>[];
 
+  /// N-best hypotheses of every finished segment (index-aligned with [_finalSegments]).
+  final List<List<String>> _segmentAlternatives = <List<String>>[];
+
+  /// How many hypotheses Vosk returns per finished segment. The mgb2 model often ranks a
+  /// number word wrongly first ("إلا" instead of "ألف") but keeps the right one in the top few —
+  /// the controller scores them by whether a clean amount can be parsed (see
+  /// VoiceController._pickBestTranscript).
+  static const _maxAlternatives = 5;
+
   final _partialController = StreamController<String>.broadcast();
   final _finalController = StreamController<String>.broadcast();
+  final _errorController = StreamController<SpeechEngineError>.broadcast();
 
   /// Live, not-yet-final text — updates continuously while the person is still talking. Fills the
   /// same UI role `speech_to_text`'s `onResult` with `finalResult: false` used to play.
@@ -51,13 +72,47 @@ class OfflineSpeechEngine implements SpeechEngine {
   @override
   Stream<String> get finalResults => _finalController.stream;
 
+  /// Whole-utterance alternatives, best first: the best-per-segment transcript, then the same
+  /// transcript with ONE segment swapped for each of its alternative hypotheses (capped).
+  @override
+  List<String> get lastAlternatives {
+    if (_finalSegments.isEmpty) return const [];
+    final out = <String>[_finalSegments.join(' ').trim()];
+    for (var i = 0; i < _finalSegments.length; i++) {
+      for (final alt in _segmentAlternatives[i]) {
+        if (alt == _finalSegments[i]) continue;
+        final copy = [..._finalSegments]..[i] = alt;
+        final text = copy.join(' ').trim();
+        if (!out.contains(text)) out.add(text);
+        if (out.length >= 16) return out;
+      }
+    }
+    return out;
+  }
+
+  @override
+  Stream<SpeechEngineError> get errors => _errorController.stream;
+
   @override
   bool get endsSessionOnFinal => false;
+
+  @override
+  Stream<void> get speechActivity => const Stream<void>.empty();
+
+  @override
+  bool get providesLiveText => true;
 
   bool get isListening => _micSubscription != null || _stopping != null;
 
   @override
-  Future<bool> hasPermission() => _recorder.hasPermission();
+  Future<bool> hasPermission() async {
+    final probe = AudioRecorder();
+    try {
+      return await probe.hasPermission();
+    } finally {
+      await probe.dispose();
+    }
+  }
 
   /// Starts the single microphone session: creates a fresh recognizer bound to [model], opens the
   /// destination .wav file, then opens ONE raw audio stream and subscribes to it.
@@ -69,12 +124,15 @@ class OfflineSpeechEngine implements SpeechEngine {
     await _stopping;
     if (isListening) return;
     if (!await hasPermission()) {
+      _errorController.add(const SpeechEngineError(SpeechEngineErrorType.permission));
       throw StateError('Microphone permission was not granted.');
     }
 
     final vosk = VoskFlutterPlugin.instance();
     _recognizer = await vosk.createRecognizer(model: model, sampleRate: sampleRate);
+    await _recognizer!.setMaxAlternatives(_maxAlternatives);
     _finalSegments.clear();
+    _segmentAlternatives.clear();
 
     final dir = await getApplicationDocumentsDirectory();
     final recordings = Directory('${dir.path}/voice_recordings');
@@ -85,15 +143,27 @@ class OfflineSpeechEngine implements SpeechEngine {
 
     // THE single microphone consumer for this entire session — replaces both the old
     // speech_to_text live-listen session AND the old separate `record.start()` file session.
-    final stream = await _recorder.startStream(
-      RecordConfig(
-        encoder: AudioEncoder.pcm16bits,
-        sampleRate: sampleRate,
-        numChannels: 1,
-        echoCancel: true,
-        noiseSuppress: true,
-      ),
-    );
+    final recorder = _recorder = AudioRecorder();
+    final Stream<Uint8List> stream;
+    try {
+      stream = await recorder.startStream(
+        RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: sampleRate,
+          numChannels: 1,
+          // Both OFF on purpose: the platform's echo-canceller / noise-suppressor are tuned for
+          // phone calls and gate or smear short, fast, quiet syllables — exactly the digits and
+          // number words ("خمسة ألف") — before the recognizer ever sees them. Raw audio gives the
+          // acoustic model the signal it was trained on.
+          echoCancel: false,
+          noiseSuppress: false,
+        ),
+      );
+    } catch (_) {
+      // Never leave a half-started session (open WAV, live recognizer, native recorder) behind.
+      await cancel();
+      rethrow;
+    }
 
     // CRITICAL FIX for the reported "only catches the last word or two, never understands the
     // amount" bug: `_onAudioChunk` is an async function, but `Stream.listen()`'s callback
@@ -127,9 +197,10 @@ class OfflineSpeechEngine implements SpeechEngine {
     if (recognizer == null) return;
     final hasFinal = await recognizer.acceptWaveformBytes(chunk);
     if (hasFinal) {
-      final text = _extractText(await recognizer.getResult(), key: 'text');
+      final (text, alternatives) = _parseFinal(await recognizer.getResult());
       if (text.isNotEmpty) {
         _finalSegments.add(text);
+        _segmentAlternatives.add(alternatives);
         _finalController.add(_joinedTranscript());
       }
     } else {
@@ -152,10 +223,58 @@ class OfflineSpeechEngine implements SpeechEngine {
     }
   }
 
+  /// Final results come back either as `{"text": "..."}` or — once N-best is enabled — as
+  /// `{"alternatives": [{"text": "...", "confidence": ...}, ...]}` (best first). Both are handled,
+  /// so enabling alternatives can never make a result silently disappear.
+  (String best, List<String> alternatives) _parseFinal(String json) {
+    try {
+      final decoded = jsonDecode(json) as Map<String, dynamic>;
+      final alternatives = decoded['alternatives'];
+      if (alternatives is List) {
+        final texts = <String>[
+          for (final item in alternatives)
+            if (item is Map && (item['text'] as String? ?? '').trim().isNotEmpty) (item['text'] as String).trim(),
+        ];
+        if (texts.isNotEmpty) return (texts.first, texts);
+      }
+      final text = (decoded['text'] as String? ?? '').trim();
+      return (text, text.isEmpty ? const <String>[] : [text]);
+    } catch (_) {
+      return ('', const <String>[]);
+    }
+  }
+
+  /// Stops the native recorder and frees it completely (see [_recorder]).
+  Future<void> _releaseRecorder() async {
+    final recorder = _recorder;
+    _recorder = null;
+    if (recorder == null) return;
+    try {
+      await recorder.stop();
+    } catch (_) {
+      // Already stopped — the dispose below is what actually matters.
+    }
+    try {
+      await recorder.dispose();
+    } catch (_) {
+      // Best effort.
+    }
+  }
+
   @override
-  Future<void> pause() => _recorder.pause();
+  Future<void> pause() async {
+    await _recorder?.pause();
+  }
+
   @override
-  Future<void> resume() => _recorder.resume();
+  Future<void> resume() async {
+    await _recorder?.resume();
+  }
+
+  /// Frees the microphone and the recognizer so ANOTHER engine can use the hardware (called when
+  /// the person switches between local and cloud recognition).
+  @override
+  Future<void> release() => cancel();
 
   /// Stops the mic session, flushes the .wav file to a valid playable state, and asks the
   /// recognizer for whatever text is left — even if Vosk never emitted its own "final" result
@@ -174,12 +293,15 @@ class OfflineSpeechEngine implements SpeechEngine {
       await _micSubscription?.cancel();
       _micSubscription = null;
       await _audioQueue;
-      await _recorder.stop();
+      await _releaseRecorder();
 
       final recognizer = _recognizer;
       if (recognizer != null) {
-        final lastText = _extractText(await recognizer.getFinalResult(), key: 'text');
-        if (lastText.isNotEmpty) _finalSegments.add(lastText);
+        final (lastText, lastAlternatives) = _parseFinal(await recognizer.getFinalResult());
+        if (lastText.isNotEmpty) {
+          _finalSegments.add(lastText);
+          _segmentAlternatives.add(lastAlternatives);
+        }
         transcript = _joinedTranscript();
         await recognizer.dispose();
         _recognizer = null;
@@ -210,7 +332,7 @@ class OfflineSpeechEngine implements SpeechEngine {
     await _micSubscription?.cancel();
     _micSubscription = null;
     await _audioQueue;
-    await _recorder.stop();
+    await _releaseRecorder();
     if (_recognizer != null) {
       await _recognizer!.dispose();
     }
@@ -219,6 +341,7 @@ class OfflineSpeechEngine implements SpeechEngine {
     await _wavWriter?.close();
     _wavWriter = null;
     _finalSegments.clear();
+    _segmentAlternatives.clear();
     if (path != null) {
       final file = File(path);
       if (await file.exists()) await file.delete();
@@ -228,8 +351,9 @@ class OfflineSpeechEngine implements SpeechEngine {
   @override
   void dispose() {
     _micSubscription?.cancel();
-    _recorder.dispose();
+    unawaited(_releaseRecorder());
     _partialController.close();
     _finalController.close();
+    _errorController.close();
   }
 }

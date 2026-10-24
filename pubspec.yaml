@@ -5,7 +5,8 @@ publish_to: "none"
 version: 0.1.0+1
 
 environment:
-  sdk: ">=3.4.0 <4.0.0"
+  sdk: ">=3.7.0 <4.0.0"
+  flutter: ">=3.29.0"
 
 dependencies:
   flutter:
@@ -89,6 +90,10 @@ dependencies:
   # Cloud/system recognition option. It uses Android/iOS speech services and keeps provider
   # credentials out of the shipped application.
   speech_to_text: ^7.4.0
+  # Local recognition (Whisper through whisper.cpp). Pinned exactly: it ships native code and the
+  # engine relies on its request options. Requires Dart >= 3.7 / Flutter >= 3.29 and Android API 24+
+  # (see android/app/build.gradle.kts). It pulls in ffmpeg_kit_flutter_new_min on its own.
+  whisper_ggml: 2.8.1
 
   # Lets the person pick an existing file from their device (the local backup screen's
   # "استعادة من ملف" / restore-from-file flow, to choose a previously exported .dyoonibackup

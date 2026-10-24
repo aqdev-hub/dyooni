@@ -13,10 +13,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/account.dart';
+import '../../../data/models/currency_type.dart';
 import '../../../data/models/personal_data.dart';
 import '../../../data/models/report_options.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
+import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/reports/pdf_report_service.dart';
 import '../../../logic/reports/report_export_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
@@ -29,6 +31,7 @@ import '../../widgets/accounts/transaction_table.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
 import '../../widgets/reports/report_options_sheet.dart';
 import '../../widgets/shared/app_snackbar.dart';
+import '../../widgets/shared/currency_picker_sheet.dart';
 import '../../widgets/shared/selection_toolbar.dart';
 import '../accounts/add_account_screen.dart';
 import '../transactions/add_transaction_screen.dart';
@@ -234,13 +237,32 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
     };
   }
 
+  /// The statement covers ONE currency (the page being shown), so its title says which.
+  String _reportTitle(WidgetRef ref, AppLocalizations l10n) {
+    final currency = currencyNameOf(ref.read(currencyTypesProvider), ref.read(effectiveCurrencyIdProvider));
+    return '${l10n.reportTypeStatement} - ${account.name} - $currency';
+  }
+
+  /// The dollar icon: switch which currency's transactions this page shows. Only currencies this
+  /// account actually has entries in are offered (with their counts) — plus the current one.
+  Future<void> _switchCurrency(BuildContext context) async {
+    final counts = ref.read(accountCurrencyCountsProvider(account.id));
+    final current = ref.read(effectiveCurrencyIdProvider);
+    final options = [
+      for (final c in ref.read(currencyTypesProvider))
+        if (counts.containsKey(c.id) || c.id == current) c,
+    ];
+    final selected = await showCurrencyPickerSheet(context, selectedCode: current, options: options, counts: counts);
+    if (selected != null) ref.read(selectedCurrencyIdProvider.notifier).state = selected;
+  }
+
   Future<Uint8List> _generateStatementPdf(WidgetRef ref, AppLocalizations l10n, List<StatementRow> rows) {
     final personalData = ref.read(personalDataProvider).value ?? PersonalData.dyooniDefault;
     final settings = ref.read(generalSettingsProvider).value;
     return ref.read(pdfReportServiceProvider).buildAccountStatement(
           personalData: personalData,
           appName: l10n.appName,
-          reportTitle: '${l10n.reportTypeStatement} - ${account.name}',
+          reportTitle: _reportTitle(ref, l10n),
           dateHeader: l10n.dateLabel,
           detailsHeader: l10n.detailsLabel,
           debitHeader: resolveDebitLabel(l10n, settings),
@@ -256,7 +278,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
   Uint8List _generateStatementXlsx(WidgetRef ref, AppLocalizations l10n, List<StatementRow> rows) {
     final settings = ref.read(generalSettingsProvider).value;
     return ref.read(xlsxReportServiceProvider).buildAccountStatement(
-          reportTitle: '${l10n.reportTypeStatement} - ${account.name}',
+          reportTitle: _reportTitle(ref, l10n),
           dateHeader: l10n.dateLabel,
           detailsHeader: l10n.detailsLabel,
           debitHeader: resolveDebitLabel(l10n, settings),
@@ -369,7 +391,11 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
-    final transactions = ref.watch(transactionsForAccountProvider(account.id));
+    // The page shows ONE currency at a time: its transactions, its totals, its statement.
+    final allTransactions = ref.watch(transactionsForAccountProvider(account.id));
+    final currencyId = ref.watch(effectiveCurrencyIdProvider);
+    final currencyName = currencyNameOf(ref.watch(currencyTypesProvider), currencyId);
+    final transactions = ref.watch(accountCurrencyTransactionsProvider((accountId: account.id, currency: currencyId)));
     final selectionMode = ref.watch(transactionSelectionModeProvider);
     final selectedIds = ref.watch(selectedTransactionIdsProvider);
     final hasPhone = account.phone != null && account.phone!.trim().isNotEmpty;
@@ -510,7 +536,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                     onAddAction: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
                     onShare: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
                     onMessage: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
-                    onCurrency: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
+                    onCurrency: () => _switchCurrency(context),
                   ),
                 ),
                 // Only rendered when the account actually has a phone number — sits on the
@@ -521,7 +547,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
             Expanded(
               child: transactions.isEmpty
                   ? Center(
-                      child: Text(l10n.noTransactionsYet, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
+                      child: Text(allTransactions.isEmpty ? l10n.noTransactionsYet : l10n.currencyNoTransactionsHere, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
                     )
                   : SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -536,6 +562,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
             BottomSummaryBar(
               totalCredit: credit,
               totalDebit: debit,
+              currencyName: currencyName,
               onAdd: () => showDialog<void>(
                 context: context,
                 barrierColor: Colors.black54,

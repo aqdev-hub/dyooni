@@ -26,6 +26,7 @@ class BottomSummaryBar extends ConsumerWidget {
     required this.totalDebit,
     this.onAdd,
     this.addTooltip,
+    this.currencyName,
     super.key,
   });
 
@@ -33,6 +34,10 @@ class BottomSummaryBar extends ConsumerWidget {
   final double totalDebit;
   final VoidCallback? onAdd;
   final String? addTooltip;
+
+  /// Name of the currency the totals are in (the selected currency page). Falls back to the
+  /// default "محلي" label when not given.
+  final String? currencyName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -83,7 +88,7 @@ class BottomSummaryBar extends ConsumerWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '${l10n.homeTotalBalance} $netLabel: ${net.abs().toStringAsFixed(0)} ${l10n.currencyLocal}',
+                    '${l10n.homeTotalBalance} $netLabel: ${net.abs().toStringAsFixed(0)} ${currencyName ?? l10n.currencyLocal}',
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
