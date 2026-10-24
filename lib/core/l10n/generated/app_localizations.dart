@@ -2060,6 +2060,108 @@ abstract class AppLocalizations {
   /// **'سحابي'**
   String get voiceRecognitionModeCloud;
 
+  /// No description provided for @generalSettingsDefaultCategoryTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديد التصنيف الافتراضي عند إضافة حساب جديد'**
+  String get generalSettingsDefaultCategoryTitle;
+
+  /// No description provided for @generalSettingsKeepLastCategory.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاحتفاظ بآخر تصنيف'**
+  String get generalSettingsKeepLastCategory;
+
+  /// No description provided for @generalSettingsDefaultCurrencyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديد العملة الافتراضية عند إضافة حساب أو عملية جديدة'**
+  String get generalSettingsDefaultCurrencyTitle;
+
+  /// No description provided for @generalSettingsKeepLastCurrency.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاحتفاظ بآخر عملة'**
+  String get generalSettingsKeepLastCurrency;
+
+  /// No description provided for @whisperModelsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'نماذج التعرف المحلي'**
+  String get whisperModelsTitle;
+
+  /// No description provided for @whisperModelsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك تنزيل أي نموذج في أي وقت، والتبديل بينها، وحذف ما لا تحتاجه لتوفير المساحة.'**
+  String get whisperModelsHint;
+
+  /// No description provided for @whisperModelActive.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد الاستخدام'**
+  String get whisperModelActive;
+
+  /// No description provided for @whisperModelInstalled.
+  ///
+  /// In ar, this message translates to:
+  /// **'محمَّل على الجهاز'**
+  String get whisperModelInstalled;
+
+  /// No description provided for @whisperModelNotInstalled.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير محمَّل'**
+  String get whisperModelNotInstalled;
+
+  /// No description provided for @whisperModelDownload.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنزيل'**
+  String get whisperModelDownload;
+
+  /// No description provided for @whisperModelUse.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدام'**
+  String get whisperModelUse;
+
+  /// No description provided for @whisperModelDelete.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف'**
+  String get whisperModelDelete;
+
+  /// No description provided for @whisperModelCancelDownload.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف التنزيل'**
+  String get whisperModelCancelDownload;
+
+  /// No description provided for @whisperModelDeleteTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف النموذج'**
+  String get whisperModelDeleteTitle;
+
+  /// No description provided for @whisperModelDeleteBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيُحذف ملف النموذج من الجهاز، ويمكنك تنزيله مرة أخرى لاحقًا.'**
+  String get whisperModelDeleteBody;
+
+  /// No description provided for @whisperModelDeleteLastNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا آخر نموذج محمَّل، فسيُطلب منك اختيار نموذج جديد عند استخدام التعرف المحلي.'**
+  String get whisperModelDeleteLastNote;
+
+  /// No description provided for @whisperModelsManageRow.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدارة نماذج التعرف المحلي (تنزيل / تبديل / حذف)'**
+  String get whisperModelsManageRow;
+
   /// No description provided for @openLinkFailedMessage.
   ///
   /// In ar, this message translates to:

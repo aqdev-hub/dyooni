@@ -9,6 +9,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/dyooni_picker_theme.dart';
 import '../../../data/models/general_settings.dart';
 import '../../../logic/auth/auth_provider.dart';
+import '../../../logic/categories/categories_provider.dart';
+import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../widgets/shared/app_snackbar.dart';
@@ -290,6 +292,30 @@ class _Body extends ConsumerWidget {
           value: settings.voiceRecognitionMode,
           onChanged: notifier.setVoiceRecognitionMode,
         ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () => context.push('/voice-models'),
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(10), border: Border.all(color: shell.border)),
+            child: Row(
+              children: [
+                Icon(Icons.download_for_offline_outlined, color: shell.accent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l10n.whisperModelsManageRow,
+                    textAlign: TextAlign.end,
+                    style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.chevron_left_rounded, color: shell.textSecondary),
+              ],
+            ),
+          ),
+        ),
 
         const SizedBox(height: 10),
         InkWell(
@@ -363,6 +389,46 @@ class _Body extends ConsumerWidget {
           selected: settings.defaultDirection == DefaultDirectionOption.keepLast,
           onTap: () => notifier.setDefaultDirection(DefaultDirectionOption.keepLast),
         ),
+        const SizedBox(height: 20),
+
+        // Default category for a new account — the list is the person's own (إدارة التصنيفات).
+        Text(
+          l10n.generalSettingsDefaultCategoryTitle,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
+        ),
+        const SizedBox(height: 10),
+        for (final category in ref.watch(assignableCategoriesProvider))
+          _DefaultDirectionRow(
+            label: category.name,
+            selected: settings.defaultCategoryId == category.id,
+            onTap: () => notifier.setDefaultCategory(category.id),
+          ),
+        _DefaultDirectionRow(
+          label: l10n.generalSettingsKeepLastCategory,
+          selected: settings.defaultCategoryId == null,
+          onTap: () => notifier.setDefaultCategory(null),
+        ),
+        const SizedBox(height: 20),
+
+        // Default currency for a new account / operation — the person's own list (إدارة العملات).
+        Text(
+          l10n.generalSettingsDefaultCurrencyTitle,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
+        ),
+        const SizedBox(height: 10),
+        for (final currency in ref.watch(currencyTypesProvider))
+          _DefaultDirectionRow(
+            label: currency.name,
+            selected: settings.defaultCurrencyId == currency.id,
+            onTap: () => notifier.setDefaultCurrency(currency.id),
+          ),
+        _DefaultDirectionRow(
+          label: l10n.generalSettingsKeepLastCurrency,
+          selected: settings.defaultCurrencyId == null,
+          onTap: () => notifier.setDefaultCurrency(null),
+        ),
         const SizedBox(height: 24),
       ],
     );
@@ -412,15 +478,26 @@ class _VoiceRecognitionModeRow extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(child: Text(l10n.voiceRecognitionModeTitle, textAlign: TextAlign.end, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary))),
           const SizedBox(width: 10),
+          // The list's own colours: without these the popup uses the default (light) menu colour
+          // with the screen's light text on it, which made the options unreadable.
           DropdownButton<VoiceRecognitionMode>(
             value: value,
             underline: const SizedBox.shrink(),
+            dropdownColor: shell.surface,
+            iconEnabledColor: shell.accent,
+            style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700),
             onChanged: (next) {
               if (next != null) onChanged(next);
             },
             items: [
-              DropdownMenuItem(value: VoiceRecognitionMode.local, child: Text(l10n.voiceRecognitionModeLocal)),
-              DropdownMenuItem(value: VoiceRecognitionMode.cloud, child: Text(l10n.voiceRecognitionModeCloud)),
+              DropdownMenuItem(
+                value: VoiceRecognitionMode.local,
+                child: Text(l10n.voiceRecognitionModeLocal, style: TextStyle(color: shell.textPrimary)),
+              ),
+              DropdownMenuItem(
+                value: VoiceRecognitionMode.cloud,
+                child: Text(l10n.voiceRecognitionModeCloud, style: TextStyle(color: shell.textPrimary)),
+              ),
             ],
           ),
         ],

@@ -1044,6 +1044,57 @@ class AppLocalizationsAr extends AppLocalizations {
   String get voiceRecognitionModeCloud => 'سحابي';
 
   @override
+  String get generalSettingsDefaultCategoryTitle => 'تحديد التصنيف الافتراضي عند إضافة حساب جديد';
+
+  @override
+  String get generalSettingsKeepLastCategory => 'الاحتفاظ بآخر تصنيف';
+
+  @override
+  String get generalSettingsDefaultCurrencyTitle => 'تحديد العملة الافتراضية عند إضافة حساب أو عملية جديدة';
+
+  @override
+  String get generalSettingsKeepLastCurrency => 'الاحتفاظ بآخر عملة';
+
+  @override
+  String get whisperModelsTitle => 'نماذج التعرف المحلي';
+
+  @override
+  String get whisperModelsHint => 'يمكنك تنزيل أي نموذج في أي وقت، والتبديل بينها، وحذف ما لا تحتاجه لتوفير المساحة.';
+
+  @override
+  String get whisperModelActive => 'قيد الاستخدام';
+
+  @override
+  String get whisperModelInstalled => 'محمَّل على الجهاز';
+
+  @override
+  String get whisperModelNotInstalled => 'غير محمَّل';
+
+  @override
+  String get whisperModelDownload => 'تنزيل';
+
+  @override
+  String get whisperModelUse => 'استخدام';
+
+  @override
+  String get whisperModelDelete => 'حذف';
+
+  @override
+  String get whisperModelCancelDownload => 'إيقاف التنزيل';
+
+  @override
+  String get whisperModelDeleteTitle => 'حذف النموذج';
+
+  @override
+  String get whisperModelDeleteBody => 'سيُحذف ملف النموذج من الجهاز، ويمكنك تنزيله مرة أخرى لاحقًا.';
+
+  @override
+  String get whisperModelDeleteLastNote => 'هذا آخر نموذج محمَّل، فسيُطلب منك اختيار نموذج جديد عند استخدام التعرف المحلي.';
+
+  @override
+  String get whisperModelsManageRow => 'إدارة نماذج التعرف المحلي (تنزيل / تبديل / حذف)';
+
+  @override
   String get openLinkFailedMessage =>
       'تعذّر فتح الرابط، تحقق من اتصالك بالإنترنت';
 

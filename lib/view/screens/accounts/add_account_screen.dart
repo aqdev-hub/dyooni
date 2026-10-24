@@ -25,6 +25,7 @@ import '../../../logic/accounts/ceiling_check.dart';
 import '../../../logic/categories/categories_provider.dart';
 import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
+import '../../../logic/settings/default_choices_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
@@ -104,9 +105,9 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       final settings = ref.read(generalSettingsProvider).value;
       if (settings != null) _direction = _resolveDefaultDirection(settings);
       // The new account's first entry starts in the currency page currently shown on Home.
-      _currencyCode = ref.read(effectiveCurrencyIdProvider);
-      // A new account starts in the category tab Home is on (if it is a real one), else the default.
-      _category = ref.read(effectiveCategoryProvider) ?? ref.read(defaultAccountCategoryProvider);
+      // Both come from الإعدادات (default, or "keep last") — see default_choices_provider.dart.
+      _currencyCode = ref.read(newEntryCurrencyIdProvider);
+      _category = ref.read(newAccountCategoryProvider);
       // ثم نعيد أي مسودة محفوظة (قد تُجاوز الاتجاه الافتراضي أعلاه إن كانت المسودة تحمل اتجاهًا
       // مختلفًا اختاره المستخدم قبل خروج غير مقصود من الشاشة) — انظر FormDraftStorage.
       _restoreDraftIfAny();
@@ -450,9 +451,15 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       await ref.read(accountsProvider.notifier).addAccount(account);
       await ref.read(transactionsProvider.notifier).addTransaction(firstTransaction);
       await _clearDraft(); // the safety-net draft has served its purpose — never resurrect it
-      unawaited(
-        ref.read(generalSettingsProvider.notifier).recordLastUsedDirection(isCredit: _direction == AccountDirection.credit),
-      );
+      // One after the other on purpose: each update reads the current settings, so two running
+      // at once could overwrite each other.
+      final settingsNotifier = ref.read(generalSettingsProvider.notifier);
+      final directionIsCredit = _direction == AccountDirection.credit;
+      final categoryId = _category.id;
+      unawaited(() async {
+        await settingsNotifier.recordLastUsedDirection(isCredit: directionIsCredit);
+        await settingsNotifier.recordLastUsedCategory(categoryId);
+      }());
       if (!mounted) return;
       // Show the currency page the new account was created in, so it is visible on Home.
       ref.read(selectedCurrencyIdProvider.notifier).state = _currencyCode;

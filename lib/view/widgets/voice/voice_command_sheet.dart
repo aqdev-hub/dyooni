@@ -218,6 +218,9 @@ class _IdleView extends StatelessWidget {
         const SizedBox(height: 11),
         GestureDetector(
           onTap: _resolveMicTap(state, controller),
+          // Long press = Bluetooth-headset mode (the hint under the button says so). Only while
+          // idle: during a recording a long press must not restart anything.
+          onLongPress: status == VoiceStatus.idle ? controller.startBluetoothMode : null,
           child: _BigMic(paused: isPaused, busy: isBusy),
         ),
         const SizedBox(height: 18),

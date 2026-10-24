@@ -27,6 +27,9 @@ class GeneralSettings {
     this.lastUsedDirectionIsCredit,
     this.annualClosingDate,
     this.voiceRecognitionMode = VoiceRecognitionMode.local,
+    this.defaultCategoryId,
+    this.lastUsedCategoryId,
+    this.defaultCurrencyId,
   });
 
   final bool biometricEnabled;
@@ -60,6 +63,17 @@ class GeneralSettings {
   final DateTime? annualClosingDate;
   final VoiceRecognitionMode voiceRecognitionMode;
 
+  /// تصنيف الحساب الافتراضي عند إضافة حساب جديد. `null` = «الاحتفاظ بآخر تصنيف» (نفس فكرة
+  /// [DefaultDirectionOption.keepLast]).
+  final String? defaultCategoryId;
+
+  /// آخر تصنيف حُفظ به حساب — يُقرأ فقط عندما يكون [defaultCategoryId] `null`.
+  final String? lastUsedCategoryId;
+
+  /// العملة الافتراضية عند إضافة حساب/عملية جديدة. `null` = «الاحتفاظ بآخر عملة» أي صفحة العملة
+  /// المفتوحة حاليًا.
+  final String? defaultCurrencyId;
+
   GeneralSettings copyWith({
     bool? biometricEnabled,
     bool? passwordEnabled,
@@ -79,6 +93,11 @@ class GeneralSettings {
     DateTime? annualClosingDate,
     bool clearAnnualClosingDate = false,
     VoiceRecognitionMode? voiceRecognitionMode,
+    String? defaultCategoryId,
+    bool clearDefaultCategoryId = false,
+    String? lastUsedCategoryId,
+    String? defaultCurrencyId,
+    bool clearDefaultCurrencyId = false,
   }) {
     return GeneralSettings(
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
@@ -95,6 +114,9 @@ class GeneralSettings {
       lastUsedDirectionIsCredit: lastUsedDirectionIsCredit ?? this.lastUsedDirectionIsCredit,
       annualClosingDate: clearAnnualClosingDate ? null : (annualClosingDate ?? this.annualClosingDate),
       voiceRecognitionMode: voiceRecognitionMode ?? this.voiceRecognitionMode,
+      defaultCategoryId: clearDefaultCategoryId ? null : (defaultCategoryId ?? this.defaultCategoryId),
+      lastUsedCategoryId: lastUsedCategoryId ?? this.lastUsedCategoryId,
+      defaultCurrencyId: clearDefaultCurrencyId ? null : (defaultCurrencyId ?? this.defaultCurrencyId),
     );
   }
 
@@ -113,6 +135,9 @@ class GeneralSettings {
         'lastUsedDirectionIsCredit': lastUsedDirectionIsCredit,
         'annualClosingDate': annualClosingDate?.toIso8601String(),
         'voiceRecognitionMode': voiceRecognitionMode.name,
+        'defaultCategoryId': defaultCategoryId,
+        'lastUsedCategoryId': lastUsedCategoryId,
+        'defaultCurrencyId': defaultCurrencyId,
       };
 
   factory GeneralSettings.fromJson(Map<String, dynamic> json) => GeneralSettings(
@@ -131,5 +156,8 @@ class GeneralSettings {
         annualClosingDate:
             json['annualClosingDate'] is String ? DateTime.tryParse(json['annualClosingDate'] as String) : null,
         voiceRecognitionMode: VoiceRecognitionMode.values.byName(json['voiceRecognitionMode'] as String? ?? 'local'),
+        defaultCategoryId: json['defaultCategoryId'] as String?,
+        lastUsedCategoryId: json['lastUsedCategoryId'] as String?,
+        defaultCurrencyId: json['defaultCurrencyId'] as String?,
       );
 }

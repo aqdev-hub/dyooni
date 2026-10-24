@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:whisper_ggml/whisper_ggml.dart' show Whisper, WhisperModel;
 
 /// Sample rate Whisper expects and the recorder captures at. Whisper is trained on 16 kHz mono.
 const whisperSampleRate = 16000;
@@ -91,6 +92,26 @@ final whisperModelControllerProvider = NotifierProvider<WhisperModelController, 
   WhisperModelController.new,
 );
 
+/// Progress of a model the person downloads WHILE another one is already installed and usable
+/// (from إدارة النماذج). Kept apart from [WhisperModelState] on purpose: the model in use must keep
+/// working during the download, so the voice screen's gate must not see a "downloading" state.
+final whisperBackgroundDownloadProvider = StateProvider<WhisperModelDownloading?>((ref) => null);
+
+/// Why the last background download failed (`null` = no failure to show).
+final whisperBackgroundErrorProvider = StateProvider<String?>((ref) => null);
+
+/// Which models are on the device and how big each file is. Refreshes whenever the active model
+/// changes or a background download starts/ends.
+final whisperInstalledProvider = FutureProvider.autoDispose<Map<WhisperModelOption, int>>((ref) {
+  ref.watch(whisperModelControllerProvider);
+  ref.watch(whisperBackgroundDownloadProvider.select((d) => d == null));
+  return ref.read(whisperModelControllerProvider.notifier).installedSizes();
+});
+
+class _DownloadCancelled implements Exception {
+  const _DownloadCancelled();
+}
+
 /// Owns the model lifecycle: look on disk → (ask) → download with resume → verify → ready.
 ///
 /// Every step first checks whether its own output already exists and skips past it, so retrying
@@ -107,6 +128,7 @@ class WhisperModelController extends Notifier<WhisperModelState> {
 
   Future<void>? _active;
   WhisperModelOption? _target;
+  bool _cancelRequested = false;
 
   @override
   WhisperModelState build() {
@@ -126,6 +148,12 @@ class WhisperModelController extends Notifier<WhisperModelState> {
 
   Future<void> _init() async {
     if (_active != null) return;
+    await _resolveFromDisk();
+  }
+
+  /// Looks at what is on disk and becomes ready with the remembered (or any) installed model, or
+  /// asks the person to choose when nothing is installed.
+  Future<void> _resolveFromDisk() async {
     try {
       final installed = <WhisperModelOption>[
         for (final option in WhisperModelOption.values)
@@ -162,23 +190,86 @@ class WhisperModelController extends Notifier<WhisperModelState> {
   }
 
   Future<void> _install(WhisperModelOption option) async {
+    // A model downloaded while another one is READY is a background download: the model in use
+    // keeps working and only switches once the new one is complete.
+    final background = state is WhisperModelReady;
+    _cancelRequested = false;
     try {
       if (!await _isInstalled(option)) {
+        if (background) ref.read(whisperBackgroundErrorProvider.notifier).state = null;
         await _downloadWithRetries(
           url: option.url,
           dest: await _fileFor(option),
           minBytes: _minModelBytes,
           checkMagic: true,
-          onProgress: (received, total) => _publishProgress(option, received, total),
+          onProgress: (received, total) => _publishProgress(option, received, total, background),
         );
       }
+      ref.read(whisperBackgroundDownloadProvider.notifier).state = null;
       await _becomeReady(option);
+    } on _DownloadCancelled {
+      ref.read(whisperBackgroundDownloadProvider.notifier).state = null;
+      // The partial file is kept (a later download resumes it). A first-run download that was
+      // cancelled goes back to "pick a model".
+      if (!background) await _resolveFromDisk();
     } catch (e) {
-      state = WhisperModelFailed(e.toString(), option: option);
+      ref.read(whisperBackgroundDownloadProvider.notifier).state = null;
+      if (background) {
+        ref.read(whisperBackgroundErrorProvider.notifier).state = e.toString();
+      } else {
+        state = WhisperModelFailed(e.toString(), option: option);
+      }
+    }
+  }
+
+  /// Stops a running download (the partial file stays so it can be resumed later).
+  Future<void> cancelDownload() async {
+    final running = _active;
+    if (running == null) return;
+    _cancelRequested = true;
+    await running;
+  }
+
+  /// Which models are installed (valid files) and their size in bytes.
+  Future<Map<WhisperModelOption, int>> installedSizes() async {
+    final result = <WhisperModelOption, int>{};
+    for (final option in WhisperModelOption.values) {
+      if (await _isInstalled(option)) result[option] = await (await _fileFor(option)).length();
+    }
+    return result;
+  }
+
+  /// Deletes a model's files (the finished file AND any partial download). If it was the model in
+  /// use, the app falls back to another installed model, or asks to choose when none is left.
+  Future<void> delete(WhisperModelOption option) async {
+    if (_active != null && _target == option) await cancelDownload();
+    final current = state;
+    final wasActive = current is WhisperModelReady && current.files.option == option;
+    if (wasActive) await _releaseNativeModel();
+    final file = await _fileFor(option);
+    for (final path in [file.path, '${file.path}.part', '${file.path}.size']) {
+      try {
+        final f = File(path);
+        if (await f.exists()) await f.delete();
+      } catch (_) {
+        // Best effort — a locked file is reported by the model list still showing it.
+      }
+    }
+    if (wasActive) await _resolveFromDisk();
+  }
+
+  /// Frees the model held in native memory so the next recognition loads the model now chosen.
+  Future<void> _releaseNativeModel() async {
+    try {
+      await const Whisper(model: WhisperModel.small).releaseModel();
+    } catch (_) {
+      // Nothing parked / native library not loaded — fine.
     }
   }
 
   Future<void> _becomeReady(WhisperModelOption option) async {
+    final previous = state;
+    if (previous is WhisperModelReady && previous.files.option != option) await _releaseNativeModel();
     final file = await _fileFor(option);
     final choice = await _choiceFile();
     await choice.writeAsString(option.id);
@@ -242,12 +333,17 @@ class WhisperModelController extends Notifier<WhisperModelState> {
 
   /// Progress callbacks arrive for every network chunk; rebuilding the UI that often is wasteful, so
   /// they are throttled (the first and last updates always pass).
-  void _publishProgress(WhisperModelOption option, int received, int? total) {
+  void _publishProgress(WhisperModelOption option, int received, int? total, bool background) {
     final now = DateTime.now();
     final done = total != null && received >= total;
     if (!done && now.difference(_lastPublish) < const Duration(milliseconds: 200)) return;
     _lastPublish = now;
-    state = WhisperModelDownloading(option: option, downloadedBytes: received, totalBytes: total);
+    final progress = WhisperModelDownloading(option: option, downloadedBytes: received, totalBytes: total);
+    if (background) {
+      ref.read(whisperBackgroundDownloadProvider.notifier).state = progress;
+    } else {
+      state = progress;
+    }
   }
 
   Future<void> _downloadWithRetries({
@@ -259,9 +355,12 @@ class WhisperModelController extends Notifier<WhisperModelState> {
     int maxRetries = _maxAutoRetries,
   }) async {
     for (var attempt = 1; attempt <= maxRetries; attempt++) {
+      if (_cancelRequested) throw const _DownloadCancelled();
       try {
         await _downloadOnce(url: url, dest: dest, minBytes: minBytes, checkMagic: checkMagic, onProgress: onProgress);
         return;
+      } on _DownloadCancelled {
+        rethrow;
       } catch (_) {
         if (attempt == maxRetries) rethrow;
         await Future<void>.delayed(Duration(seconds: (attempt * 2).clamp(2, 15)));
@@ -319,6 +418,7 @@ class WhisperModelController extends Notifier<WhisperModelState> {
           onTimeout: (s) => s.addError(TimeoutException('Download stalled — no data for 30s')),
         );
         await for (final chunk in timed) {
+          if (_cancelRequested) throw const _DownloadCancelled();
           sink.add(chunk);
           received += chunk.length;
           onProgress(received, total);

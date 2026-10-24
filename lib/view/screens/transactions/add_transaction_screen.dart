@@ -23,6 +23,7 @@ import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/accounts/ceiling_check.dart';
 import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
+import '../../../logic/settings/default_choices_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
@@ -98,7 +99,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       if (settings != null) _direction = _resolveDefaultDirection(settings);
       // A new entry starts in the currency page the person is looking at (Home / Account
       // Details), so adding from the "أجنبي" page does not silently create a "محلي" entry.
-      _currencyCode = ref.read(effectiveCurrencyIdProvider);
+      _currencyCode = ref.read(newEntryCurrencyIdProvider);
       // ثم نعيد أي مسودة محفوظة (قد تُجاوز الاتجاه الافتراضي أعلاه) — انظر FormDraftStorage.
       _restoreDraftIfAny();
       // Recovers a photo the camera genuinely finished capturing right before Android killed

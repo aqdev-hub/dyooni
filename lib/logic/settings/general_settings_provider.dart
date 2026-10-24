@@ -86,6 +86,17 @@ class GeneralSettingsController extends AsyncNotifier<GeneralSettings> {
   Future<void> setAnnualClosingDate(DateTime? date) =>
       _update((s) => s.copyWith(annualClosingDate: date, clearAnnualClosingDate: date == null));
 
+  /// `null` = «الاحتفاظ بآخر تصنيف».
+  Future<void> setDefaultCategory(String? id) =>
+      _update((s) => s.copyWith(defaultCategoryId: id, clearDefaultCategoryId: id == null));
+
+  /// يُسجَّل في كل مرة يُحفظ فيها حساب؛ لا يُقرأ إلا عندما لا يوجد تصنيف افتراضي محدد.
+  Future<void> recordLastUsedCategory(String id) => _update((s) => s.copyWith(lastUsedCategoryId: id));
+
+  /// `null` = «الاحتفاظ بآخر عملة».
+  Future<void> setDefaultCurrency(String? id) =>
+      _update((s) => s.copyWith(defaultCurrencyId: id, clearDefaultCurrencyId: id == null));
+
   Future<void> setVoiceRecognitionMode(VoiceRecognitionMode value) =>
       _update((s) => s.copyWith(voiceRecognitionMode: value));
 }

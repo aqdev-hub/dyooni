@@ -1054,6 +1054,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceRecognitionModeCloud => 'Cloud';
 
   @override
+  String get generalSettingsDefaultCategoryTitle => 'Default category when adding a new account';
+
+  @override
+  String get generalSettingsKeepLastCategory => 'Keep the last category';
+
+  @override
+  String get generalSettingsDefaultCurrencyTitle => 'Default currency when adding a new account or operation';
+
+  @override
+  String get generalSettingsKeepLastCurrency => 'Keep the last currency';
+
+  @override
+  String get whisperModelsTitle => 'Local recognition models';
+
+  @override
+  String get whisperModelsHint => 'Download any model at any time, switch between them, and delete the ones you do not need to free space.';
+
+  @override
+  String get whisperModelActive => 'In use';
+
+  @override
+  String get whisperModelInstalled => 'Downloaded';
+
+  @override
+  String get whisperModelNotInstalled => 'Not downloaded';
+
+  @override
+  String get whisperModelDownload => 'Download';
+
+  @override
+  String get whisperModelUse => 'Use';
+
+  @override
+  String get whisperModelDelete => 'Delete';
+
+  @override
+  String get whisperModelCancelDownload => 'Stop download';
+
+  @override
+  String get whisperModelDeleteTitle => 'Delete model';
+
+  @override
+  String get whisperModelDeleteBody => 'The model file will be removed from this device. You can download it again later.';
+
+  @override
+  String get whisperModelDeleteLastNote => 'This is the last downloaded model; you will be asked to pick one when you next use local recognition.';
+
+  @override
+  String get whisperModelsManageRow => 'Manage local models (download / switch / delete)';
+
+  @override
   String get openLinkFailedMessage =>
       'Couldn\'t open the link, check your internet connection';
 

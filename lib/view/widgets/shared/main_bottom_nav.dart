@@ -29,9 +29,9 @@ class MainBottomNav extends StatelessWidget {
   final VoidCallback onVoice;
   final VoidCallback onReports;
 
-  /// Only meaningful from Home, where a long press on the voice tab jumps straight into
-  /// Bluetooth mode (see HomeScreen._openVoiceScreen). `null` on the voice screen itself — you
-  /// can't long-press your way into Bluetooth mode from a screen you're already on.
+  /// A long press on the voice tab enters Bluetooth-headset mode: from Home/Reports it opens the
+  /// voice screen in that mode (see HomeScreen._openVoiceScreen); on the voice screen it starts it
+  /// directly.
   final VoidCallback? onVoiceLongPress;
 
   /// Larger variant used by the voice screen (reference design): bigger icons/labels, an

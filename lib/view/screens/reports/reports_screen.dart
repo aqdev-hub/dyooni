@@ -332,6 +332,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               activeTab: MainNavTab.reports,
               onHome: () => context.go('/home'),
               onVoice: () => context.push('/voice'),
+              onVoiceLongPress: () => context.push('/voice', extra: true),
               onReports: () {},
             ),
           ],

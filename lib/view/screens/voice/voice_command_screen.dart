@@ -140,6 +140,12 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
               prominent: true,
               onHome: () => _goHome(context),
               onVoice: () {},
+              // Long press on the voice tab = Bluetooth-headset mode (only when nothing is recording).
+              onVoiceLongPress: () {
+                if (ref.read(voiceProvider).status == VoiceStatus.idle) {
+                  unawaited(ref.read(voiceProvider.notifier).startBluetoothMode());
+                }
+              },
               onReports: () => context.push('/reports'),
             ),
           ],
@@ -205,7 +211,12 @@ class _EntryModeInitState extends ConsumerState<_EntryModeInit> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(voiceProvider.notifier).setEntryMode(bluetoothMode: widget.bluetoothMode);
+      if (!mounted) return;
+      final controller = ref.read(voiceProvider.notifier);
+      controller.setEntryMode(bluetoothMode: widget.bluetoothMode);
+      // Long-pressing the voice button on Home means "Bluetooth headset mode": connect now instead
+      // of making the person tap the record button a second time.
+      if (widget.bluetoothMode) unawaited(controller.startBluetoothMode());
     });
   }
 
