@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show MethodChannel;
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:speech_to_text/speech_recognition_error.dart';
 
+import 'parallel_recorder.dart';
 import 'speech_engine.dart';
 
 /// Suppresses the Android system's own "start listening" / "stop listening" notification tones
@@ -52,10 +53,14 @@ class _SystemSoundMuter {
 /// bundled Vosk MGB-2 model. The OS/provider decides whether it processes locally or online;
 /// this engine deliberately never embeds a cloud API key in the mobile app.
 class SystemSpeechEngine implements SpeechEngine {
-  SystemSpeechEngine({stt.SpeechToText? speech}) : _speech = speech ?? stt.SpeechToText();
+  SystemSpeechEngine({stt.SpeechToText? speech, ParallelRecorder? recorder})
+      : _speech = speech ?? stt.SpeechToText(),
+        _recorder = recorder ?? ParallelRecorder();
 
   final stt.SpeechToText _speech;
   final _soundMuter = _SystemSoundMuter();
+  // Keeps a replayable copy of the voice while the OS recognizer listens — see ParallelRecorder.
+  final ParallelRecorder _recorder;
   final _partialController = StreamController<String>.broadcast();
   final _finalController = StreamController<String>.broadcast();
   final _errorController = StreamController<SpeechEngineError>.broadcast();
@@ -171,6 +176,8 @@ class SystemSpeechEngine implements SpeechEngine {
         }
       },
     );
+    // After listen() so the recognizer has already claimed the microphone; never throws.
+    await _recorder.start();
   }
 
   /// Use Yemeni Arabic when the installed recognizer offers it, rather than forcing a Saudi
@@ -184,7 +191,10 @@ class SystemSpeechEngine implements SpeechEngine {
   }
 
   @override
-  Future<void> pause() => _speech.stop();
+  Future<void> pause() async {
+    await _speech.stop();
+    await _recorder.pause();
+  }
 
   @override
   Future<void> resume() => start();
@@ -193,13 +203,14 @@ class SystemSpeechEngine implements SpeechEngine {
   Future<(String transcript, String? recordingPath)> stop() async {
     await _speech.stop();
     await _soundMuter.restore();
-    return (_latestTranscript, null);
+    return (_latestTranscript, await _recorder.stop());
   }
 
   @override
   Future<void> cancel() async {
     _latestTranscript = '';
     await _speech.cancel();
+    await _recorder.cancel();
     await _soundMuter.restore();
   }
 
@@ -211,12 +222,14 @@ class SystemSpeechEngine implements SpeechEngine {
     } catch (_) {
       // Nothing to cancel is fine.
     }
+    await _recorder.cancel();
     await _soundMuter.restore();
   }
 
   @override
   void dispose() {
     unawaited(_speech.cancel());
+    unawaited(_recorder.cancel());
     unawaited(_soundMuter.restore());
     _partialController.close();
     _finalController.close();
