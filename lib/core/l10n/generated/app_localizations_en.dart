@@ -1037,6 +1037,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Accurate';
 
   @override
+  String get whisperOptionFastTitle => 'Fast';
+
+  @override
+  String get whisperOptionFastSubtitle =>
+      'About 60 MB — much faster but less accurate in Arabic';
+
+  @override
   String get whisperOptionAccurateSubtitle =>
       'About 540 MB — more accurate but slower, best on a powerful phone';
 

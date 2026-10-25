@@ -353,6 +353,8 @@
   "whisperOptionBalancedTitle": "متوازن (موصى به)",
   "whisperOptionBalancedSubtitle": "حجمه نحو 190 ميجابايت — أسرع في الفهم",
   "whisperOptionAccurateTitle": "دقيق",
+  "whisperOptionFastTitle": "سريع",
+  "whisperOptionFastSubtitle": "حجمه نحو 60 ميجابايت — الأسرع بفارق كبير لكنه أقل دقة في العربية",
   "whisperOptionAccurateSubtitle": "حجمه نحو 540 ميجابايت — أدق لكنه أبطأ، ويناسب الهاتف القوي",
   "whisperDownloadingHint": "جارٍ تحميل نموذج التعرف الصوتي (مرة واحدة فقط) — بعدها يعمل الأمر الصوتي بلا إنترنت",
   "voiceRecognitionModeTitle": "طريقة التعرف الصوتي",

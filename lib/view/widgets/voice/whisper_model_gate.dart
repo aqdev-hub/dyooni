@@ -53,6 +53,12 @@ class WhisperModelGate extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               _OptionCard(
+                title: l10n.whisperOptionFastTitle,
+                subtitle: l10n.whisperOptionFastSubtitle,
+                onTap: () => ref.read(whisperModelControllerProvider.notifier).choose(WhisperModelOption.fast),
+              ),
+              const SizedBox(height: 10),
+              _OptionCard(
                 title: l10n.whisperOptionBalancedTitle,
                 subtitle: l10n.whisperOptionBalancedSubtitle,
                 highlighted: true,

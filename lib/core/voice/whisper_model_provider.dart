@@ -9,7 +9,7 @@ import 'package:whisper_ggml/whisper_ggml.dart' show Whisper, WhisperModel;
 /// Sample rate Whisper expects and the recorder captures at. Whisper is trained on 16 kHz mono.
 const whisperSampleRate = 16000;
 
-/// The two Whisper models offered for local recognition. Both are `ggml` files published by the
+/// The three Whisper models offered for local recognition. Both are `ggml` files published by the
 /// whisper.cpp project on Hugging Face and are downloaded ONCE, then run fully offline.
 ///
 /// Both are quantised (q5): roughly a third of the original size with a small accuracy cost, which
@@ -19,6 +19,7 @@ const whisperSampleRate = 16000;
 ///    noticeably longer. Whether that is acceptable depends on the phone, so it is the person's
 ///    choice, not ours.
 enum WhisperModelOption {
+  fast('fast', 'ggml-base-q5_1.bin', 60),
   balanced('balanced', 'ggml-small-q5_1.bin', 190),
   accurate('accurate', 'ggml-medium-q5_0.bin', 540);
 

@@ -1027,6 +1027,13 @@ class AppLocalizationsAr extends AppLocalizations {
       'دقيق';
 
   @override
+  String get whisperOptionFastTitle => 'سريع';
+
+  @override
+  String get whisperOptionFastSubtitle =>
+      'حجمه نحو 60 ميجابايت — الأسرع بفارق كبير لكنه أقل دقة في العربية';
+
+  @override
   String get whisperOptionAccurateSubtitle =>
       'حجمه نحو 540 ميجابايت — أدق لكنه أبطأ، ويناسب الهاتف القوي';
 

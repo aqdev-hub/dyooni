@@ -2030,6 +2030,18 @@ abstract class AppLocalizations {
   /// **'دقيق'**
   String get whisperOptionAccurateTitle;
 
+  /// No description provided for @whisperOptionFastTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'سريع'**
+  String get whisperOptionFastTitle;
+
+  /// No description provided for @whisperOptionFastSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حجمه نحو 60 ميجابايت — الأسرع بفارق كبير لكنه أقل دقة في العربية'**
+  String get whisperOptionFastSubtitle;
+
   /// No description provided for @whisperOptionAccurateSubtitle.
   ///
   /// In ar, this message translates to:

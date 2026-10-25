@@ -162,8 +162,11 @@ class _ModelCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
     final isInstalled = installedBytes != null;
-    final title = option == WhisperModelOption.balanced ? l10n.whisperOptionBalancedTitle : l10n.whisperOptionAccurateTitle;
-    final subtitle = option == WhisperModelOption.balanced ? l10n.whisperOptionBalancedSubtitle : l10n.whisperOptionAccurateSubtitle;
+    final (title, subtitle) = switch (option) {
+      WhisperModelOption.fast => (l10n.whisperOptionFastTitle, l10n.whisperOptionFastSubtitle),
+      WhisperModelOption.balanced => (l10n.whisperOptionBalancedTitle, l10n.whisperOptionBalancedSubtitle),
+      WhisperModelOption.accurate => (l10n.whisperOptionAccurateTitle, l10n.whisperOptionAccurateSubtitle),
+    };
     final status = isActive
         ? l10n.whisperModelActive
         : isInstalled
