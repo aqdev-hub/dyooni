@@ -53,10 +53,15 @@ class _SystemSoundMuter {
 /// bundled Vosk MGB-2 model. The OS/provider decides whether it processes locally or online;
 /// this engine deliberately never embeds a cloud API key in the mobile app.
 class SystemSpeechEngine implements SpeechEngine {
-  SystemSpeechEngine({stt.SpeechToText? speech, ParallelRecorder? recorder})
+  SystemSpeechEngine({stt.SpeechToText? speech, ParallelRecorder? recorder, this.recordInParallel = false})
       : _speech = speech ?? stt.SpeechToText(),
         _recorder = recorder ?? ParallelRecorder();
 
+  /// OFF by default. Android lets only ONE capture client hear the microphone at a time: when our
+  /// own `record` stream opens beside the system recognizer, the OS silences one of them and the
+  /// recognizer was the one that went deaf (v12 regression: "cloud hears nothing"). Hearing the
+  /// person is the feature; the parallel copy is a best-effort extra that must be opted into.
+  final bool recordInParallel;
   final stt.SpeechToText _speech;
   final _soundMuter = _SystemSoundMuter();
   // Keeps a replayable copy of the voice while the OS recognizer listens — see ParallelRecorder.
@@ -177,7 +182,7 @@ class SystemSpeechEngine implements SpeechEngine {
       },
     );
     // After listen() so the recognizer has already claimed the microphone; never throws.
-    await _recorder.start();
+    if (recordInParallel) await _recorder.start();
   }
 
   /// Use Yemeni Arabic when the installed recognizer offers it, rather than forcing a Saudi
@@ -193,7 +198,7 @@ class SystemSpeechEngine implements SpeechEngine {
   @override
   Future<void> pause() async {
     await _speech.stop();
-    await _recorder.pause();
+    if (recordInParallel) await _recorder.pause();
   }
 
   @override
@@ -203,7 +208,7 @@ class SystemSpeechEngine implements SpeechEngine {
   Future<(String transcript, String? recordingPath)> stop() async {
     await _speech.stop();
     await _soundMuter.restore();
-    return (_latestTranscript, await _recorder.stop());
+    return (_latestTranscript, recordInParallel ? await _recorder.stop() : null);
   }
 
   @override
