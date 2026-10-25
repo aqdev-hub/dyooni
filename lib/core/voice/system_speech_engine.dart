@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:speech_to_text/speech_recognition_error.dart';
 
+import 'native_speech_bridge.dart';
 import 'parallel_recorder.dart';
 import 'speech_engine.dart';
 
@@ -53,8 +55,9 @@ class _SystemSoundMuter {
 /// bundled Vosk MGB-2 model. The OS/provider decides whether it processes locally or online;
 /// this engine deliberately never embeds a cloud API key in the mobile app.
 class SystemSpeechEngine implements SpeechEngine {
-  SystemSpeechEngine({stt.SpeechToText? speech, ParallelRecorder? recorder, this.recordInParallel = false})
+  SystemSpeechEngine({stt.SpeechToText? speech, ParallelRecorder? recorder, NativeSpeechBridge? native, this.recordInParallel = false})
       : _speech = speech ?? stt.SpeechToText(),
+        _native = native ?? NativeSpeechBridge(),
         _recorder = recorder ?? ParallelRecorder();
 
   /// OFF by default. Android lets only ONE capture client hear the microphone at a time: when our
@@ -62,6 +65,16 @@ class SystemSpeechEngine implements SpeechEngine {
   /// recognizer was the one that went deaf (v12 regression: "cloud hears nothing"). Hearing the
   /// person is the feature; the parallel copy is a best-effort extra that must be opted into.
   final bool recordInParallel;
+
+  /// Android 13+ path: the app's recorder is the ONLY microphone owner and feeds the system
+  /// recognizer through EXTRA_AUDIO_SOURCE, so it hears AND the original recording is kept.
+  /// Flip to false to go back to the plain plugin path everywhere.
+  static const useNativeAudioSource = true;
+  final NativeSpeechBridge _native;
+  StreamSubscription<NativeSpeechEvent>? _nativeSub;
+  bool? _nativeSupported;
+  bool _nativeFailed = false;
+  bool _nativeActive = false;
   final stt.SpeechToText _speech;
   final _soundMuter = _SystemSoundMuter();
   // Keeps a replayable copy of the voice while the OS recognizer listens — see ParallelRecorder.
@@ -153,6 +166,7 @@ class SystemSpeechEngine implements SpeechEngine {
     // restored in stop()/cancel(), both of which run on every exit path (see voice_provider.dart,
     // every code path that ends a session calls one of the two).
     await _soundMuter.mute();
+    if (await _tryStartNative()) return;
     await _speech.listen(
       listenOptions: stt.SpeechListenOptions(
         localeId: await _arabicLocaleId(),
@@ -161,28 +175,84 @@ class SystemSpeechEngine implements SpeechEngine {
         pauseFor: const Duration(seconds: 3),
         listenMode: stt.ListenMode.dictation,
       ),
-      onResult: (result) {
-        final text = result.recognizedWords.trim();
-        // Diagnostic only (v5 log showed sessions but never whether any text came back): length
-        // and finality, never the words themselves.
-        debugPrint('[voice] system recognizer result: final=${result.finalResult} chars=${text.length} alternates=${result.alternates.length}');
-        if (text.isEmpty) return;
-        _latestTranscript = text;
-        if (result.finalResult) {
-          _lastAlternatives = [
-            text,
-            for (final alt in result.alternates)
-              if (alt.recognizedWords.trim().isNotEmpty && alt.recognizedWords.trim() != text)
-                alt.recognizedWords.trim(),
-          ];
-          _finalController.add(text);
-        } else {
-          _partialController.add(text);
-        }
-      },
+      onResult: (result) => _handleResult(
+        result.recognizedWords,
+        result.finalResult,
+        [for (final alt in result.alternates) alt.recognizedWords],
+      ),
     );
     // After listen() so the recognizer has already claimed the microphone; never throws.
     if (recordInParallel) await _recorder.start();
+  }
+
+  void _handleResult(String raw, bool isFinal, List<String> alternates) {
+    final text = raw.trim();
+    // Diagnostic only: length and finality, never the words themselves.
+    debugPrint('[voice] system recognizer result: final=$isFinal chars=${text.length} alternates=${alternates.length}');
+    if (text.isEmpty) return;
+    _latestTranscript = text;
+    if (isFinal) {
+      _lastAlternatives = [
+        text,
+        for (final alt in alternates)
+          if (alt.trim().isNotEmpty && alt.trim() != text) alt.trim(),
+      ];
+      _finalController.add(text);
+    } else {
+      _partialController.add(text);
+    }
+  }
+
+  void _onNativeEvent(NativeSpeechEvent event) {
+    switch (event.type) {
+      case 'partial':
+      case 'final':
+        if (event.texts.isEmpty) return;
+        _handleResult(event.texts.first, event.type == 'final', event.texts.skip(1).toList());
+      case 'error':
+        // 3 audio, 5 client, 12/13 language: this recognizer cannot work through the audio-source
+        // path. Remember it so the next session uses the plain plugin path instead.
+        const unusable = {3, 5, 12, 13};
+        if (unusable.contains(event.code)) _nativeFailed = true;
+        const network = {1, 2, 4, 10, 11};
+        const noMatch = {6, 7};
+        final type = network.contains(event.code)
+            ? SpeechEngineErrorType.network
+            : noMatch.contains(event.code)
+                ? SpeechEngineErrorType.noMatch
+                : event.code == 9
+                    ? SpeechEngineErrorType.permission
+                    : SpeechEngineErrorType.other;
+        debugPrint('[voice] native recognizer error: ${event.code}');
+        _errorController.add(SpeechEngineError(type, message: 'native_${event.code}'));
+    }
+  }
+
+  Future<bool> _tryStartNative() async {
+    if (!useNativeAudioSource || _nativeFailed || !Platform.isAndroid) return false;
+    _nativeSupported ??= await _native.isSupported();
+    if (_nativeSupported != true) return false;
+    _nativeSub ??= _native.events.listen(_onNativeEvent);
+    final started = await _native.start(await _arabicLocaleId());
+    if (!started) {
+      _nativeFailed = true;
+      return false;
+    }
+    _recorder.onChunk = _native.feed;
+    await _recorder.start();
+    _nativeActive = true;
+    debugPrint('[voice] system recognizer running on app-supplied audio');
+    return true;
+  }
+
+  Future<void> _stopRecognizer() async {
+    if (_nativeActive) {
+      _nativeActive = false;
+      _recorder.onChunk = null;
+      await _native.stop();
+    } else {
+      await _speech.stop();
+    }
   }
 
   /// Use Yemeni Arabic when the installed recognizer offers it, rather than forcing a Saudi
@@ -197,8 +267,9 @@ class SystemSpeechEngine implements SpeechEngine {
 
   @override
   Future<void> pause() async {
-    await _speech.stop();
-    if (recordInParallel) await _recorder.pause();
+    final wasNative = _nativeActive;
+    await _stopRecognizer();
+    if (wasNative || recordInParallel) await _recorder.pause();
   }
 
   @override
@@ -206,14 +277,18 @@ class SystemSpeechEngine implements SpeechEngine {
 
   @override
   Future<(String transcript, String? recordingPath)> stop() async {
-    await _speech.stop();
+    final wasNative = _nativeActive;
+    await _stopRecognizer();
     await _soundMuter.restore();
-    return (_latestTranscript, recordInParallel ? await _recorder.stop() : null);
+    return (_latestTranscript, wasNative || recordInParallel ? await _recorder.stop() : null);
   }
 
   @override
   Future<void> cancel() async {
     _latestTranscript = '';
+    _nativeActive = false;
+    _recorder.onChunk = null;
+    await _native.cancel();
     await _speech.cancel();
     await _recorder.cancel();
     await _soundMuter.restore();
@@ -222,6 +297,9 @@ class SystemSpeechEngine implements SpeechEngine {
   @override
   Future<void> release() async {
     _latestTranscript = '';
+    _nativeActive = false;
+    _recorder.onChunk = null;
+    await _native.cancel();
     try {
       await _speech.cancel();
     } catch (_) {
@@ -233,6 +311,8 @@ class SystemSpeechEngine implements SpeechEngine {
 
   @override
   void dispose() {
+    unawaited(_native.cancel());
+    unawaited(_nativeSub?.cancel());
     unawaited(_speech.cancel());
     unawaited(_recorder.cancel());
     unawaited(_soundMuter.restore());

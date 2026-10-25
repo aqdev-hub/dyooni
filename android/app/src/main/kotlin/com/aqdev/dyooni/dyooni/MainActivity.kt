@@ -16,9 +16,11 @@ class MainActivity : FlutterFragmentActivity() {
   // EXACTLY as it was, never a guessed/default value — see configureFlutterEngine below.
   private var savedNotificationVolume: Int? = null
   private var savedMusicVolume: Int? = null
+  private var nativeSpeech: NativeSpeechBridge? = null
 
   override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
     super.configureFlutterEngine(flutterEngine)
+    nativeSpeech = NativeSpeechBridge(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
     MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dyooni/voice_bluetooth")
       .setMethodCallHandler { call, result ->
         if (call.method == "isHeadsetConnected") {

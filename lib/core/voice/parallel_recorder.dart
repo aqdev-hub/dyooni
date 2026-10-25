@@ -24,6 +24,10 @@ class ParallelRecorder {
 
   final int sampleRate;
 
+  /// Receives every captured PCM16 chunk (used to feed the system recognizer — see
+  /// NativeSpeechBridge). Set before [start].
+  void Function(Uint8List chunk)? onChunk;
+
   /// Same floor and minimum length the Whisper engine uses to call a recording "dead" / too short.
   static const _silentPeak = 0.003;
   static const _minAudioMs = 400;
@@ -93,6 +97,7 @@ class ParallelRecorder {
     }
     _peak = peak;
     _bytes += chunk.length;
+    onChunk?.call(chunk);
     _queue = _queue.then((_) => _wav?.write(chunk)).catchError((_) {});
   }
 
