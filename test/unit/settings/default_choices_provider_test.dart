@@ -4,15 +4,12 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dyooni/data/models/account.dart';
-import 'package:dyooni/data/models/category_type.dart';
 import 'package:dyooni/data/models/transaction.dart';
 import 'package:dyooni/data/repositories/accounts/accounts_repository.dart';
 import 'package:dyooni/data/repositories/transactions/transactions_repository.dart';
 import 'package:dyooni/logic/accounts/accounts_provider.dart';
 import 'package:dyooni/logic/settings/default_choices_provider.dart';
 import 'package:dyooni/logic/settings/general_settings_provider.dart';
-import 'package:dyooni/logic/currencies/currencies_provider.dart';
-import 'package:dyooni/logic/categories/categories_provider.dart';
 import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
 
@@ -27,9 +24,6 @@ class MockTransactionsRepository extends Mock implements TransactionsRepository 
   @override
   Stream<List<Transaction>> watchTransactions() => const Stream.empty();
 }
-
-Account _account(String id, [AccountCategory category = AccountCategory.client]) =>
-    Account(id: id, name: 'حساب $id', category: category, createdDate: DateTime(2026, 1, 1));
 
 Future<ProviderContainer> _container({
   List<Transaction> transactions = const [],

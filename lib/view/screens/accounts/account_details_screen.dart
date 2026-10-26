@@ -448,7 +448,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Row(
                   children: [
-                    IconButton(icon: const Icon(Icons.close_rounded, color: context.voicePalette.headerGold), onPressed: _closeSearch),
+                    IconButton(icon: Icon(Icons.close_rounded, color: context.voicePalette.headerGold), onPressed: _closeSearch),
                     Expanded(
                       child: Container(
                         height: 36,
@@ -496,7 +496,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                 // read right-to-left in RTL, same as Home.
                 child: Row(
                   children: [
-                    IconButton(icon: const Icon(Icons.arrow_back_rounded, color: context.voicePalette.headerGold, size: 20), onPressed: () => context.pop()),
+                    IconButton(icon: Icon(Icons.arrow_back_rounded, color: context.voicePalette.headerGold, size: 20), onPressed: () => context.pop()),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -505,14 +505,14 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    IconButton(icon: const Icon(Icons.search_rounded, color: context.voicePalette.headerGold, size: 20), onPressed: _openSearch),
+                    IconButton(icon: Icon(Icons.search_rounded, color: context.voicePalette.headerGold, size: 20), onPressed: _openSearch),
                     IconButton(
                       icon: Image.asset('assets/icons/header_document_reference.png', width: 27, height: 27),
                       tooltip: l10n.reportsSheetTitle,
                       onPressed: () => _openReportsSheet(context, ref, l10n, transactions),
                     ),
                     PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert_rounded, color: context.voicePalette.headerGold),
+                      icon: Icon(Icons.more_vert_rounded, color: context.voicePalette.headerGold),
                       color: shell.surface,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: shell.border)),
                       onSelected: (value) {

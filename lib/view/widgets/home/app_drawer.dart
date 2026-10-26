@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -76,7 +78,7 @@ class AppDrawer extends ConsumerWidget {
       }
       return;
     }
-    context.push(route);
+    unawaited(context.push(route));
   }
 
   void _showComingSoon(BuildContext context, AppLocalizations l10n) {
