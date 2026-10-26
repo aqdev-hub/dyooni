@@ -1322,6 +1322,48 @@ abstract class AppLocalizations {
   /// **'سماعة بلوتوث'**
   String get voiceBtDeviceUnknown;
 
+  /// No description provided for @voiceBtOffTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'البلوتوث مغلق'**
+  String get voiceBtOffTitle;
+
+  /// No description provided for @voiceBtOffBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'فعّل البلوتوث من إعدادات الهاتف ثم عد إلى هنا وأعد المحاولة.'**
+  String get voiceBtOffBody;
+
+  /// No description provided for @voiceBtNotFoundTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتم العثور على سماعة'**
+  String get voiceBtNotFoundTitle;
+
+  /// No description provided for @voiceBtNotFoundBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكد من تشغيل السماعة وقربها من الهاتف وأنها مقترنة به، ثم أعد المحاولة.'**
+  String get voiceBtNotFoundBody;
+
+  /// No description provided for @voiceBtDroppedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'انقطع الاتصال بالسماعة'**
+  String get voiceBtDroppedTitle;
+
+  /// No description provided for @voiceBtDroppedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ربما ابتعدت السماعة أو انطفأت. سيعود الاتصال تلقائيًا فور رجوعها، أو يمكنك إعادة المحاولة الآن.'**
+  String get voiceBtDroppedBody;
+
+  /// No description provided for @voiceBtOpenSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح إعدادات البلوتوث'**
+  String get voiceBtOpenSettings;
+
   /// No description provided for @voiceBluetoothRetry.
   ///
   /// In ar, this message translates to:

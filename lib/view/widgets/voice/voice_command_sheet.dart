@@ -100,6 +100,8 @@ class VoiceCommandSheet extends ConsumerWidget {
     final Widget content;
     if (isRecording) {
       content = _ListeningView(state: state, controller: controller);
+    } else if (status == VoiceStatus.bluetoothDisconnected && const {'bluetoothOff', 'noHeadset', 'dropped', 'connection'}.contains(state.errorCode)) {
+      content = _BluetoothProblemView(state: state, controller: controller);
     } else if (_isBluetoothStage(status)) {
       content = _BluetoothView(state: state, controller: controller);
     } else if (_isMicFamily(status)) {
@@ -463,6 +465,69 @@ class _BluetoothView extends StatelessWidget {
         _BluetoothStopButton(onPressed: controller.cancel),
         const SizedBox(height: 10),
         _InfoCard(icon: Icons.lightbulb_rounded, text: l10n.voiceBtStopTip, compact: true),
+        const SizedBox(height: 14),
+      ],
+    );
+  }
+}
+
+/// Bluetooth could not be used: radio off, no headset found, or the headset dropped mid-use.
+/// Each says what happened and offers the one useful next step (settings / retry / cancel).
+class _BluetoothProblemView extends StatelessWidget {
+  const _BluetoothProblemView({required this.state, required this.controller});
+  final VoiceState state;
+  final VoiceController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final palette = context.voicePalette;
+    final (IconData icon, String title, String body) = switch (state.errorCode) {
+      'bluetoothOff' => (Icons.bluetooth_disabled_rounded, l10n.voiceBtOffTitle, l10n.voiceBtOffBody),
+      'dropped' => (Icons.headset_off_rounded, l10n.voiceBtDroppedTitle, l10n.voiceBtDroppedBody),
+      _ => (Icons.bluetooth_searching_rounded, l10n.voiceBtNotFoundTitle, l10n.voiceBtNotFoundBody),
+    };
+    final showSettings = state.errorCode != 'dropped';
+    return Column(
+      children: [
+        const SizedBox(height: 30),
+        Container(
+          width: 150,
+          height: 150,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: palette.stopGlow.withValues(alpha: 0.45)),
+          alignment: Alignment.center,
+          child: Container(
+            width: 110,
+            height: 110,
+            decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [palette.micTop, palette.micBottom])),
+            child: Icon(icon, size: 56, color: Colors.white),
+          ),
+        ),
+        const SizedBox(height: 20),
+        _Headline(title: title, subtitle: body),
+        const SizedBox(height: 20),
+        if (showSettings)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 36),
+            child: FilledButton.icon(
+              onPressed: () => unawaited(controller.openBluetoothSettings()),
+              icon: const Icon(Icons.settings_bluetooth_rounded),
+              label: Text(l10n.voiceBtOpenSettings),
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+            ),
+          ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 36),
+          child: OutlinedButton.icon(
+            onPressed: () => unawaited(controller.retry()),
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text(l10n.voiceBluetoothRetry),
+            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _CancelPill(controller: controller),
         const SizedBox(height: 14),
       ],
     );

@@ -22,6 +22,22 @@ class BluetoothAudioRouteService {
     }
   }
 
+  /// Whether the phone's Bluetooth radio is on. Never throws (false when unknown).
+  Future<bool> isBluetoothEnabled() async {
+    try {
+      return await _channel.invokeMethod<bool>('isBluetoothEnabled') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Opens the system Bluetooth settings page (to switch it on / pair a headset).
+  Future<void> openBluetoothSettings() async {
+    try {
+      await _channel.invokeMethod<bool>('openBluetoothSettings');
+    } catch (_) {}
+  }
+
   /// Never throws; returns an empty info object when nothing is known.
   Future<BluetoothHeadsetInfo> headsetInfo() async {
     try {

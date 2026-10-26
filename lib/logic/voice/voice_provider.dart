@@ -246,6 +246,8 @@ class VoiceController extends StateNotifier<VoiceState> {
   StreamSubscription<SpeechEngineError>? _errorSubscription;
   StreamSubscription<void>? _activitySubscription;
   Timer? _bluetoothMonitor;
+  Timer? _reconnectWatch;
+  int _bluetoothAttempt = 0;
   Timer? _speechSilenceTimer;
   final _uuid = const Uuid();
   int _session = 0;
@@ -547,9 +549,31 @@ class VoiceController extends StateNotifier<VoiceState> {
   }
 
   Future<void> startBluetoothMode() async {
+    _reconnectWatch?.cancel();
+    final attempt = ++_bluetoothAttempt;
     state = const VoiceState(status: VoiceStatus.bluetoothConnecting, bluetoothMode: true);
-    if (!await _ref.read(bluetoothAudioRouteServiceProvider).isHeadsetConnected()) {
-      state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'connection');
+    final bluetooth = _ref.read(bluetoothAudioRouteServiceProvider);
+    // 1) The radio itself must be on — otherwise searching is pointless; say so immediately.
+    if (!await bluetooth.isBluetoothEnabled()) {
+      if (attempt == _bluetoothAttempt) state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'bluetoothOff');
+      return;
+    }
+    // 2) A headset may need a few seconds to connect after being switched on: really wait for it
+    // (this is the "searching" the screen shows), up to ~12 s, noticing if the person cancels or
+    // switches Bluetooth off meanwhile.
+    var found = await bluetooth.isHeadsetConnected();
+    for (var i = 0; !found && i < 12; i++) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      if (attempt != _bluetoothAttempt || state.status != VoiceStatus.bluetoothConnecting) return;
+      if (!await bluetooth.isBluetoothEnabled()) {
+        state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'bluetoothOff');
+        return;
+      }
+      found = await bluetooth.isHeadsetConnected();
+    }
+    if (attempt != _bluetoothAttempt || state.status != VoiceStatus.bluetoothConnecting) return;
+    if (!found) {
+      state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'noHeadset');
       return;
     }
     if (!await _engine.hasPermission()) {
@@ -583,13 +607,44 @@ class VoiceController extends StateNotifier<VoiceState> {
   void _startBluetoothMonitor() {
     _bluetoothMonitor?.cancel();
     _bluetoothMonitor = Timer.periodic(const Duration(seconds: 2), (_) async {
+      // Only react while the headset is what we are actually waiting on / listening through. In
+      // the middle of understanding, confirming or saving an entry a drop must not throw the draft
+      // away — the monitor keeps running and checks again afterwards.
+      const watched = {
+        VoiceStatus.bluetoothConnected,
+        VoiceStatus.bluetoothWaitingWakeWord,
+        VoiceStatus.bluetoothWakeWordDetected,
+        VoiceStatus.bluetoothListeningCommand,
+        VoiceStatus.listening,
+      };
+      if (!state.bluetoothMode || !watched.contains(state.status)) return;
       if (!await _ref.read(bluetoothAudioRouteServiceProvider).isHeadsetConnected()) {
         _bluetoothMonitor?.cancel();
+        _clearSpeechEndTimer();
         await _engine.cancel();
-        state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'connection');
+        state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'dropped');
+        _startReconnectWatch();
       }
     });
   }
+
+  /// After a sudden drop: reconnect by itself the moment the headset is back, so hands-free use
+  /// recovers without touching the phone. Stops on cancel / retry / any other state.
+  void _startReconnectWatch() {
+    _reconnectWatch?.cancel();
+    _reconnectWatch = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      if (state.status != VoiceStatus.bluetoothDisconnected || state.errorCode != 'dropped') {
+        timer.cancel();
+        return;
+      }
+      if (await _ref.read(bluetoothAudioRouteServiceProvider).isHeadsetConnected()) {
+        timer.cancel();
+        await startBluetoothMode();
+      }
+    });
+  }
+
+  Future<void> openBluetoothSettings() => _ref.read(bluetoothAudioRouteServiceProvider).openBluetoothSettings();
 
   Future<void> _beginListening({required bool bluetoothMode}) async {
     final session = ++_session;
@@ -1568,6 +1623,8 @@ class VoiceController extends StateNotifier<VoiceState> {
     _networkRetryCount = 0;
     _clearSpeechEndTimer();
     _bluetoothMonitor?.cancel();
+    _reconnectWatch?.cancel();
+    ++_bluetoothAttempt;
     await _voiceOutput.stop();
     try {
       await _engine.cancel();
@@ -1595,6 +1652,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   void dispose() {
     _clearSpeechEndTimer();
     _bluetoothMonitor?.cancel();
+    _reconnectWatch?.cancel();
     _partialSubscription?.cancel();
     _finalSubscription?.cancel();
     _errorSubscription?.cancel();

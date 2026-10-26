@@ -25,6 +25,19 @@ class MainActivity : FlutterFragmentActivity() {
       .setMethodCallHandler { call, result ->
         if (call.method == "isHeadsetConnected") {
           result.success(hasBluetoothAudioDevice())
+        } else if (call.method == "isBluetoothEnabled") {
+          val bt = getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager
+          result.success(try { bt?.adapter?.isEnabled ?: false } catch (_: Throwable) { false })
+        } else if (call.method == "openBluetoothSettings") {
+          try {
+            startActivity(
+              android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            result.success(true)
+          } catch (_: Throwable) {
+            result.success(false)
+          }
         } else if (call.method == "headsetInfo") {
           result.success(headsetInfo())
         } else {

@@ -637,6 +637,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get voiceBtDeviceUnknown => 'سماعة بلوتوث';
 
   @override
+  String get voiceBtOffTitle => 'البلوتوث مغلق';
+
+  @override
+  String get voiceBtOffBody => 'فعّل البلوتوث من إعدادات الهاتف ثم عد إلى هنا وأعد المحاولة.';
+
+  @override
+  String get voiceBtNotFoundTitle => 'لم يتم العثور على سماعة';
+
+  @override
+  String get voiceBtNotFoundBody => 'تأكد من تشغيل السماعة وقربها من الهاتف وأنها مقترنة به، ثم أعد المحاولة.';
+
+  @override
+  String get voiceBtDroppedTitle => 'انقطع الاتصال بالسماعة';
+
+  @override
+  String get voiceBtDroppedBody => 'ربما ابتعدت السماعة أو انطفأت. سيعود الاتصال تلقائيًا فور رجوعها، أو يمكنك إعادة المحاولة الآن.';
+
+  @override
+  String get voiceBtOpenSettings => 'فتح إعدادات البلوتوث';
+
+  @override
   String get voiceBluetoothRetry => 'إعادة المحاولة';
 
   @override

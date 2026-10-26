@@ -640,6 +640,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceBtDeviceUnknown => 'Bluetooth headset';
 
   @override
+  String get voiceBtOffTitle => 'Bluetooth is off';
+
+  @override
+  String get voiceBtOffBody => 'Turn Bluetooth on in the phone settings, then come back and try again.';
+
+  @override
+  String get voiceBtNotFoundTitle => 'No headset found';
+
+  @override
+  String get voiceBtNotFoundBody => 'Make sure the headset is on, close to the phone and paired with it, then try again.';
+
+  @override
+  String get voiceBtDroppedTitle => 'The headset disconnected';
+
+  @override
+  String get voiceBtDroppedBody => 'It may have moved out of range or switched off. It will reconnect by itself as soon as it is back, or you can retry now.';
+
+  @override
+  String get voiceBtOpenSettings => 'Open Bluetooth settings';
+
+  @override
   String get voiceBluetoothRetry => 'Retry';
 
   @override
