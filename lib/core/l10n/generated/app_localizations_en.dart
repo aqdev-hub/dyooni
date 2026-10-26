@@ -592,6 +592,54 @@ class AppLocalizationsEn extends AppLocalizations {
       'Bluetooth connection was interrupted';
 
   @override
+  String get voiceBtActivatingTitle => 'Activating Bluetooth mode…';
+
+  @override
+  String get voiceBtSearchingSubtitle => 'Looking for an available Bluetooth headset to connect to';
+
+  @override
+  String get voiceBtPairingHint => 'Make sure the headset is near the phone and in pairing mode if it is not already connected.';
+
+  @override
+  String get voiceBtStepInit => 'Setup';
+
+  @override
+  String get voiceBtStepConnect => 'Connect';
+
+  @override
+  String get voiceBtStepSearching => 'Searching';
+
+  @override
+  String get voiceBtConnectedTitle => 'Headset connected';
+
+  @override
+  String get voiceBtConnectedSubtitle => 'Connected successfully. Continuous listening is on.';
+
+  @override
+  String get voiceBtConnectedBadge => 'Connected';
+
+  @override
+  String get voiceBtWakeWaiting => 'Waiting for the wake word';
+
+  @override
+  String get voiceBtWakeHeard => 'Wake word heard';
+
+  @override
+  String get voiceBtWakeWaitingHint => 'The wake word is listened for through the headset, in the background, until you say it.';
+
+  @override
+  String get voiceBtReadyNow => 'Go ahead, I am ready. Speak now.';
+
+  @override
+  String get voiceBtStop => 'Stop Bluetooth mode';
+
+  @override
+  String get voiceBtStopTip => 'You can stop Bluetooth mode at any time with the button above.';
+
+  @override
+  String get voiceBtDeviceUnknown => 'Bluetooth headset';
+
+  @override
   String get voiceBluetoothRetry => 'Retry';
 
   @override

@@ -1226,6 +1226,102 @@ abstract class AppLocalizations {
   /// **'انقطع اتصال البلوتوث'**
   String get voiceBluetoothDisconnected;
 
+  /// No description provided for @voiceBtActivatingTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري تفعيل وضع البلوتوث…'**
+  String get voiceBtActivatingTitle;
+
+  /// No description provided for @voiceBtSearchingSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري البحث عن سماعة بلوتوث متاحة والاتصال بها'**
+  String get voiceBtSearchingSubtitle;
+
+  /// No description provided for @voiceBtPairingHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكد من أن السماعة قريبة من الهاتف وفي وضع الاقتران إذا لم تكن متصلة مسبقًا.'**
+  String get voiceBtPairingHint;
+
+  /// No description provided for @voiceBtStepInit.
+  ///
+  /// In ar, this message translates to:
+  /// **'التهيئة'**
+  String get voiceBtStepInit;
+
+  /// No description provided for @voiceBtStepConnect.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاتصال'**
+  String get voiceBtStepConnect;
+
+  /// No description provided for @voiceBtStepSearching.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري البحث'**
+  String get voiceBtStepSearching;
+
+  /// No description provided for @voiceBtConnectedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الاتصال بالسماعة'**
+  String get voiceBtConnectedTitle;
+
+  /// No description provided for @voiceBtConnectedSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الاتصال بنجاح، والآن في وضع الاستماع المستمر'**
+  String get voiceBtConnectedSubtitle;
+
+  /// No description provided for @voiceBtConnectedBadge.
+  ///
+  /// In ar, this message translates to:
+  /// **'متصل'**
+  String get voiceBtConnectedBadge;
+
+  /// No description provided for @voiceBtWakeWaiting.
+  ///
+  /// In ar, this message translates to:
+  /// **'في انتظار كلمة التنبيه'**
+  String get voiceBtWakeWaiting;
+
+  /// No description provided for @voiceBtWakeHeard.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم سماع كلمة التنبيه'**
+  String get voiceBtWakeHeard;
+
+  /// No description provided for @voiceBtWakeWaitingHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتم الاستماع إلى كلمة التنبيه عبر السماعة وفي الخلفية حتى تنطق بها.'**
+  String get voiceBtWakeWaitingHint;
+
+  /// No description provided for @voiceBtReadyNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفضل، أنا مستعد، تحدث الآن'**
+  String get voiceBtReadyNow;
+
+  /// No description provided for @voiceBtStop.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف وضع البلوتوث'**
+  String get voiceBtStop;
+
+  /// No description provided for @voiceBtStopTip.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك إيقاف وضع البلوتوث في أي وقت من خلال الزر أعلاه.'**
+  String get voiceBtStopTip;
+
+  /// No description provided for @voiceBtDeviceUnknown.
+  ///
+  /// In ar, this message translates to:
+  /// **'سماعة بلوتوث'**
+  String get voiceBtDeviceUnknown;
+
   /// No description provided for @voiceBluetoothRetry.
   ///
   /// In ar, this message translates to:

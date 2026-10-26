@@ -25,6 +25,8 @@ class MainActivity : FlutterFragmentActivity() {
       .setMethodCallHandler { call, result ->
         if (call.method == "isHeadsetConnected") {
           result.success(hasBluetoothAudioDevice())
+        } else if (call.method == "headsetInfo") {
+          result.success(headsetInfo())
         } else {
           result.notImplemented()
         }
@@ -93,6 +95,31 @@ class MainActivity : FlutterFragmentActivity() {
           else -> result.notImplemented()
         }
       }
+  }
+
+  /// Name (and, when the OS exposes it, battery %) of the connected Bluetooth headset. Battery
+  /// uses the hidden BluetoothDevice.getBatteryLevel() through reflection, which many Android
+  /// versions block or which needs the BLUETOOTH_CONNECT runtime permission — every failure just
+  /// leaves it out (-1), and the screen then simply hides the battery.
+  private fun headsetInfo(): Map<String, Any?> {
+    val manager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    val device = manager.getDevices(AudioManager.GET_DEVICES_ALL).firstOrNull { d ->
+      d.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+        d.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+        d.type == AudioDeviceInfo.TYPE_BLE_HEADSET
+    } ?: return mapOf("name" to null, "battery" to -1)
+    var battery = -1
+    try {
+      val btManager = getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager
+      val bonded = btManager.adapter?.bondedDevices ?: emptySet()
+      val match = bonded.firstOrNull { it.address == device.address }
+      if (match != null) {
+        battery = match.javaClass.getMethod("getBatteryLevel").invoke(match) as? Int ?: -1
+      }
+    } catch (_: Throwable) {
+      battery = -1
+    }
+    return mapOf("name" to device.productName?.toString(), "battery" to battery)
   }
 
   private fun hasBluetoothAudioDevice(): Boolean {

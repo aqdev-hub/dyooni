@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,6 +31,15 @@ bool _isMicFamily(VoiceStatus status) => const {
       VoiceStatus.bluetoothWaitingWakeWord,
       VoiceStatus.bluetoothWakeWordDetected,
       VoiceStatus.bluetoothListeningCommand,
+    }.contains(status);
+
+/// The Bluetooth handshake / hands-free waiting stages that have their own screens
+/// ([_BluetoothView]); the command-listening stage after the wake word reuses [_ListeningView].
+bool _isBluetoothStage(VoiceStatus status) => const {
+      VoiceStatus.bluetoothConnecting,
+      VoiceStatus.bluetoothConnected,
+      VoiceStatus.bluetoothWaitingWakeWord,
+      VoiceStatus.bluetoothWakeWordDetected,
     }.contains(status);
 
 /// Resolves what tapping the mic circle should do for the CURRENT status — exhaustive over every
@@ -90,6 +100,8 @@ class VoiceCommandSheet extends ConsumerWidget {
     final Widget content;
     if (isRecording) {
       content = _ListeningView(state: state, controller: controller);
+    } else if (_isBluetoothStage(status)) {
+      content = _BluetoothView(state: state, controller: controller);
     } else if (_isMicFamily(status)) {
       content = _IdleView(state: state, controller: controller);
     } else if (status == VoiceStatus.processing) {
@@ -336,6 +348,323 @@ class _BigMic extends StatelessWidget {
   }
 }
 
+// ───────────────────────────── Bluetooth stages ─────────────────────────────
+
+/// Bluetooth mode screens (connecting → connected / waiting for the wake word → wake word heard).
+/// Same chrome, palette and widgets as the rest of the voice screen; only the middle changes.
+class _BluetoothView extends StatelessWidget {
+  const _BluetoothView({required this.state, required this.controller});
+  final VoiceState state;
+  final VoiceController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final palette = context.voicePalette;
+    final connecting = state.status == VoiceStatus.bluetoothConnecting;
+    final heard = state.status == VoiceStatus.bluetoothWakeWordDetected;
+
+    if (connecting) {
+      return Column(
+        children: [
+          const SizedBox(height: 26),
+          const _BluetoothBadge(connected: false),
+          const SizedBox(height: 22),
+          _Headline(title: l10n.voiceBtActivatingTitle, subtitle: l10n.voiceBtSearchingSubtitle),
+          const SizedBox(height: 18),
+          _InfoCard(icon: Icons.bluetooth_rounded, text: l10n.voiceBtPairingHint),
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Expanded(child: _StepChip(label: l10n.voiceBtStepInit, icon: Icons.radio_button_unchecked_rounded, active: false)),
+                const SizedBox(width: 10),
+                Expanded(child: _StepChip(label: l10n.voiceBtStepConnect, icon: Icons.link_rounded, active: false)),
+                const SizedBox(width: 10),
+                Expanded(child: _StepChip(label: l10n.voiceBtStepSearching, icon: Icons.graphic_eq_rounded, active: true)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          _CancelPill(controller: controller),
+        ],
+      );
+    }
+
+    final name = state.bluetoothDeviceName ?? l10n.voiceBtDeviceUnknown;
+    final battery = state.bluetoothBattery;
+    return Column(
+      children: [
+        const SizedBox(height: 22),
+        const _BluetoothBadge(connected: true),
+        const SizedBox(height: 18),
+        _Headline(title: l10n.voiceBtConnectedTitle, subtitle: l10n.voiceBtConnectedSubtitle),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: _BoxCard(
+            child: Row(
+              children: [
+                Icon(Icons.headset_mic_rounded, size: 34, color: palette.textPrimary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyles.title(context).copyWith(color: palette.textPrimary, fontSize: 16)),
+                      if (battery != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Row(
+                            children: [
+                              Icon(battery <= 20 ? Icons.battery_alert_rounded : Icons.battery_full_rounded, size: 20, color: battery <= 20 ? palette.stopRed : palette.success),
+                              const SizedBox(width: 4),
+                              Text('$battery%', style: AppTextStyles.body(context).copyWith(color: palette.textSecondary, fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Container(width: 1, height: 34, color: palette.tipBorder, margin: const EdgeInsets.symmetric(horizontal: 10)),
+                const Icon(Icons.bluetooth_connected_rounded, size: 20, color: Color(0xFF1E6FE0)),
+                const SizedBox(width: 4),
+                Text(l10n.voiceBtConnectedBadge, style: AppTextStyles.body(context).copyWith(color: palette.textSecondary, fontSize: 13)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: _BoxCard(
+            child: Column(
+              children: [
+                Text(
+                  heard ? l10n.voiceBtWakeHeard : l10n.voiceBtWakeWaiting,
+                  style: AppTextStyles.title(context).copyWith(color: palette.success, fontSize: 15),
+                ),
+                const SizedBox(height: 2),
+                Text('«${VoiceController.wakeWord}»', style: AppTextStyles.headline(context).copyWith(color: palette.textPrimary, fontSize: 22)),
+                const SizedBox(height: 8),
+                const FittedBox(fit: BoxFit.scaleDown, child: _Waveform()),
+                const SizedBox(height: 8),
+                Text(
+                  heard ? l10n.voiceBtReadyNow : l10n.voiceBtWakeWaitingHint,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.body(context).copyWith(color: palette.textSecondary, fontSize: 13, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _BluetoothStopButton(onPressed: controller.cancel),
+        const SizedBox(height: 10),
+        _InfoCard(icon: Icons.lightbulb_rounded, text: l10n.voiceBtStopTip, compact: true),
+        const SizedBox(height: 14),
+      ],
+    );
+  }
+}
+
+/// Navy disc with the Bluetooth glyph (a gold arc turns while connecting) or the headset with a
+/// green check once connected.
+class _BluetoothBadge extends StatefulWidget {
+  const _BluetoothBadge({required this.connected});
+  final bool connected;
+
+  @override
+  State<_BluetoothBadge> createState() => _BluetoothBadgeState();
+}
+
+class _BluetoothBadgeState extends State<_BluetoothBadge> with SingleTickerProviderStateMixin {
+  late final AnimationController _spin = AnimationController(vsync: this, duration: const Duration(seconds: 2));
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.connected) _spin.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _BluetoothBadge old) {
+    super.didUpdateWidget(old);
+    if (widget.connected) {
+      _spin.stop();
+    } else if (!_spin.isAnimating) {
+      _spin.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    final size = widget.connected ? 170.0 : 200.0;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: palette.goldGlow.withValues(alpha: 0.55))),
+          Container(
+            width: size - 24,
+            height: size - 24,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: palette.goldGlow.withValues(alpha: 0.35), border: Border.all(color: palette.gold.withValues(alpha: 0.7), width: 1.5)),
+          ),
+          if (!widget.connected)
+            RotationTransition(
+              turns: _spin,
+              child: CustomPaint(size: Size(size, size), painter: _ArcPainter(color: palette.gold)),
+            ),
+          Container(
+            width: size - 62,
+            height: size - 62,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(colors: [palette.micTop, palette.micBottom]),
+              boxShadow: [BoxShadow(color: palette.micBottom.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
+            ),
+            alignment: Alignment.center,
+            child: Icon(widget.connected ? Icons.headphones_rounded : Icons.bluetooth_rounded, size: widget.connected ? 70 : 72, color: Colors.white),
+          ),
+          if (widget.connected)
+            PositionedDirectional(
+              end: size * 0.16,
+              bottom: size * 0.16,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: palette.success, border: Border.all(color: Colors.white, width: 2)),
+                child: const Icon(Icons.check_rounded, color: Colors.white, size: 24),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArcPainter extends CustomPainter {
+  const _ArcPainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round;
+    final rect = Rect.fromCircle(center: size.center(Offset.zero), radius: size.width / 2 - 6);
+    canvas.drawArc(rect, -math.pi / 2, math.pi * 0.62, false, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArcPainter old) => old.color != color;
+}
+
+class _BoxCard extends StatelessWidget {
+  const _BoxCard({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: palette.tipBorder),
+        boxShadow: [BoxShadow(color: palette.cardShadow, blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({required this.icon, required this.text, this.compact = false});
+  final IconData icon;
+  final String text;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: compact ? 8 : 12),
+      decoration: BoxDecoration(color: palette.tipBackground, border: Border.all(color: palette.tipBorder), borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          Icon(icon, size: compact ? 20 : 26, color: compact ? palette.gold : palette.textPrimary),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text, style: AppTextStyles.body(context).copyWith(color: palette.textSecondary, fontSize: compact ? 12 : 13.5, height: 1.6))),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepChip extends StatelessWidget {
+  const _StepChip({required this.label, required this.icon, required this.active});
+  final String label;
+  final IconData icon;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.voicePalette;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: active ? palette.gold : palette.tipBorder)),
+      child: Column(
+        children: [
+          Icon(icon, size: 24, color: active ? palette.gold : palette.textSecondary.withValues(alpha: 0.6)),
+          const SizedBox(height: 4),
+          Text(label, style: AppTextStyles.body(context).copyWith(color: active ? palette.textPrimary : palette.textSecondary, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+}
+
+class _BluetoothStopButton extends StatelessWidget {
+  const _BluetoothStopButton({required this.onPressed});
+  final Future<void> Function() onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final palette = context.voicePalette;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 36),
+      child: OutlinedButton.icon(
+        onPressed: () => unawaited(onPressed()),
+        icon: Icon(Icons.power_settings_new_rounded, color: palette.stopRed),
+        label: Text(l10n.voiceBtStop, style: AppTextStyles.title(context).copyWith(color: palette.stopRed, fontSize: 16)),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(50),
+          side: BorderSide(color: palette.gold, width: 1.5),
+          backgroundColor: palette.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      ),
+    );
+  }
+}
+
 // ───────────────────────────── Stage 2 — listening ─────────────────────────────
 
 class _ListeningView extends StatelessWidget {
@@ -355,7 +684,9 @@ class _ListeningView extends StatelessWidget {
         const SizedBox(height: 16),
         _Headline(
           title: l10n.voiceListening,
-          subtitle: resumed ? l10n.voiceContinueSpeakingHint : l10n.voiceListeningSubtitle,
+          subtitle: state.bluetoothMode
+              ? l10n.voiceBtReadyNow
+              : (resumed ? l10n.voiceContinueSpeakingHint : l10n.voiceListeningSubtitle),
         ),
         const SizedBox(height: 14),
         const _Waveform(),

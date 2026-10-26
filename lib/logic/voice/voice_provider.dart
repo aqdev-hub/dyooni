@@ -124,6 +124,8 @@ class VoiceState {
     this.clarifyingField,
     this.suggestedAccount,
     this.processingStep = 0,
+    this.bluetoothDeviceName,
+    this.bluetoothBattery,
   });
 
   final VoiceStatus status;
@@ -168,6 +170,10 @@ class VoiceState {
   /// Driven by what the controller is actually doing — never by a timer.
   final int processingStep;
 
+  /// Connected headset name / battery % (null = unknown). Only filled during Bluetooth mode.
+  final String? bluetoothDeviceName;
+  final int? bluetoothBattery;
+
   VoiceState copyWith({
     VoiceStatus? status,
     String? transcript,
@@ -182,6 +188,8 @@ class VoiceState {
     String? clarifyingField,
     Account? suggestedAccount,
     int? processingStep,
+    String? bluetoothDeviceName,
+    int? bluetoothBattery,
     bool clearSuggestedAccount = false,
     bool clearDraft = false,
     bool clearAccount = false,
@@ -202,6 +210,8 @@ class VoiceState {
         clarifyingField: clearClarifyingField ? null : clarifyingField ?? this.clarifyingField,
         suggestedAccount: clearSuggestedAccount ? null : suggestedAccount ?? this.suggestedAccount,
         processingStep: processingStep ?? this.processingStep,
+        bluetoothDeviceName: bluetoothDeviceName ?? this.bluetoothDeviceName,
+        bluetoothBattery: bluetoothBattery ?? this.bluetoothBattery,
       );
 }
 
@@ -546,7 +556,12 @@ class VoiceController extends StateNotifier<VoiceState> {
       state = state.copyWith(status: VoiceStatus.bluetoothDisconnected, errorCode: 'permission');
       return;
     }
-    state = state.copyWith(status: VoiceStatus.bluetoothConnected);
+    final info = await _ref.read(bluetoothAudioRouteServiceProvider).headsetInfo();
+    state = state.copyWith(
+      status: VoiceStatus.bluetoothConnected,
+      bluetoothDeviceName: info.name,
+      bluetoothBattery: info.batteryPercent,
+    );
     await Future<void>.delayed(const Duration(milliseconds: 350));
     if (!_engine.providesLiveText) {
       // Wake-word detection reads the recognizer's LIVE text, which a batch engine (Whisper) does

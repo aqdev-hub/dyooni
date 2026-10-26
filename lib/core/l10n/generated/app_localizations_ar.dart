@@ -589,6 +589,54 @@ class AppLocalizationsAr extends AppLocalizations {
   String get voiceBluetoothDisconnected => 'انقطع اتصال البلوتوث';
 
   @override
+  String get voiceBtActivatingTitle => 'جاري تفعيل وضع البلوتوث…';
+
+  @override
+  String get voiceBtSearchingSubtitle => 'جاري البحث عن سماعة بلوتوث متاحة والاتصال بها';
+
+  @override
+  String get voiceBtPairingHint => 'تأكد من أن السماعة قريبة من الهاتف وفي وضع الاقتران إذا لم تكن متصلة مسبقًا.';
+
+  @override
+  String get voiceBtStepInit => 'التهيئة';
+
+  @override
+  String get voiceBtStepConnect => 'الاتصال';
+
+  @override
+  String get voiceBtStepSearching => 'جاري البحث';
+
+  @override
+  String get voiceBtConnectedTitle => 'تم الاتصال بالسماعة';
+
+  @override
+  String get voiceBtConnectedSubtitle => 'تم الاتصال بنجاح، والآن في وضع الاستماع المستمر';
+
+  @override
+  String get voiceBtConnectedBadge => 'متصل';
+
+  @override
+  String get voiceBtWakeWaiting => 'في انتظار كلمة التنبيه';
+
+  @override
+  String get voiceBtWakeHeard => 'تم سماع كلمة التنبيه';
+
+  @override
+  String get voiceBtWakeWaitingHint => 'سيتم الاستماع إلى كلمة التنبيه عبر السماعة وفي الخلفية حتى تنطق بها.';
+
+  @override
+  String get voiceBtReadyNow => 'تفضل، أنا مستعد، تحدث الآن';
+
+  @override
+  String get voiceBtStop => 'إيقاف وضع البلوتوث';
+
+  @override
+  String get voiceBtStopTip => 'يمكنك إيقاف وضع البلوتوث في أي وقت من خلال الزر أعلاه.';
+
+  @override
+  String get voiceBtDeviceUnknown => 'سماعة بلوتوث';
+
+  @override
   String get voiceBluetoothRetry => 'إعادة المحاولة';
 
   @override
