@@ -378,6 +378,8 @@
   "whisperOptionAccurateTitle": "Accurate",
   "whisperOptionFastTitle": "Fast",
   "whisperOptionFastSubtitle": "About 60 MB — much faster but less accurate in Arabic",
+  "whisperOptionArabicFastTitle": "Arabic fast (experimental)",
+  "whisperOptionArabicFastSubtitle": "About 132 MB — NVIDIA FastConformer built for Arabic (CC-BY-4.0). Try it and compare",
   "whisperOptionAccurateSubtitle": "About 540 MB — more accurate but slower, best on a powerful phone",
   "whisperDownloadingHint": "Downloading the speech model (one time only) — after this, voice commands work offline",
   "voiceRecognitionModeTitle": "Speech recognition mode",

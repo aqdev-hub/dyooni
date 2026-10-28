@@ -1113,6 +1113,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'About 60 MB — much faster but less accurate in Arabic';
 
   @override
+  String get whisperOptionArabicFastTitle =>
+      'Arabic fast (experimental)';
+
+  @override
+  String get whisperOptionArabicFastSubtitle =>
+      'About 132 MB — NVIDIA FastConformer built for Arabic (CC-BY-4.0). Try it and compare';
+
+  @override
   String get whisperOptionAccurateSubtitle =>
       'About 540 MB — more accurate but slower, best on a powerful phone';
 

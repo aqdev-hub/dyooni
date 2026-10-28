@@ -378,6 +378,8 @@
   "whisperOptionAccurateTitle": "دقيق",
   "whisperOptionFastTitle": "سريع",
   "whisperOptionFastSubtitle": "حجمه نحو 60 ميجابايت — الأسرع بفارق كبير لكنه أقل دقة في العربية",
+  "whisperOptionArabicFastTitle": "عربي سريع (تجريبي)",
+  "whisperOptionArabicFastSubtitle": "حجمه نحو 132 ميجابايت — نموذج NVIDIA FastConformer المصمّم للعربية (CC-BY-4.0). جرّبه وقارنه بغيره",
   "whisperOptionAccurateSubtitle": "حجمه نحو 540 ميجابايت — أدق لكنه أبطأ، ويناسب الهاتف القوي",
   "whisperDownloadingHint": "جارٍ تحميل نموذج التعرف الصوتي (مرة واحدة فقط) — بعدها يعمل الأمر الصوتي بلا إنترنت",
   "voiceRecognitionModeTitle": "طريقة التعرف الصوتي",

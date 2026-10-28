@@ -8,6 +8,7 @@ import 'package:record/record.dart';
 import 'package:whisper_ggml/whisper_ggml.dart' show TranscribeRequest, Whisper, WhisperModel;
 
 import 'energy_vad.dart';
+import 'fast_conformer_decoder.dart';
 import 'speech_engine.dart';
 import 'wav_file_writer.dart';
 import 'whisper_model_provider.dart';
@@ -70,6 +71,7 @@ class WhisperSpeechEngine implements SpeechEngine {
   Future<void> _audioQueue = Future<void>.value();
   Future<void>? _stopping;
   final EnergyVad _vad = EnergyVad();
+  final FastConformerDecoder _fast = FastConformerDecoder();
 
   final _partialController = StreamController<String>.broadcast();
   final _finalController = StreamController<String>.broadcast();
@@ -122,6 +124,14 @@ class WhisperSpeechEngine implements SpeechEngine {
     if (!await hasPermission()) {
       _errorController.add(const SpeechEngineError(SpeechEngineErrorType.permission));
       throw StateError('Microphone permission was not granted.');
+    }
+
+    // The sherpa model takes seconds to load; start loading while the person is still speaking.
+    final files = modelFiles();
+    if (files != null && files.option.engine == VoiceModelEngine.sherpa && files.tokensPath != null) {
+      unawaited(_fast.ensureLoaded(modelPath: files.modelPath, tokensPath: files.tokensPath!).catchError((Object e) {
+        debugPrint('[voice] fastconformer preload failed: $e');
+      }));
     }
 
     final dir = await getApplicationDocumentsDirectory();
@@ -249,6 +259,16 @@ class WhisperSpeechEngine implements SpeechEngine {
 
     final started = DateTime.now();
     String raw;
+    if (files.option.engine == VoiceModelEngine.sherpa) {
+      raw = await _decodeSherpa(audioPath, files).timeout(_decodeTimeout);
+      final text = cleanTranscript(raw);
+      debugPrint(
+        '[voice] fastconformer: audio=${audioMs}ms decode=${DateTime.now().difference(started).inMilliseconds}ms '
+        'raw=${raw.trim().length} chars kept=${text.length} chars peakRms=${_vad.peakRms.toStringAsFixed(3)} '
+        'speechDetected=${_vad.speechStarted}',
+      );
+      return text;
+    }
     try {
       raw = await _decode(audioPath, files, useVad: files.vadPath != null).timeout(_decodeTimeout);
     } on TimeoutException {
@@ -267,6 +287,24 @@ class WhisperSpeechEngine implements SpeechEngine {
       'kept=${text.length} chars peakRms=${_vad.peakRms.toStringAsFixed(3)} speechDetected=${_vad.speechStarted}',
     );
     return text;
+  }
+
+  /// Reads the recording we wrote ourselves (44-byte header + 16-bit mono PCM) into float samples
+  /// and decodes it with FastConformer. No conversion step and no temporary copy is needed.
+  Future<String> _decodeSherpa(String audioPath, WhisperModelFiles files) async {
+    final tokens = files.tokensPath;
+    if (tokens == null) throw StateError('The FastConformer vocabulary file is missing.');
+    await _fast.ensureLoaded(modelPath: files.modelPath, tokensPath: tokens);
+    final bytes = await File(audioPath).readAsBytes();
+    const headerBytes = 44;
+    if (bytes.length <= headerBytes) return '';
+    final data = ByteData.sublistView(bytes);
+    final count = (bytes.length - headerBytes) ~/ 2;
+    final samples = Float32List(count);
+    for (var i = 0; i < count; i++) {
+      samples[i] = data.getInt16(headerBytes + i * 2, Endian.little) / 32768.0;
+    }
+    return _fast.decode(samples, sampleRate: sampleRate);
   }
 
   Future<String> _decode(String audioPath, WhisperModelFiles files, {required bool useVad}) async {
@@ -334,6 +372,7 @@ class WhisperSpeechEngine implements SpeechEngine {
   @override
   Future<void> release() async {
     await cancel();
+    await _fast.dispose();
     try {
       await const Whisper(model: WhisperModel.small).releaseModel();
     } catch (_) {

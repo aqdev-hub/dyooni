@@ -2180,6 +2180,18 @@ abstract class AppLocalizations {
   /// **'حجمه نحو 60 ميجابايت — الأسرع بفارق كبير لكنه أقل دقة في العربية'**
   String get whisperOptionFastSubtitle;
 
+  /// No description provided for @whisperOptionArabicFastTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'عربي سريع (تجريبي)'**
+  String get whisperOptionArabicFastTitle;
+
+  /// No description provided for @whisperOptionArabicFastSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حجمه نحو 132 ميجابايت — نموذج NVIDIA FastConformer المصمّم للعربية (CC-BY-4.0). جرّبه وقارنه بغيره'**
+  String get whisperOptionArabicFastSubtitle;
+
   /// No description provided for @whisperOptionAccurateSubtitle.
   ///
   /// In ar, this message translates to:

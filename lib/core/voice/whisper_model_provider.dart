@@ -9,6 +9,11 @@ import 'package:whisper_ggml/whisper_ggml.dart' show Whisper, WhisperModel;
 /// Sample rate Whisper expects and the recorder captures at. Whisper is trained on 16 kHz mono.
 const whisperSampleRate = 16000;
 
+const _fastConformerBase = 'https://github.com/OmarrGhorab/openbot-personal/releases/download/models-fastconformer-ar-v1';
+
+/// Which runtime executes a model file.
+enum VoiceModelEngine { whisper, sherpa }
+
 /// The three Whisper models offered for local recognition. Both are `ggml` files published by the
 /// whisper.cpp project on Hugging Face and are downloaded ONCE, then run fully offline.
 ///
@@ -21,15 +26,31 @@ const whisperSampleRate = 16000;
 enum WhisperModelOption {
   fast('fast', 'ggml-base-q5_1.bin', 60),
   balanced('balanced', 'ggml-small-q5_1.bin', 190),
-  accurate('accurate', 'ggml-medium-q5_0.bin', 540);
+  accurate('accurate', 'ggml-medium-q5_0.bin', 540),
 
-  const WhisperModelOption(this.id, this.fileName, this.approxMegabytes);
+  /// EXPERIMENTAL: NVIDIA FastConformer for Arabic (CTC, int8 ONNX, CC-BY-4.0) run through
+  /// sherpa-onnx. Built for Arabic, not a general multilingual model, and decodes a short clip in
+  /// a fraction of a second instead of Whisper's fixed 30-second window. Hosted as a release asset
+  /// of a third-party repository — see [_fastConformerBase]; mirror it before publishing the app.
+  arabicFast('arabic_fast', 'fastconformer-ar-int8.onnx', 132, engine: VoiceModelEngine.sherpa);
+
+  const WhisperModelOption(this.id, this.fileName, this.approxMegabytes, {this.engine = VoiceModelEngine.whisper});
 
   final String id;
   final String fileName;
   final int approxMegabytes;
+  final VoiceModelEngine engine;
 
-  Uri get url => Uri.parse('https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$fileName');
+  Uri get url => engine == VoiceModelEngine.sherpa
+      ? Uri.parse('$_fastConformerBase/model.int8.onnx')
+      : Uri.parse('https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$fileName');
+
+  /// The vocabulary file the sherpa model needs next to it (null for Whisper models).
+  Uri? get tokensUrl => engine == VoiceModelEngine.sherpa ? Uri.parse('$_fastConformerBase/tokens.txt') : null;
+  String? get tokensFileName => engine == VoiceModelEngine.sherpa ? 'fastconformer-ar-tokens.txt' : null;
+
+  /// Smallest believable size of the main file (real FastConformer int8 file: 131.5 MB).
+  int get minBytes => engine == VoiceModelEngine.sherpa ? 100 * 1024 * 1024 : 20 * 1024 * 1024;
 
   static WhisperModelOption? fromId(String? id) {
     for (final option in values) {
@@ -48,10 +69,13 @@ const _vadMinBytes = 100 * 1024;
 
 /// The model files ready for the engine.
 class WhisperModelFiles {
-  const WhisperModelFiles({required this.option, required this.modelPath, this.vadPath});
+  const WhisperModelFiles({required this.option, required this.modelPath, this.vadPath, this.tokensPath});
   final WhisperModelOption option;
   final String modelPath;
   final String? vadPath;
+
+  /// Vocabulary file of a sherpa model (null for Whisper).
+  final String? tokensPath;
 }
 
 /// One state per stage of getting a model ready (sealed, so an invalid combination such as
@@ -145,6 +169,11 @@ class WhisperModelController extends Notifier<WhisperModelState> {
   }
 
   Future<File> _fileFor(WhisperModelOption option) async => File('${(await _dir()).path}/${option.fileName}');
+  Future<File?> _tokensFor(WhisperModelOption option) async {
+    final name = option.tokensFileName;
+    return name == null ? null : File('${(await _dir()).path}/$name');
+  }
+
   Future<File> _choiceFile() async => File('${(await _dir()).path}/choice.txt');
 
   Future<void> _init() async {
@@ -196,14 +225,28 @@ class WhisperModelController extends Notifier<WhisperModelState> {
     final background = state is WhisperModelReady;
     _cancelRequested = false;
     try {
-      if (!await _isInstalled(option)) {
+      final modelFile = await _fileFor(option);
+      final haveModel = option.engine == VoiceModelEngine.sherpa
+          ? (await modelFile.exists() && await modelFile.length() >= option.minBytes)
+          : await _isInstalled(option);
+      if (!haveModel) {
         if (background) ref.read(whisperBackgroundErrorProvider.notifier).state = null;
         await _downloadWithRetries(
           url: option.url,
           dest: await _fileFor(option),
-          minBytes: _minModelBytes,
-          checkMagic: true,
+          minBytes: option.minBytes,
+          checkMagic: option.engine == VoiceModelEngine.whisper,
           onProgress: (received, total) => _publishProgress(option, received, total, background),
+        );
+      }
+      final tokens = await _tokensFor(option);
+      if (tokens != null && !(await tokens.exists() && await tokens.length() > 1000)) {
+        await _downloadWithRetries(
+          url: option.tokensUrl!,
+          dest: tokens,
+          minBytes: 1000,
+          checkMagic: false,
+          onProgress: (_, __) {},
         );
       }
       ref.read(whisperBackgroundDownloadProvider.notifier).state = null;
@@ -246,9 +289,10 @@ class WhisperModelController extends Notifier<WhisperModelState> {
     if (_active != null && _target == option) await cancelDownload();
     final current = state;
     final wasActive = current is WhisperModelReady && current.files.option == option;
-    if (wasActive) await _releaseNativeModel();
+    if (wasActive && option.engine == VoiceModelEngine.whisper) await _releaseNativeModel();
     final file = await _fileFor(option);
-    for (final path in [file.path, '${file.path}.part', '${file.path}.size']) {
+    final tokens = await _tokensFor(option);
+    for (final path in [file.path, '${file.path}.part', '${file.path}.size', if (tokens != null) tokens.path]) {
       try {
         final f = File(path);
         if (await f.exists()) await f.delete();
@@ -270,12 +314,20 @@ class WhisperModelController extends Notifier<WhisperModelState> {
 
   Future<void> _becomeReady(WhisperModelOption option) async {
     final previous = state;
-    if (previous is WhisperModelReady && previous.files.option != option) await _releaseNativeModel();
+    if (previous is WhisperModelReady && previous.files.option != option && previous.files.option.engine == VoiceModelEngine.whisper) {
+      await _releaseNativeModel();
+    }
     final file = await _fileFor(option);
     final choice = await _choiceFile();
     await choice.writeAsString(option.id);
-    final vadPath = await _ensureVad();
-    state = WhisperModelReady(WhisperModelFiles(option: option, modelPath: file.path, vadPath: vadPath));
+    final isWhisper = option.engine == VoiceModelEngine.whisper;
+    final vadPath = isWhisper ? await _ensureVad() : null;
+    state = WhisperModelReady(WhisperModelFiles(
+      option: option,
+      modelPath: file.path,
+      vadPath: vadPath,
+      tokensPath: (await _tokensFor(option))?.path,
+    ));
   }
 
   Future<WhisperModelOption?> _readChoice() async {
@@ -291,6 +343,12 @@ class WhisperModelController extends Notifier<WhisperModelState> {
   Future<bool> _isInstalled(WhisperModelOption option) async {
     final file = await _fileFor(option);
     if (!await file.exists()) return false;
+    if (option.engine == VoiceModelEngine.sherpa) {
+      final tokens = await _tokensFor(option);
+      final tokensOk = tokens != null && await tokens.exists() && await tokens.length() > 1000;
+      // A missing tokens file only needs that small file again, so the big model is kept.
+      return await file.length() >= option.minBytes && tokensOk;
+    }
     if (await file.length() >= _minModelBytes && await _hasGgmlMagic(file)) return true;
     await file.delete();
     return false;

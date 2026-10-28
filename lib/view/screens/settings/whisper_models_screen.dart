@@ -166,6 +166,7 @@ class _ModelCard extends StatelessWidget {
       WhisperModelOption.fast => (l10n.whisperOptionFastTitle, l10n.whisperOptionFastSubtitle),
       WhisperModelOption.balanced => (l10n.whisperOptionBalancedTitle, l10n.whisperOptionBalancedSubtitle),
       WhisperModelOption.accurate => (l10n.whisperOptionAccurateTitle, l10n.whisperOptionAccurateSubtitle),
+      WhisperModelOption.arabicFast => (l10n.whisperOptionArabicFastTitle, l10n.whisperOptionArabicFastSubtitle),
     };
     final status = isActive
         ? l10n.whisperModelActive

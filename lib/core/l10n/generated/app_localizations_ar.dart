@@ -1103,6 +1103,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'حجمه نحو 60 ميجابايت — الأسرع بفارق كبير لكنه أقل دقة في العربية';
 
   @override
+  String get whisperOptionArabicFastTitle =>
+      'عربي سريع (تجريبي)';
+
+  @override
+  String get whisperOptionArabicFastSubtitle =>
+      'حجمه نحو 132 ميجابايت — نموذج NVIDIA FastConformer المصمّم للعربية (CC-BY-4.0). جرّبه وقارنه بغيره';
+
+  @override
   String get whisperOptionAccurateSubtitle =>
       'حجمه نحو 540 ميجابايت — أدق لكنه أبطأ، ويناسب الهاتف القوي';
 

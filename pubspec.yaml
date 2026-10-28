@@ -94,6 +94,10 @@ dependencies:
   # engine relies on its request options. Requires Dart >= 3.7 / Flutter >= 3.29 and Android API 24+
   # (see android/app/build.gradle.kts). It pulls in ffmpeg_kit_flutter_new_min on its own.
   whisper_ggml: 2.8.1
+  # Local Arabic recognition with NVIDIA's FastConformer (ONNX, int8) — experimental option next to
+  # Whisper (see lib/core/voice/fast_conformer_decoder.dart). Ships native code for Android.
+  # ACTION NEEDED: flutter pub get   (version not verified from this sandbox — pub.dev is blocked)
+  sherpa_onnx: ^1.12.14
 
   # Lets the person pick an existing file from their device (the local backup screen's
   # "استعادة من ملف" / restore-from-file flow, to choose a previously exported .dyoonibackup
