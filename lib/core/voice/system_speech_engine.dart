@@ -149,6 +149,10 @@ class SystemSpeechEngine implements SpeechEngine {
     // Kept in the logs on purpose: the exact Android code is what identifies a device-specific
     // recognizer problem.
     debugPrint('[voice] system recognizer error: $code (permanent: ${error.permanent})');
+    if (type == SpeechEngineErrorType.noMatch && _wantListening && !_nativeActive) {
+      unawaited(_restartDeadSession());
+      return;
+    }
     _errorController.add(SpeechEngineError(type, message: code));
   }
 
@@ -166,7 +170,22 @@ class SystemSpeechEngine implements SpeechEngine {
     // restored in stop()/cancel(), both of which run on every exit path (see voice_provider.dart,
     // every code path that ends a session calls one of the two).
     await _soundMuter.mute();
+    _wantListening = true;
+    _deadRestarts = 0;
     if (await _tryStartNative()) return;
+    await _listenWithPlugin();
+    // After listen() so the recognizer has already claimed the microphone; never throws.
+    if (recordInParallel) await _recorder.start();
+  }
+
+  /// Whether the dialogue currently wants the recognizer running (between start() and
+  /// stop()/pause()/cancel()/release()).
+  bool _wantListening = false;
+  bool _restarting = false;
+  int _deadRestarts = 0;
+  static const _maxDeadRestarts = 20;
+
+  Future<void> _listenWithPlugin() async {
     await _speech.listen(
       listenOptions: stt.SpeechListenOptions(
         localeId: await _arabicLocaleId(),
@@ -181,8 +200,33 @@ class SystemSpeechEngine implements SpeechEngine {
         [for (final alt in result.alternates) alt.recognizedWords],
       ),
     );
-    // After listen() so the recognizer has already claimed the microphone; never throws.
-    if (recordInParallel) await _recorder.start();
+  }
+
+  /// THE fix for "it heard me, then stopped hearing, then heard me again" in cloud mode. Android's
+  /// recognizer ends a session by itself with `error_speech_timeout` / `error_no_match` — most
+  /// often a session that began a moment too early after the previous one and heard nothing (the
+  /// v-log showed `listening → notListening → done → error_speech_timeout` within a beat, with no
+  /// text). Previously that error was only logged, so the engine sat DEAD while the person kept
+  /// talking until the 8 s silence timer gave up. Now, while the dialogue still wants to listen,
+  /// the recognizer is quietly restarted after a short gap and the error is never shown.
+  Future<void> _restartDeadSession() async {
+    if (!_wantListening || _restarting || _nativeActive || _deadRestarts >= _maxDeadRestarts) return;
+    _restarting = true;
+    _deadRestarts++;
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      if (_wantListening && !_nativeActive) {
+        try {
+          await _speech.cancel();
+        } catch (_) {}
+        await _listenWithPlugin();
+        debugPrint('[voice] system recognizer restarted after an empty session ($_deadRestarts)');
+      }
+    } catch (e) {
+      debugPrint('[voice] system recognizer restart failed: $e');
+    } finally {
+      _restarting = false;
+    }
   }
 
   void _handleResult(String raw, bool isFinal, List<String> alternates) {
@@ -191,6 +235,7 @@ class SystemSpeechEngine implements SpeechEngine {
     debugPrint('[voice] system recognizer result: final=$isFinal chars=${text.length} alternates=${alternates.length}');
     if (text.isEmpty) return;
     _latestTranscript = text;
+    _deadRestarts = 0;
     if (isFinal) {
       _lastAlternatives = [
         text,
@@ -267,6 +312,7 @@ class SystemSpeechEngine implements SpeechEngine {
 
   @override
   Future<void> pause() async {
+    _wantListening = false;
     final wasNative = _nativeActive;
     await _stopRecognizer();
     if (wasNative || recordInParallel) await _recorder.pause();
@@ -277,6 +323,7 @@ class SystemSpeechEngine implements SpeechEngine {
 
   @override
   Future<(String transcript, String? recordingPath)> stop() async {
+    _wantListening = false;
     final wasNative = _nativeActive;
     await _stopRecognizer();
     await _soundMuter.restore();
@@ -285,6 +332,7 @@ class SystemSpeechEngine implements SpeechEngine {
 
   @override
   Future<void> cancel() async {
+    _wantListening = false;
     _latestTranscript = '';
     _nativeActive = false;
     _recorder.onChunk = null;
@@ -296,6 +344,7 @@ class SystemSpeechEngine implements SpeechEngine {
 
   @override
   Future<void> release() async {
+    _wantListening = false;
     _latestTranscript = '';
     _nativeActive = false;
     _recorder.onChunk = null;
@@ -311,6 +360,7 @@ class SystemSpeechEngine implements SpeechEngine {
 
   @override
   void dispose() {
+    _wantListening = false;
     unawaited(_native.cancel());
     unawaited(_nativeSub?.cancel());
     unawaited(_speech.cancel());
