@@ -22,6 +22,7 @@ import '../transactions/transactions_provider.dart';
 import 'arabic_number_parser.dart';
 import 'transcript_cleaner.dart';
 import 'voice_command_parser.dart';
+import 'wake_word_matcher.dart';
 
 /// Local recognition (Whisper). The engine looks the model files up when recording starts, so
 /// creating it never depends on the model being downloaded — the previous Vosk provider cast the
@@ -34,6 +35,7 @@ final whisperSpeechEngineProvider = Provider<WhisperSpeechEngine>((ref) {
       return state is WhisperModelReady ? state.files : null;
     },
     cleanTranscript: (raw) => TranscriptCleaner.clean(raw, prompt: whisperInitialPrompt),
+    isWakeWord: WakeWordMatcher.matches,
   );
   ref.onDispose(engine.dispose);
   return engine;
@@ -550,6 +552,7 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   Future<void> startBluetoothMode() async {
     _reconnectWatch?.cancel();
+    _wakeSubscription?.cancel();
     final attempt = ++_bluetoothAttempt;
     state = const VoiceState(status: VoiceStatus.bluetoothConnecting, bluetoothMode: true);
     final bluetooth = _ref.read(bluetoothAudioRouteServiceProvider);
@@ -587,6 +590,30 @@ class VoiceController extends StateNotifier<VoiceState> {
       bluetoothBattery: info.batteryPercent,
     );
     await Future<void>.delayed(const Duration(milliseconds: 350));
+    final engine = _engine;
+    if (engine is WhisperSpeechEngine && engine.canListenForWakeWord) {
+      // Local wake word: the FastConformer engine segments speech by loudness and checks each short
+      // utterance for «ديوني» — no extra model, nothing is recorded or saved while waiting.
+      state = state.copyWith(status: VoiceStatus.bluetoothWaitingWakeWord);
+      _startBluetoothMonitor();
+      await _wakeSubscription?.cancel();
+      _wakeSubscription = engine.wakeWordDetected.listen((_) {
+        if (state.status != VoiceStatus.bluetoothWaitingWakeWord) return;
+        state = state.copyWith(status: VoiceStatus.bluetoothWakeWordDetected);
+        unawaited(_beginListening(bluetoothMode: true));
+      });
+      try {
+        await engine.startWakeListening();
+        return;
+      } catch (e) {
+        debugPrint('[voice] local wake word unavailable ($e) - listening for the command directly');
+        await _wakeSubscription?.cancel();
+        _wakeSubscription = null;
+      }
+      if (attempt != _bluetoothAttempt || !state.bluetoothMode) return;
+      await _beginListening(bluetoothMode: true);
+      return;
+    }
     if (!_engine.providesLiveText) {
       // Wake-word detection reads the recognizer's LIVE text, which a batch engine (Whisper) does
       // not produce; running it on every sound near the headset would drain the battery. So here
@@ -632,6 +659,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// recovers without touching the phone. Stops on cancel / retry / any other state.
   void _startReconnectWatch() {
     _reconnectWatch?.cancel();
+    _wakeSubscription?.cancel();
     _reconnectWatch = Timer.periodic(const Duration(seconds: 3), (timer) async {
       if (state.status != VoiceStatus.bluetoothDisconnected || state.errorCode != 'dropped') {
         timer.cancel();
@@ -643,6 +671,8 @@ class VoiceController extends StateNotifier<VoiceState> {
       }
     });
   }
+
+  StreamSubscription<void>? _wakeSubscription;
 
   Future<void> openBluetoothSettings() => _ref.read(bluetoothAudioRouteServiceProvider).openBluetoothSettings();
 
@@ -1118,7 +1148,7 @@ class VoiceController extends StateNotifier<VoiceState> {
 
     // 4. A bare "تعديل" — ask what to change.
     const editWords = {'تعديل', 'عدل', 'غير', 'غيير', 'تغيير', 'بدل', 'edit', 'change'};
-    if (tokens.any(editWords.contains)) {
+    if (tokens.any((t) => editWords.contains(t) || (t.length >= 3 && _withinOneEdit(t, 'تعديل')) || (t.length >= 3 && _withinOneEdit(t, 'عدل')))) {
       await _askWhatToEditThenListen();
       return;
     }
@@ -1137,8 +1167,49 @@ class VoiceController extends StateNotifier<VoiceState> {
     'yes', 'correct', 'save', 'ok', 'okay', 'yeah',
   };
 
-  bool _isYes(List<String> tokens) =>
-      tokens.any((t) => _yesTokens.contains(t) || t.startsWith('حفظ') || t.startsWith('احفظ'));
+  /// Words that mean "save" once the local model's typical slips are allowed for: a one-letter
+  /// substitution/drop/insert ("حفض", "حفز", "احفض", "حف"). Real-device finding: a CTC model
+  /// returns only a few characters for a one-word answer, so exact matching missed "حفظ".
+  static const _saveStems = ['حفظ', 'احفظ', 'خزن', 'سجل', 'ثبت'];
+
+  static bool _withinOneEdit(String a, String b) {
+    if ((a.length - b.length).abs() > 1) return false;
+    var i = 0;
+    var j = 0;
+    var edits = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] == b[j]) {
+        i++;
+        j++;
+        continue;
+      }
+      if (++edits > 1) return false;
+      if (a.length > b.length) {
+        i++;
+      } else if (a.length < b.length) {
+        j++;
+      } else {
+        i++;
+        j++;
+      }
+    }
+    return edits + (a.length - i) + (b.length - j) <= 1;
+  }
+
+  bool _isYes(List<String> tokens) => tokens.any((raw) {
+        if (_yesTokens.contains(raw)) return true;
+        // Attached conjunction/pronoun forms: "وحفظ", "احفظه", "احفظها".
+        var t = raw.length > 3 && raw.startsWith('و') ? raw.substring(1) : raw;
+        for (final suffix in const ['ها', 'ه']) {
+          if (t.length > 3 && t.endsWith(suffix)) {
+            t = t.substring(0, t.length - suffix.length);
+            break;
+          }
+        }
+        if (t.startsWith('حفظ') || t.startsWith('احفظ')) return true;
+        if (t.length < 2 || t.length > 5) return false;
+        return _saveStems.any((stem) => _withinOneEdit(t, stem));
+      });
 
   /// `true` = yes, `false` = no, `null` = neither (used for the "same account?" question).
   bool? _yesNo(String text) {
@@ -1624,6 +1695,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     _clearSpeechEndTimer();
     _bluetoothMonitor?.cancel();
     _reconnectWatch?.cancel();
+    _wakeSubscription?.cancel();
     ++_bluetoothAttempt;
     await _voiceOutput.stop();
     try {
@@ -1653,6 +1725,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     _clearSpeechEndTimer();
     _bluetoothMonitor?.cancel();
     _reconnectWatch?.cancel();
+    _wakeSubscription?.cancel();
     _partialSubscription?.cancel();
     _finalSubscription?.cancel();
     _errorSubscription?.cancel();

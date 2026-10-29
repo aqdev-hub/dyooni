@@ -106,6 +106,17 @@ class EnergyVad {
     }
   }
 
+  /// Starts a new utterance but KEEPS the learned background level (unlike [reset]), so the
+  /// wake-word loop can segment utterance after utterance without re-learning the room each time.
+  void resetUtterance() {
+    _run = 0;
+    _hangover = 0;
+    _speechStarted = false;
+    _carry.clear();
+    peakRms = 0;
+    frames = 0;
+  }
+
   void reset() {
     _floor = -1;
     _run = 0;

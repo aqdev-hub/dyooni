@@ -160,6 +160,9 @@ class ArabicNumberParser {
   static final RegExp _digitsToken = RegExp(r'^\d+(\.\d+)?$');
   static final RegExp _latin = RegExp('[a-zA-Z]');
 
+  /// Public form of [_isNumberLike] for callers that hold a raw token (normalises it first).
+  static bool looksLikeNumberWord(String token) => _isNumberLike(normalizeWord(token));
+
   static bool _isNumberLike(String w) {
     bool known(String x) => _units.containsKey(x) || _hundreds.containsKey(x) || _multipliers.containsKey(x);
     if (_digitsToken.hasMatch(w) || known(w) || _currencyWords.contains(w)) {

@@ -70,4 +70,14 @@ void main() {
       expect(amountOf('عليه 5 آلاف ريال'), 5000);
     });
   });
+
+  group('known confusions after an amount', () {
+    test('خيال right after a number becomes ريال', () {
+      expect(clean('احمد عليه خمسة الاف خيال'), 'احمد عليه خمسة الاف ريال');
+      expect(clean('عليه 3000 خيال'), 'عليه 3000 ريال');
+    });
+    test('خيال in an ordinary sentence is untouched', () {
+      expect(clean('هذا خيال علمي'), 'هذا خيال علمي');
+    });
+  });
 }

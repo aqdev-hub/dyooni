@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:whisper_ggml/whisper_ggml.dart' show TranscribeRequest, Whisper, WhisperModel;
@@ -37,6 +37,7 @@ class WhisperSpeechEngine implements SpeechEngine {
   WhisperSpeechEngine({
     required this.modelFiles,
     required this.cleanTranscript,
+    this.isWakeWord,
     this.sampleRate = whisperSampleRate,
   });
 
@@ -48,6 +49,10 @@ class WhisperSpeechEngine implements SpeechEngine {
   /// Post-processing of Whisper's raw text (punctuation, hallucinations, prompt echo). Injected so
   /// this file does not depend on the logic layer.
   final String Function(String raw) cleanTranscript;
+
+  /// Decides whether a short transcript is the wake word. Injected (like [cleanTranscript]) so this
+  /// file stays independent of the logic layer; without it wake listening is not offered.
+  final bool Function(String text)? isWakeWord;
 
   final int sampleRate;
 
@@ -116,6 +121,7 @@ class WhisperSpeechEngine implements SpeechEngine {
 
   @override
   Future<void> start() async {
+    await stopWakeListening();
     await _stopping;
     if (isListening) return;
     if (modelFiles() == null) {
@@ -201,6 +207,127 @@ class WhisperSpeechEngine implements SpeechEngine {
     await _recorder?.resume();
   }
 
+  // ───────────────────────── Wake word («ديوني») ─────────────────────────
+
+  final _wakeController = StreamController<void>.broadcast();
+
+  /// Fires once when the wake word is heard; wake listening has already stopped by then, so the
+  /// controller can start its normal command recording immediately.
+  Stream<void> get wakeWordDetected => _wakeController.stream;
+
+  /// Wake listening is only offered for the FastConformer model: its decode of one short word takes
+  /// a fraction of a second. Whisper would take seconds per sound and drain the battery.
+  bool get canListenForWakeWord => isWakeWord != null && modelFiles()?.option.engine == VoiceModelEngine.sherpa;
+
+  bool get isWakeListening => _wakeActive;
+  bool _wakeActive = false;
+  bool _wakeBusy = false;
+  bool _wakeInUtterance = false;
+  final List<Uint8List> _wakeChunks = [];
+  int _wakeBytes = 0;
+  StreamSubscription<Uint8List>? _wakeSubscription;
+
+  static const _wakePreRollBytes = 16000 * 2 * 4 ~/ 10; // 400 ms kept before speech starts
+  static const _wakeMaxBytes = 16000 * 2 * 3; // longer than 3 s = a conversation, not a call
+  static const _wakeMinBytes = 16000 * 2 * 3 ~/ 10; // shorter than 0.3 s = a tap or a cough
+
+  /// Starts listening for «ديوني» with NO file and NO recording: audio is only kept in memory for
+  /// the length of one short utterance and is dropped right after it is checked.
+  Future<void> startWakeListening() async {
+    await _stopping;
+    if (_wakeActive || isListening) return;
+    final files = modelFiles();
+    if (files == null || files.option.engine != VoiceModelEngine.sherpa || files.tokensPath == null) {
+      throw StateError('Wake word needs the FastConformer model.');
+    }
+    if (!await hasPermission()) {
+      _errorController.add(const SpeechEngineError(SpeechEngineErrorType.permission));
+      throw StateError('Microphone permission was not granted.');
+    }
+    await _fast.ensureLoaded(modelPath: files.modelPath, tokensPath: files.tokensPath!);
+    _vad.reset();
+    _wakeChunks.clear();
+    _wakeBytes = 0;
+    _wakeInUtterance = false;
+    _wakeBusy = false;
+    final recorder = _recorder = AudioRecorder();
+    final Stream<Uint8List> stream;
+    try {
+      stream = await recorder.startStream(
+        RecordConfig(encoder: AudioEncoder.pcm16bits, sampleRate: sampleRate, numChannels: 1, echoCancel: false, noiseSuppress: false),
+      );
+    } catch (_) {
+      await _releaseRecorder();
+      rethrow;
+    }
+    _wakeActive = true;
+    _wakeSubscription = stream.listen(_onWakeChunk);
+  }
+
+  Future<void> stopWakeListening() async {
+    if (!_wakeActive && _wakeSubscription == null) return;
+    _wakeActive = false;
+    await _wakeSubscription?.cancel();
+    _wakeSubscription = null;
+    _wakeChunks.clear();
+    _wakeBytes = 0;
+    await _releaseRecorder();
+  }
+
+  void _onWakeChunk(Uint8List chunk) {
+    if (!_wakeActive || _wakeBusy) return;
+    final speaking = _vad.addChunk(chunk);
+    _wakeChunks.add(Uint8List.fromList(chunk));
+    _wakeBytes += chunk.length;
+    if (speaking) {
+      _wakeInUtterance = true;
+      if (_wakeBytes > _wakeMaxBytes) _wakeDiscard();
+      return;
+    }
+    if (!_wakeInUtterance) {
+      // Idle: keep only a short pre-roll so the first syllable is not cut off.
+      while (_wakeBytes > _wakePreRollBytes && _wakeChunks.length > 1) {
+        _wakeBytes -= _wakeChunks.removeAt(0).length;
+      }
+      return;
+    }
+    // The utterance just ended (voice, then the detector's hangover of silence).
+    final builder = BytesBuilder(copy: false);
+    for (final c in _wakeChunks) {
+      builder.add(c);
+    }
+    final pcm = builder.takeBytes();
+    _wakeDiscard();
+    if (pcm.length < _wakeMinBytes) return;
+    _wakeBusy = true;
+    unawaited(_checkWake(pcm));
+  }
+
+  void _wakeDiscard() {
+    _wakeChunks.clear();
+    _wakeBytes = 0;
+    _wakeInUtterance = false;
+    _vad.resetUtterance();
+  }
+
+  Future<void> _checkWake(Uint8List pcm) async {
+    try {
+      final raw = await _fast.decode(_samplesFromPcm(pcm), sampleRate: sampleRate).timeout(const Duration(seconds: 5));
+      final text = cleanTranscript(raw);
+      final heard = isWakeWord?.call(text) ?? false;
+      if (kDebugMode) debugPrint('[voice] wake check: "${raw.trim()}" -> $heard');
+      if (_wakeActive && heard) {
+        await stopWakeListening();
+        if (!_wakeController.isClosed) _wakeController.add(null);
+        return;
+      }
+    } catch (e) {
+      debugPrint('[voice] wake check failed: $e');
+    } finally {
+      _wakeBusy = false;
+    }
+  }
+
   /// Stops recording, closes the WAV and decodes it. Throws [SpeechEngineException] when decoding
   /// itself failed (model damaged, out of memory, timeout) — never returns an empty transcript for
   /// a failure, because the dialogue would then tell the person "I heard nothing", which is a
@@ -262,6 +389,9 @@ class WhisperSpeechEngine implements SpeechEngine {
     if (files.option.engine == VoiceModelEngine.sherpa) {
       raw = await _decodeSherpa(audioPath, files).timeout(_decodeTimeout);
       final text = cleanTranscript(raw);
+      // Words are logged ONLY in debug builds (never in release), so recognition mistakes can be
+      // diagnosed from the log without ever leaking spoken content from a published app.
+      if (kDebugMode) debugPrint('[voice] fastconformer text: "${raw.trim()}" -> "$text"');
       debugPrint(
         '[voice] fastconformer: audio=${audioMs}ms decode=${DateTime.now().difference(started).inMilliseconds}ms '
         'raw=${raw.trim().length} chars kept=${text.length} chars peakRms=${_vad.peakRms.toStringAsFixed(3)} '
@@ -298,13 +428,35 @@ class WhisperSpeechEngine implements SpeechEngine {
     final bytes = await File(audioPath).readAsBytes();
     const headerBytes = 44;
     if (bytes.length <= headerBytes) return '';
-    final data = ByteData.sublistView(bytes);
-    final count = (bytes.length - headerBytes) ~/ 2;
-    final samples = Float32List(count);
+    return _fast.decode(_samplesFromPcm(Uint8List.sublistView(bytes, headerBytes)), sampleRate: sampleRate);
+  }
+
+  /// PCM16 little-endian mono → float samples ready for FastConformer, with the decode-only
+  /// treatment: half a second of silence on both sides (CTC models drop the first/last word when
+  /// speech touches the very edge of the clip) and a capped lift of quiet audio (a weak microphone
+  /// path makes short number words vanish). The saved WAV is never changed.
+  Float32List _samplesFromPcm(Uint8List pcm) {
+    final data = ByteData.sublistView(pcm);
+    final count = pcm.length ~/ 2;
+    final pad = sampleRate ~/ 2;
+    final samples = Float32List(count + pad * 2);
+    var peak = 0.0;
     for (var i = 0; i < count; i++) {
-      samples[i] = data.getInt16(headerBytes + i * 2, Endian.little) / 32768.0;
+      final v = data.getInt16(i * 2, Endian.little) / 32768.0;
+      samples[pad + i] = v;
+      final a = v < 0 ? -v : v;
+      if (a > peak) peak = a;
     }
-    return _fast.decode(samples, sampleRate: sampleRate);
+    if (peak > 0.0005 && peak < 0.3) {
+      final gain = (0.5 / peak).clamp(1.0, 6.0).toDouble();
+      if (gain > 1.01) {
+        for (var i = pad; i < pad + count; i++) {
+          samples[i] = (samples[i] * gain).clamp(-1.0, 1.0).toDouble();
+        }
+      }
+    }
+    return samples;
+
   }
 
   Future<String> _decode(String audioPath, WhisperModelFiles files, {required bool useVad}) async {
@@ -351,6 +503,7 @@ class WhisperSpeechEngine implements SpeechEngine {
   /// Aborts everything without keeping the file or any text (the person cancelled mid-recording).
   @override
   Future<void> cancel() async {
+    await stopWakeListening();
     final activeStop = _stopping;
     if (activeStop != null) {
       await activeStop;
@@ -387,5 +540,6 @@ class WhisperSpeechEngine implements SpeechEngine {
     _finalController.close();
     _errorController.close();
     _activityController.close();
+    _wakeController.close();
   }
 }

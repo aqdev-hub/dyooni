@@ -76,7 +76,23 @@ class TranscriptCleaner {
     // answer ("نعم", "حفظ") is also a substring of the prompt and must be kept.
     if (promptNorm.isNotEmpty && norm.split(' ').length >= 4 && promptNorm.contains(norm)) return '';
 
-    return collapsed;
+    return _fixKnownConfusions(collapsed);
+  }
+
+  /// Words the local model is known to produce INSTEAD of "ريال" right after an amount
+  /// (real-device finding: "ألف ريال" heard as "ألف خيال"). Applied ONLY directly after a number
+  /// word/digit, so an ordinary sentence containing "خيال" is never touched.
+  static const _riyalLookalikes = {'خيال', 'ريا', 'ريل', 'ريان', 'رجال', 'ريالي'};
+
+  static String _fixKnownConfusions(String text) {
+    final tokens = text.split(' ');
+    for (var i = 1; i < tokens.length; i++) {
+      final n = _norm(tokens[i]);
+      if (_riyalLookalikes.contains(n) && ArabicNumberParser.looksLikeNumberWord(tokens[i - 1])) {
+        tokens[i] = 'ريال';
+      }
+    }
+    return tokens.join(' ');
   }
 
   /// Digits → ASCII, annotations/punctuation/bidi marks removed (separators inside numbers kept),
