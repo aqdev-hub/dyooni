@@ -21,7 +21,9 @@ import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/reports/pdf_report_service.dart';
+import '../../../logic/reports/report_delivery.dart';
 import '../../../logic/reports/report_export_provider.dart';
+import '../../../logic/reports/tabular_report.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/personal_data_provider.dart';
@@ -292,6 +294,38 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
         );
   }
 
+  /// "كشف حساب شهري": the same ledger split by month, each month with its opening and closing
+  /// balance (built by [ReportBuilders.accountMonthlyStatement]).
+  Future<void> _handleMonthlyStatement(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    List<Transaction> transactions,
+    ReportSortOption? sort,
+    DateTimeRange? range,
+    TabularDelivery mode,
+  ) async {
+    try {
+      final title = '${l10n.reportTypeMonthlyStatement} - ${account.name} - '
+          '${currencyNameOf(ref.read(currencyTypesProvider), ref.read(effectiveCurrencyIdProvider))}';
+      final report = ReportBuilders.accountMonthlyStatement(
+        title: title,
+        transactions: transactions,
+        labels: buildReportLabels(ref, l10n),
+        from: range?.start,
+        to: range?.end,
+        sort: sort,
+      );
+      if (report.isEmpty) {
+        if (context.mounted) AppSnackBar.showError(context, l10n.reportNoDataMessage);
+        return;
+      }
+      await deliverTabularReport(ref, l10n, report, fileName: title, mode: mode);
+    } catch (_) {
+      if (context.mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
+    }
+  }
+
   Future<void> _handleGeneratePdf(
     BuildContext context,
     WidgetRef ref,
@@ -302,8 +336,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
     DateTimeRange? range,
   ) async {
     if (type != AccountReportType.statement) {
-      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
-      return;
+      return _handleMonthlyStatement(context, ref, l10n, transactions, sort, range, TabularDelivery.printPdf);
     }
     try {
       final rows = _buildStatementRows(transactions, range, sort);
@@ -324,8 +357,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
     DateTimeRange? range,
   ) async {
     if (type != AccountReportType.statement) {
-      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
-      return;
+      return _handleMonthlyStatement(context, ref, l10n, transactions, sort, range, TabularDelivery.shareExcel);
     }
     try {
       final rows = _buildStatementRows(transactions, range, sort);
@@ -350,8 +382,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
     ReportShareFormat format,
   ) async {
     if (type != AccountReportType.statement) {
-      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
-      return;
+      return _handleMonthlyStatement(context, ref, l10n, transactions, sort, range, format == ReportShareFormat.pdf ? TabularDelivery.sharePdf : TabularDelivery.shareExcel);
     }
     try {
       final rows = _buildStatementRows(transactions, range, sort);

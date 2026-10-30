@@ -16,11 +16,14 @@ import '../../../core/theme/voice_palette.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/personal_data.dart';
 import '../../../data/models/report_options.dart';
+import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/categories/categories_provider.dart';
 import '../../../data/models/category_type.dart';
 import '../../../logic/reports/pdf_report_service.dart';
+import '../../../logic/reports/report_delivery.dart';
 import '../../../logic/reports/report_export_provider.dart';
+import '../../../logic/reports/tabular_report.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/personal_data_provider.dart';
@@ -135,8 +138,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Future<void> _handleGeneratePdf(SummaryReportType type, ReportSortOption? sort, DateTimeRange? range) async {
     final l10n = AppLocalizations.of(context)!;
     if (type != SummaryReportType.totalAmounts) {
-      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
-      return;
+      return _handleTabular(type, sort, range, TabularDelivery.printPdf);
     }
     setState(() => _isExporting = true);
     try {
@@ -153,8 +155,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Future<void> _handleGenerateExcel(SummaryReportType type, ReportSortOption? sort, DateTimeRange? range) async {
     final l10n = AppLocalizations.of(context)!;
     if (type != SummaryReportType.totalAmounts) {
-      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
-      return;
+      return _handleTabular(type, sort, range, TabularDelivery.shareExcel);
     }
     setState(() => _isExporting = true);
     try {
@@ -179,8 +180,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     if (type != SummaryReportType.totalAmounts) {
-      AppSnackBar.showError(context, l10n.reportFeatureNotReadyMessage);
-      return;
+      return _handleTabular(type, sort, range, format == ReportShareFormat.pdf ? TabularDelivery.sharePdf : TabularDelivery.shareExcel);
     }
     setState(() => _isExporting = true);
     try {
@@ -197,6 +197,54 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         await file.writeAsBytes(bytes);
         await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: _xlsxMimeType)]));
       }
+    } catch (_) {
+      if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  String _typeTitle(AppLocalizations l10n, SummaryReportType type) => switch (type) {
+        SummaryReportType.totalAmounts => l10n.reportTypeTotalAmounts,
+        SummaryReportType.allAmountsDetails => l10n.reportTypeAllAmountsDetails,
+        SummaryReportType.monthlyTotals => l10n.reportTypeMonthlyTotals,
+        SummaryReportType.categoryAndCurrencyTotals => l10n.reportTypeCategoryAndCurrencyTotals,
+        SummaryReportType.monthlyDetailsForCurrentCategory => l10n.reportTypeMonthlyDetailsCurrentCategory,
+      };
+
+  /// The four newer summary reports. They are built as plain tables ([TabularReport]) so PDF,
+  /// Excel and sharing all come from the same data. Amounts are always grouped per currency.
+  Future<void> _handleTabular(
+    SummaryReportType type,
+    ReportSortOption? sort,
+    DateTimeRange? range,
+    TabularDelivery mode,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _isExporting = true);
+    try {
+      final labels = buildReportLabels(ref, l10n);
+      final accounts = _filteredAccounts();
+      final transactions = ref.read(transactionsProvider).value ?? const <Transaction>[];
+      final title = '${_typeTitle(l10n, type)} - ${_categoryLabel(l10n)}';
+      final from = range?.start;
+      final to = range?.end;
+      final report = switch (type) {
+        SummaryReportType.allAmountsDetails => ReportBuilders.allAmountsDetails(
+            title: title, accounts: accounts, transactions: transactions, labels: labels, from: from, to: to, sort: sort),
+        SummaryReportType.monthlyTotals => ReportBuilders.monthlyTotals(
+            title: title, accounts: accounts, transactions: transactions, labels: labels, from: from, to: to, sort: sort),
+        SummaryReportType.categoryAndCurrencyTotals => ReportBuilders.categoryAndCurrencyTotals(
+            title: title, accounts: accounts, transactions: transactions, labels: labels, from: from, to: to, sort: sort),
+        SummaryReportType.monthlyDetailsForCurrentCategory => ReportBuilders.monthlyDetails(
+            title: title, accounts: accounts, transactions: transactions, labels: labels, from: from, to: to, sort: sort),
+        SummaryReportType.totalAmounts => throw StateError('handled by the original report'),
+      };
+      if (report.isEmpty) {
+        if (mounted) AppSnackBar.showError(context, l10n.reportNoDataMessage);
+        return;
+      }
+      await deliverTabularReport(ref, l10n, report, fileName: title, mode: mode);
     } catch (_) {
       if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
     } finally {

@@ -320,7 +320,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerGoogleDriveSync => 'Sync data to Google Drive';
 
   @override
-  String get drawerSendDatabase => 'Send database';
+  String get drawerSendDatabase => 'Export all data';
 
   @override
   String get drawerShareApp => 'Share app';
@@ -1606,4 +1606,92 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceYouCanSayExamples => '"Yes" or "Save" or "Edit the amount to 3500"';
+
+  @override
+  String get reportMonthHeader => 'Month';
+
+  @override
+  String get reportNetHeader => 'Net';
+
+  @override
+  String get reportAccountsCountHeader => 'Accounts';
+
+  @override
+  String get reportOpeningBalance => 'Opening balance';
+
+  @override
+  String get reportClosingBalance => 'Closing balance';
+
+  @override
+  String get reportMonthTotal => 'Month total';
+
+  @override
+  String get reportGrandTotal => 'Total';
+
+  @override
+  String get reportNoDataMessage => 'No entries in the selected period or category';
+
+  @override
+  String get shareAppSubject => 'Dyooni app';
+
+  @override
+  String shareAppMessage(String url) {
+    return 'Dyooni helps you track debts and manage accounts with customers and suppliers, with Arabic voice entry.\nGet it here:\n$url';
+  }
+
+  @override
+  String get rateSheetTitle => 'How do you like Dyooni?';
+
+  @override
+  String get rateSheetSubtitle => 'Tap the number of stars';
+
+  @override
+  String get rateHighBody => 'Glad you like it! Share it with someone who could use it.';
+
+  @override
+  String get rateStoreButton => 'Rate on the store';
+
+  @override
+  String get rateLowBody => 'Sorry it fell short. What could we improve?';
+
+  @override
+  String get rateFeedbackHint => 'Write your feedback here (optional)';
+
+  @override
+  String get rateSendWhatsapp => 'Send via WhatsApp';
+
+  @override
+  String get rateSendEmail => 'Send by email';
+
+  @override
+  String get rateEmailSubject => 'Dyooni feedback';
+
+  @override
+  String rateFeedbackMessage(String stars, String note) {
+    return 'My rating of Dyooni: $stars of 5\n$note';
+  }
+
+  @override
+  String get exportAllDataTitle => 'Export all data';
+
+  @override
+  String get exportAllDataBody => 'An Excel file with all accounts and entries will be created. It is NOT encrypted — share it only with people you trust.\nFor a restorable backup use local backup instead.';
+
+  @override
+  String get exportAllDataConfirm => 'Export';
+
+  @override
+  String get exportAllDataEmpty => 'There is no data to export yet';
+
+  @override
+  String get exportAccountsHeading => 'Accounts';
+
+  @override
+  String get exportEntriesHeading => 'Entries';
+
+  @override
+  String get exportAllDataFileTitle => 'All Dyooni data';
+
+  @override
+  String get createdDateLabel => 'Created on';
 }

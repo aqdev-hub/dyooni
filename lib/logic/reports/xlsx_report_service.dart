@@ -7,6 +7,7 @@ import 'package:excel_plus/excel_plus.dart';
 
 import '../../data/models/account.dart';
 import 'pdf_report_service.dart' show ReportRow, StatementRow;
+import 'tabular_report.dart';
 
 /// Real, styled `.xlsx` output — a colored/centered table with a report title above it. This
 /// replaces `csv_report_service.dart` (deleted this batch — see the delivery notes for why),
@@ -152,6 +153,66 @@ class XlsxReportService {
     _writeTotalsRow(sheet, rowIndex, ['', totalRowLabel, '', '', finalBalance.abs().toStringAsFixed(0)]);
 
     _writeColumnWidths(sheet, [14, 28, 14, 14, 14]);
+    return _encode(workbook);
+  }
+
+  /// Any [TabularReport]: one sheet, a merged title row, then for every table an optional merged
+  /// heading row, the header row and the lines (total lines highlighted, carry-over lines grey).
+  /// A blank row separates tables. [sheetName] must be a valid Excel sheet name (≤31 chars).
+  Uint8List buildTabular({required TabularReport report, String sheetName = 'Report'}) {
+    final workbook = Excel.createExcel();
+    final sheet = workbook[sheetName];
+    workbook.delete('Sheet1');
+
+    final columnCount = report.tables.fold<int>(1, (m, t) => t.headers.length > m ? t.headers.length : m);
+    _writeTitleRow(sheet, report.title, columnCount);
+    final widths = List<double>.filled(columnCount, 12);
+
+    var rowIndex = 1;
+    for (final table in report.tables) {
+      if (table.heading != null) {
+        sheet.merge(
+          CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex),
+          CellIndex.indexByColumnRow(columnIndex: columnCount - 1, rowIndex: rowIndex),
+        );
+        final cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex));
+        cell.value = TextCellValue(table.heading!);
+        cell.cellStyle = CellStyle(
+          backgroundColorHex: ExcelColor.fromHexString('#DDE3EC'),
+          bold: true,
+          horizontalAlign: HorizontalAlign.Center,
+          verticalAlign: VerticalAlign.Center,
+          topBorder: _gridBorder,
+          bottomBorder: _gridBorder,
+          leftBorder: _gridBorder,
+          rightBorder: _gridBorder,
+        );
+        rowIndex++;
+      }
+      _writeHeaderRow(sheet, rowIndex, table.headers);
+      rowIndex++;
+      for (var c = 0; c < table.headers.length; c++) {
+        final w = table.headers[c].length + 4.0;
+        if (w > widths[c]) widths[c] = w;
+      }
+      for (final line in table.lines) {
+        switch (line.style) {
+          case ReportLineStyle.total:
+            _writeTotalsRow(sheet, rowIndex, line.cells);
+          case ReportLineStyle.subtle:
+            _writeDataRow(sheet, rowIndex, line.cells, fillHex: '#EEF0F3');
+          case ReportLineStyle.normal:
+            _writeDataRow(sheet, rowIndex, line.cells, fillHex: '#FFFFFF');
+        }
+        for (var c = 0; c < line.cells.length && c < columnCount; c++) {
+          final w = line.cells[c].length + 3.0;
+          if (w > widths[c]) widths[c] = w > 48 ? 48 : w;
+        }
+        rowIndex++;
+      }
+      rowIndex++; // blank separator row
+    }
+    _writeColumnWidths(sheet, widths);
     return _encode(workbook);
   }
 

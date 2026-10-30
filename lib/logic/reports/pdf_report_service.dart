@@ -9,6 +9,7 @@ import '../../core/utils/arabic_pdf_text.dart';
 import '../../data/models/account.dart';
 import '../../data/models/personal_data.dart';
 import '../../data/models/transaction.dart';
+import 'tabular_report.dart';
 
 /// One row of the "إجمالي المبالغ" (summary totals) report — one line per account.
 class ReportRow {
@@ -477,6 +478,103 @@ class PdfReportService {
       ),
     );
 
+    return doc.save();
+  }
+
+  /// Any [TabularReport] (the five newer reports and the data export): the same letterhead,
+  /// one bordered table per section with its heading, and the stamp/signature block at the end.
+  /// Column widths follow the longest text of each column so details columns get the room.
+  Future<Uint8List> buildTabular({
+    required PersonalData personalData,
+    required String appName,
+    required TabularReport report,
+    required String signatureLabel,
+    required String stampLabel,
+  }) async {
+    final (regularFont, boldFont) = await _loadFonts();
+    final logo = await _loadLogo(personalData);
+    final signatureImage = personalData.signatureEnabled
+        ? await _loadCustomOrDefaultImage(personalData.signaturePath, 'assets/icons/default_signature.png')
+        : null;
+    final stampImage = personalData.stampEnabled
+        ? await _loadCustomOrDefaultImage(personalData.stampPath, 'assets/icons/default_stamp.png')
+        : null;
+    final signatureStampSection = _buildSignatureStampSection(
+      signatureImage: signatureImage,
+      stampImage: stampImage,
+      signatureLabel: signatureLabel,
+      stampLabel: stampLabel,
+      boldFont: boldFont,
+    );
+    final doc = pw.Document();
+
+    pw.Widget tableWidget(ReportTable table) {
+      final columns = table.headers.length;
+      final weights = List<double>.filled(columns, 1);
+      for (var c = 0; c < columns; c++) {
+        var longest = table.headers[c].length;
+        for (final line in table.lines) {
+          if (c < line.cells.length && line.cells[c].length > longest) longest = line.cells[c].length;
+        }
+        weights[c] = longest.clamp(6, 28).toDouble();
+      }
+      return pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          if (table.heading != null)
+            pw.Container(
+              width: double.infinity,
+              margin: const pw.EdgeInsets.only(top: 10, bottom: 4),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: const pw.BoxDecoration(color: PdfColors.blueGrey100),
+              child: pw.Text(shapeArabicForPdf(table.heading!), style: pw.TextStyle(font: boldFont, fontSize: 11)),
+            ),
+          pw.Table(
+            border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+            columnWidths: {for (var c = 0; c < columns; c++) c: pw.FlexColumnWidth(weights[c])},
+            children: [
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.blueGrey800),
+                children: [for (final h in table.headers) _headerCell(shapeArabicForPdf(h), boldFont)],
+              ),
+              for (final line in table.lines)
+                pw.TableRow(
+                  decoration: switch (line.style) {
+                    ReportLineStyle.total => const pw.BoxDecoration(color: PdfColors.green100),
+                    ReportLineStyle.subtle => const pw.BoxDecoration(color: PdfColors.grey200),
+                    ReportLineStyle.normal => null,
+                  },
+                  children: [
+                    for (var c = 0; c < columns; c++)
+                      line.style == ReportLineStyle.total
+                          ? _bodyCellBold(shapeArabicForPdf(c < line.cells.length ? line.cells[c] : ''), boldFont)
+                          : _bodyCell(shapeArabicForPdf(c < line.cells.length ? line.cells[c] : ''), regularFont),
+                  ],
+                ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    doc.addPage(
+      pw.MultiPage(
+        theme: pw.ThemeData.withFont(base: regularFont, bold: boldFont),
+        textDirection: pw.TextDirection.rtl,
+        header: (context) => _buildHeader(
+          personalData: personalData,
+          logo: logo,
+          reportTitle: report.title,
+          regularFont: regularFont,
+          boldFont: boldFont,
+        ),
+        footer: (context) => _footer(context, appName, regularFont),
+        build: (context) => [
+          for (final table in report.tables) tableWidget(table),
+          if (signatureStampSection != null) signatureStampSection,
+        ],
+      ),
+    );
     return doc.save();
   }
 

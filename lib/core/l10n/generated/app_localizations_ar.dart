@@ -318,7 +318,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get drawerGoogleDriveSync => 'مزامنة البيانات على جوجل درايف';
 
   @override
-  String get drawerSendDatabase => 'إرسال قاعدة البيانات';
+  String get drawerSendDatabase => 'تصدير جميع البيانات';
 
   @override
   String get drawerShareApp => 'مشاركة التطبيق';
@@ -1591,4 +1591,92 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get voiceYouCanSayExamples => '"نعم" أو "احفظ" أو "عدل المبلغ إلى 3500"';
+
+  @override
+  String get reportMonthHeader => 'الشهر';
+
+  @override
+  String get reportNetHeader => 'الصافي';
+
+  @override
+  String get reportAccountsCountHeader => 'عدد الحسابات';
+
+  @override
+  String get reportOpeningBalance => 'رصيد سابق';
+
+  @override
+  String get reportClosingBalance => 'الرصيد في نهاية الشهر';
+
+  @override
+  String get reportMonthTotal => 'إجمالي الشهر';
+
+  @override
+  String get reportGrandTotal => 'الإجمالي';
+
+  @override
+  String get reportNoDataMessage => 'لا توجد عمليات ضمن الفترة أو التصنيف المحدد';
+
+  @override
+  String get shareAppSubject => 'تطبيق ديوني';
+
+  @override
+  String shareAppMessage(String url) {
+    return 'تطبيق ديوني لتسجيل الديون وإدارة الحسابات بين العملاء والموردين، ويدعم الإدخال الصوتي بالعربية.\nحمّله من هنا:\n$url';
+  }
+
+  @override
+  String get rateSheetTitle => 'ما رأيك في ديوني؟';
+
+  @override
+  String get rateSheetSubtitle => 'اضغط على عدد النجوم الذي يناسبك';
+
+  @override
+  String get rateHighBody => 'يسعدنا أن التطبيق أعجبك! شاركه مع من قد يستفيد منه.';
+
+  @override
+  String get rateStoreButton => 'قيّم على المتجر';
+
+  @override
+  String get rateLowBody => 'نأسف لأن التجربة لم تكن كما تتوقع. ما الذي يمكننا تحسينه؟';
+
+  @override
+  String get rateFeedbackHint => 'اكتب ملاحظتك هنا (اختياري)';
+
+  @override
+  String get rateSendWhatsapp => 'إرسال عبر واتساب';
+
+  @override
+  String get rateSendEmail => 'إرسال بالبريد الإلكتروني';
+
+  @override
+  String get rateEmailSubject => 'تقييم تطبيق ديوني';
+
+  @override
+  String rateFeedbackMessage(String stars, String note) {
+    return 'تقييمي لتطبيق ديوني: $stars من 5\n$note';
+  }
+
+  @override
+  String get exportAllDataTitle => 'تصدير جميع البيانات';
+
+  @override
+  String get exportAllDataBody => 'سيُنشأ ملف Excel يضم كل الحسابات والعمليات، وهو غير مشفّر. اختر بعد ذلك التطبيق الذي سترسله عبره وشاركه مع من تثق به فقط.\nلنسخة احتياطية قابلة للاستعادة استخدم «حفظ واسترجاع البيانات من الجهاز».';
+
+  @override
+  String get exportAllDataConfirm => 'تصدير';
+
+  @override
+  String get exportAllDataEmpty => 'لا توجد بيانات لتصديرها بعد';
+
+  @override
+  String get exportAccountsHeading => 'الحسابات';
+
+  @override
+  String get exportEntriesHeading => 'العمليات';
+
+  @override
+  String get exportAllDataFileTitle => 'جميع بيانات ديوني';
+
+  @override
+  String get createdDateLabel => 'تاريخ الإنشاء';
 }

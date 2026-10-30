@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/support_contacts.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
@@ -10,17 +11,6 @@ import '../../widgets/shared/app_logo.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
-/// Contact details are fixed constants (not user-editable data), matching the pattern used
-/// throughout the settings screens for anything that isn't stored per-account.
-///
-/// DISCLOSED ASSUMPTION: the number was given without a country code — assumed +967 (Yemen),
-/// matching the project's default currency/locale context. If that's wrong, only these three
-/// lines need to change.
-const _contactPhoneLocal = '772906988';
-const _whatsappNumber = '967$_contactPhoneLocal'; // wa.me format: country code + number, no '+'
-const _callNumber = '+967$_contactPhoneLocal';
-const _supportEmail = 'sba849198@gmail.com';
-
 /// "تواصل معنا" — reached from the drawer (now a real destination, see app_drawer.dart) and from
 /// AboutScreen's own contact button. WhatsApp opens a chat prefilled with a default help-request
 /// message (contactUsDefaultMessage); the same message is reused as the email body so the person
@@ -30,7 +20,7 @@ class ContactUsScreen extends StatelessWidget {
 
   Future<void> _openWhatsApp(BuildContext context, AppLocalizations l10n) async {
     try {
-      await launchWhatsAppChat(_whatsappNumber, l10n.contactUsDefaultMessage);
+      await launchWhatsAppChat(SupportContacts.whatsappNumber, l10n.contactUsDefaultMessage);
     } catch (_) {
       if (context.mounted) AppSnackBar.showError(context, l10n.contactUsWhatsappFailedMessage);
     }
@@ -38,7 +28,7 @@ class ContactUsScreen extends StatelessWidget {
 
   Future<void> _call(BuildContext context, AppLocalizations l10n) async {
     try {
-      await launchPhoneDialer(_callNumber);
+      await launchPhoneDialer(SupportContacts.callNumber);
     } catch (_) {
       if (context.mounted) AppSnackBar.showError(context, l10n.callFailedMessage);
     }
@@ -47,7 +37,7 @@ class ContactUsScreen extends StatelessWidget {
   Future<void> _sendEmail(BuildContext context, AppLocalizations l10n) async {
     try {
       await launchSupportEmail(
-        email: _supportEmail,
+        email: SupportContacts.email,
         subject: l10n.contactUsEmailSubject,
         body: l10n.contactUsDefaultMessage,
       );

@@ -3,22 +3,74 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
+import '../../../core/constants/app_links.dart';
 import '../../../core/constants/legal_links.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/web_launcher.dart';
 import '../../../logic/settings/locale_provider.dart';
 import '../../../logic/auth/auth_provider.dart';
+import '../../../logic/reports/report_delivery.dart';
 import '../shared/app_logo.dart';
+import 'rate_app_sheet.dart';
 import '../shared/app_snackbar.dart';
 import '../shared/language_toggle_button.dart';
 import '../shared/theme_toggle_button.dart';
 
+/// Route-slot markers for drawer entries that run an action instead of opening a screen (same
+/// idea as [LegalLinks.privacyRouteMarker]).
+const _shareAppMarker = '#share-app';
+const _rateAppMarker = '#rate-app';
+const _exportDataMarker = '#export-data';
+
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
+
+  Future<void> _shareApp(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
+    final language = ref.read(localeProvider).languageCode;
+    try {
+      await SharePlus.instance.share(
+        ShareParams(text: l10n.shareAppMessage(AppLinks.shareUrl(language)), subject: l10n.shareAppSubject),
+      );
+    } catch (_) {
+      if (context.mounted) AppSnackBar.showError(context, l10n.unexpectedError);
+    }
+  }
+
+  /// Asks first: the file is NOT encrypted, so the person must know that before it leaves.
+  Future<void> _exportData(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
+    final shell = context.shellColors;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: shell.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text(l10n.exportAllDataTitle, style: AppTextStyles.title(dialogContext).copyWith(color: shell.textPrimary)),
+        content: Text(l10n.exportAllDataBody, style: AppTextStyles.body(dialogContext).copyWith(color: shell.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel, style: TextStyle(color: shell.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.exportAllDataConfirm, style: TextStyle(color: shell.accent, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      final exported = await exportAllData(ref, l10n);
+      if (!exported && context.mounted) AppSnackBar.showError(context, l10n.exportAllDataEmpty);
+    } catch (_) {
+      if (context.mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
+    }
+  }
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
     final confirmed = await showDialog<bool>(
@@ -69,6 +121,18 @@ class AppDrawer extends ConsumerWidget {
       _showComingSoon(context, l10n);
       return;
     }
+    if (route == _shareAppMarker) {
+      await _shareApp(context, ref, l10n);
+      return;
+    }
+    if (route == _rateAppMarker) {
+      await showRateAppSheet(context);
+      return;
+    }
+    if (route == _exportDataMarker) {
+      await _exportData(context, ref, l10n);
+      return;
+    }
     if (route == LegalLinks.privacyRouteMarker) {
       final languageCode = ref.read(localeProvider).languageCode;
       try {
@@ -109,9 +173,9 @@ class AppDrawer extends ConsumerWidget {
       (Icons.save_alt_outlined, l10n.drawerLocalBackup, '/local-backup'),
       (Icons.cloud_outlined, l10n.drawerGoogleBackup, '/drive-backup'),
       (Icons.sync_outlined, l10n.drawerGoogleDriveSync, '/drive-backup'),
-      (Icons.dns_outlined, l10n.drawerSendDatabase, null),
-      (Icons.share_outlined, l10n.drawerShareApp, null),
-      (Icons.star_outline, l10n.drawerRateApp, null),
+      (Icons.dns_outlined, l10n.drawerSendDatabase, _exportDataMarker),
+      (Icons.share_outlined, l10n.drawerShareApp, _shareAppMarker),
+      (Icons.star_outline, l10n.drawerRateApp, _rateAppMarker),
       (Icons.privacy_tip_outlined, l10n.drawerPrivacyPolicy, LegalLinks.privacyRouteMarker),
       // "الدعم الفني" and the old "تواصل معنا" were the same thing (WhatsApp / call / email), so
       // there is one entry now, with the support name.

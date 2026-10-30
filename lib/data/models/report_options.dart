@@ -1,8 +1,6 @@
 /// The five summary-report variants offered on the "التقارير" sheet reached from the Reports
-/// screen (all accounts). Only [totalAmounts] is fully implemented this batch — the other four
-/// are real, selectable options in the UI (matching the reference exactly) but generating one of
-/// them currently shows an honest "still under development" message instead of silently
-/// producing wrong output. See ReportsScreen's doc comment for the full disclosure.
+/// screen (all accounts). [totalAmounts] has its own builder; the other four are produced by
+/// ReportBuilders (logic/reports/tabular_report.dart), which groups every amount per currency.
 enum SummaryReportType {
   totalAmounts,
   allAmountsDetails,
@@ -12,8 +10,8 @@ enum SummaryReportType {
 }
 
 /// The two account-statement variants offered on the "التقارير" sheet reached from Account
-/// Details (one account). Only [statement] is fully implemented this batch — see the doc comment
-/// on [SummaryReportType] for why [monthlyStatement] is UI-complete but generation-pending.
+/// Details (one account): the full [statement] and the [monthlyStatement] (per-month opening and
+/// closing balance, built by ReportBuilders.accountMonthlyStatement).
 enum AccountReportType {
   statement,
   monthlyStatement,

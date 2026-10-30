@@ -701,7 +701,7 @@ abstract class AppLocalizations {
   /// No description provided for @drawerSendDatabase.
   ///
   /// In ar, this message translates to:
-  /// **'إرسال قاعدة البيانات'**
+  /// **'تصدير جميع البيانات'**
   String get drawerSendDatabase;
 
   /// No description provided for @drawerShareApp.
@@ -3074,6 +3074,174 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'"نعم" أو "احفظ" أو "عدل المبلغ إلى 3500"'**
   String get voiceYouCanSayExamples;
+
+  /// No description provided for @reportMonthHeader.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشهر'**
+  String get reportMonthHeader;
+
+  /// No description provided for @reportNetHeader.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصافي'**
+  String get reportNetHeader;
+
+  /// No description provided for @reportAccountsCountHeader.
+  ///
+  /// In ar, this message translates to:
+  /// **'عدد الحسابات'**
+  String get reportAccountsCountHeader;
+
+  /// No description provided for @reportOpeningBalance.
+  ///
+  /// In ar, this message translates to:
+  /// **'رصيد سابق'**
+  String get reportOpeningBalance;
+
+  /// No description provided for @reportClosingBalance.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرصيد في نهاية الشهر'**
+  String get reportClosingBalance;
+
+  /// No description provided for @reportMonthTotal.
+  ///
+  /// In ar, this message translates to:
+  /// **'إجمالي الشهر'**
+  String get reportMonthTotal;
+
+  /// No description provided for @reportGrandTotal.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإجمالي'**
+  String get reportGrandTotal;
+
+  /// No description provided for @reportNoDataMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد عمليات ضمن الفترة أو التصنيف المحدد'**
+  String get reportNoDataMessage;
+
+  /// No description provided for @shareAppSubject.
+  ///
+  /// In ar, this message translates to:
+  /// **'تطبيق ديوني'**
+  String get shareAppSubject;
+
+  /// No description provided for @shareAppMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تطبيق ديوني لتسجيل الديون وإدارة الحسابات بين العملاء والموردين، ويدعم الإدخال الصوتي بالعربية. حمّله من هنا: {url}'**
+  String shareAppMessage(String url);
+
+  /// No description provided for @rateSheetTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما رأيك في ديوني؟'**
+  String get rateSheetTitle;
+
+  /// No description provided for @rateSheetSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط على عدد النجوم الذي يناسبك'**
+  String get rateSheetSubtitle;
+
+  /// No description provided for @rateHighBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'يسعدنا أن التطبيق أعجبك! شاركه مع من قد يستفيد منه.'**
+  String get rateHighBody;
+
+  /// No description provided for @rateStoreButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيّم على المتجر'**
+  String get rateStoreButton;
+
+  /// No description provided for @rateLowBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'نأسف لأن التجربة لم تكن كما تتوقع. ما الذي يمكننا تحسينه؟'**
+  String get rateLowBody;
+
+  /// No description provided for @rateFeedbackHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب ملاحظتك هنا (اختياري)'**
+  String get rateFeedbackHint;
+
+  /// No description provided for @rateSendWhatsapp.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال عبر واتساب'**
+  String get rateSendWhatsapp;
+
+  /// No description provided for @rateSendEmail.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال بالبريد الإلكتروني'**
+  String get rateSendEmail;
+
+  /// No description provided for @rateEmailSubject.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقييم تطبيق ديوني'**
+  String get rateEmailSubject;
+
+  /// No description provided for @rateFeedbackMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقييمي لتطبيق ديوني: {stars} من 5 {note}'**
+  String rateFeedbackMessage(String stars, String note);
+
+  /// No description provided for @exportAllDataTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصدير جميع البيانات'**
+  String get exportAllDataTitle;
+
+  /// No description provided for @exportAllDataBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيُنشأ ملف Excel يضم كل الحسابات والعمليات، وهو غير مشفّر. اختر بعد ذلك التطبيق الذي سترسله عبره وشاركه مع من تثق به فقط. لنسخة احتياطية قابلة للاستعادة استخدم «حفظ واسترجاع البيانات من الجهاز».'**
+  String get exportAllDataBody;
+
+  /// No description provided for @exportAllDataConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصدير'**
+  String get exportAllDataConfirm;
+
+  /// No description provided for @exportAllDataEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد بيانات لتصديرها بعد'**
+  String get exportAllDataEmpty;
+
+  /// No description provided for @exportAccountsHeading.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحسابات'**
+  String get exportAccountsHeading;
+
+  /// No description provided for @exportEntriesHeading.
+  ///
+  /// In ar, this message translates to:
+  /// **'العمليات'**
+  String get exportEntriesHeading;
+
+  /// No description provided for @exportAllDataFileTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'جميع بيانات ديوني'**
+  String get exportAllDataFileTitle;
+
+  /// No description provided for @createdDateLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ الإنشاء'**
+  String get createdDateLabel;
 }
 
 class _AppLocalizationsDelegate
