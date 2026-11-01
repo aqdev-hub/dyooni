@@ -13,6 +13,7 @@ import '../../data/repositories/transactions/transactions_firestore_repository_i
 import '../../data/remote/firestore/transactions_firestore_datasource.dart';
 import '../auth/auth_provider.dart' show authStateProvider;
 import '../onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
+import 'transfer_logic.dart';
 
 final transactionsLocalDataSourceProvider = Provider<TransactionsLocalDataSource>(
   (ref) => TransactionsLocalDataSource(ref.watch(sharedPreferencesProvider)),
@@ -87,6 +88,34 @@ class TransactionsController extends AsyncNotifier<List<Transaction>> {
     await ref.read(transactionsRepositoryProvider).deleteTransaction(id);
     await _deleteRecordingFiles(deleted);
     state = AsyncData((state.value ?? const <Transaction>[]).where((t) => t.id != id).toList());
+  }
+
+  /// Saves both entries of a transfer. They are two separate writes, so if the second one fails
+  /// the first is removed again — a half-made transfer would move money out of one account
+  /// without it arriving anywhere.
+  Future<void> addTransfer(TransferLegs legs) async {
+    await addTransaction(legs.debit);
+    try {
+      await addTransaction(legs.credit);
+    } catch (_) {
+      try {
+        await deleteTransaction(legs.debit.id);
+      } catch (_) {
+        // Nothing more can be done here; the original error below is what matters.
+      }
+      rethrow;
+    }
+  }
+
+  /// Deletes every entry that belongs to [transferId] (normally the two legs).
+  Future<void> deleteTransfer(String transferId) async {
+    final ids = [
+      for (final t in state.value ?? const <Transaction>[])
+        if (t.transferId == transferId) t.id,
+    ];
+    for (final id in ids) {
+      await deleteTransaction(id);
+    }
   }
 
   Future<void> deleteForAccount(String accountId) async {

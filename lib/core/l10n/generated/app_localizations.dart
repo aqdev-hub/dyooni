@@ -3075,6 +3075,450 @@ abstract class AppLocalizations {
   /// **'"نعم" أو "احفظ" أو "عدل المبلغ إلى 3500"'**
   String get voiceYouCanSayExamples;
 
+  /// No description provided for @rateOnPageButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيّم من صفحة التطبيق'**
+  String get rateOnPageButton;
+
+  /// No description provided for @menuSendMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال رسالة'**
+  String get menuSendMessage;
+
+  /// No description provided for @menuAddReminder.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة تذكير'**
+  String get menuAddReminder;
+
+  /// No description provided for @menuQuickCurrency.
+  ///
+  /// In ar, this message translates to:
+  /// **'الانتقال السريع للعملات'**
+  String get menuQuickCurrency;
+
+  /// No description provided for @menuIssueReport.
+  ///
+  /// In ar, this message translates to:
+  /// **'إصدار تقرير'**
+  String get menuIssueReport;
+
+  /// No description provided for @menuTransferAmount.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل مبلغ'**
+  String get menuTransferAmount;
+
+  /// No description provided for @menuRateApp.
+  ///
+  /// In ar, this message translates to:
+  /// **'امنحنا خمس نجوم'**
+  String get menuRateApp;
+
+  /// No description provided for @transferTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل'**
+  String get transferTitle;
+
+  /// No description provided for @transferThisAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الحساب'**
+  String get transferThisAccount;
+
+  /// No description provided for @transferFromHere.
+  ///
+  /// In ar, this message translates to:
+  /// **'من هذا الحساب'**
+  String get transferFromHere;
+
+  /// No description provided for @transferToHere.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلى هذا الحساب'**
+  String get transferToHere;
+
+  /// No description provided for @transferOtherAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحساب الآخر'**
+  String get transferOtherAccount;
+
+  /// No description provided for @transferChooseAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر الحساب الآخر'**
+  String get transferChooseAccount;
+
+  /// No description provided for @transferSearchHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن حساب'**
+  String get transferSearchHint;
+
+  /// No description provided for @transferNoOtherAccounts.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد حسابات أخرى للتحويل منها أو إليها. أضف حساباً آخر أولاً.'**
+  String get transferNoOtherAccounts;
+
+  /// No description provided for @transferNoteHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة (اختياري)'**
+  String get transferNoteHint;
+
+  /// No description provided for @transferSave.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنفيذ التحويل'**
+  String get transferSave;
+
+  /// No description provided for @transferPreviewTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملخص التحويل'**
+  String get transferPreviewTitle;
+
+  /// No description provided for @transferPreviewDebit.
+  ///
+  /// In ar, this message translates to:
+  /// **'{name}: يُخصم {amount} ← الرصيد بعد التحويل {balance}'**
+  String transferPreviewDebit(String name, String amount, String balance);
+
+  /// No description provided for @transferPreviewCredit.
+  ///
+  /// In ar, this message translates to:
+  /// **'{name}: يُضاف {amount} ← الرصيد بعد التحويل {balance}'**
+  String transferPreviewCredit(String name, String amount, String balance);
+
+  /// No description provided for @transferSameAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يمكن التحويل إلى نفس الحساب'**
+  String get transferSameAccount;
+
+  /// No description provided for @transferDetailsTo.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل إلى {name}'**
+  String transferDetailsTo(String name);
+
+  /// No description provided for @transferDetailsFrom.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل من {name}'**
+  String transferDetailsFrom(String name);
+
+  /// No description provided for @transferSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم التحويل بنجاح'**
+  String get transferSuccess;
+
+  /// No description provided for @transferEntryTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا القيد جزء من تحويل'**
+  String get transferEntryTitle;
+
+  /// No description provided for @transferEntryBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك حذف التحويل كاملاً (من الحسابين معاً) أو تعديل هذا القيد وحده. تعديل أحد الطرفين وحده لا يغيّر الطرف الآخر.'**
+  String get transferEntryBody;
+
+  /// No description provided for @transferDeleteBoth.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف التحويل كاملاً'**
+  String get transferDeleteBoth;
+
+  /// No description provided for @transferEditOne.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل هذا القيد فقط'**
+  String get transferEditOne;
+
+  /// No description provided for @transferDeleted.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حذف التحويل من الحسابين'**
+  String get transferDeleted;
+
+  /// No description provided for @messageSheetTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسالة إلى {name}'**
+  String messageSheetTitle(String name);
+
+  /// No description provided for @messageNoPhoneTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد رقم هاتف لهذا الحساب'**
+  String get messageNoPhoneTitle;
+
+  /// No description provided for @messageNoPhoneBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف رقم الهاتف من «تعديل الحساب» لتتمكن من إرسال الرسائل مباشرة.'**
+  String get messageNoPhoneBody;
+
+  /// No description provided for @messageChooseTemplate.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر نوع الرسالة'**
+  String get messageChooseTemplate;
+
+  /// No description provided for @messageTemplateFriendly.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذكير ودّي'**
+  String get messageTemplateFriendly;
+
+  /// No description provided for @messageTemplateDemand.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطالبة بالسداد'**
+  String get messageTemplateDemand;
+
+  /// No description provided for @messageTemplateThanks.
+  ///
+  /// In ar, this message translates to:
+  /// **'شكر بعد السداد'**
+  String get messageTemplateThanks;
+
+  /// No description provided for @messageTemplateStatement.
+  ///
+  /// In ar, this message translates to:
+  /// **'كشف الحساب'**
+  String get messageTemplateStatement;
+
+  /// No description provided for @messageTemplateConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد الرصيد'**
+  String get messageTemplateConfirm;
+
+  /// No description provided for @messageBodyFriendly.
+  ///
+  /// In ar, this message translates to:
+  /// **'السلام عليكم {name}، تذكير ودّي بأن رصيدكم المستحق لدينا {balance}. نرجو التكرم بالسداد في أقرب وقت ممكن، وشكراً لتعاونكم.'**
+  String messageBodyFriendly(String name, String balance);
+
+  /// No description provided for @messageBodyDemand.
+  ///
+  /// In ar, this message translates to:
+  /// **'السلام عليكم {name}، نفيدكم بأن المبلغ المستحق عليكم هو {balance}. نرجو سداده في أقرب وقت، أو إبلاغنا بموعد السداد المناسب.'**
+  String messageBodyDemand(String name, String balance);
+
+  /// No description provided for @messageBodyThanks.
+  ///
+  /// In ar, this message translates to:
+  /// **'السلام عليكم {name}، شكراً لكم على السداد، جزاكم الله خيراً. رصيد حسابكم الآن: {balance}.'**
+  String messageBodyThanks(String name, String balance);
+
+  /// No description provided for @messageBodyConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'السلام عليكم {name}، للتأكيد: رصيد حسابكم لدينا {balance}. إن كان لديكم أي ملاحظة فنرجو إبلاغنا.'**
+  String messageBodyConfirm(String name, String balance);
+
+  /// No description provided for @messageBodyStatement.
+  ///
+  /// In ar, this message translates to:
+  /// **'السلام عليكم {name}، كشف حسابكم (آخر العمليات): {lines} الرصيد: {balance}'**
+  String messageBodyStatement(String name, String lines, String balance);
+
+  /// No description provided for @messageStatementLine.
+  ///
+  /// In ar, this message translates to:
+  /// **'{date}  {amount}  {direction}  {details}'**
+  String messageStatementLine(String date, String amount, String direction, String details);
+
+  /// No description provided for @messageEditHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك تعديل نص الرسالة قبل الإرسال'**
+  String get messageEditHint;
+
+  /// No description provided for @messageSendWhatsapp.
+  ///
+  /// In ar, this message translates to:
+  /// **'واتساب'**
+  String get messageSendWhatsapp;
+
+  /// No description provided for @messageSendSms.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسالة نصية'**
+  String get messageSendSms;
+
+  /// No description provided for @messageCopy.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ'**
+  String get messageCopy;
+
+  /// No description provided for @messageCopied.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نسخ الرسالة'**
+  String get messageCopied;
+
+  /// No description provided for @messageSendFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر فتح تطبيق الإرسال'**
+  String get messageSendFailed;
+
+  /// No description provided for @messageLastSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر إرسال: {date}'**
+  String messageLastSent(String date);
+
+  /// No description provided for @messageBalanceNone.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد رصيد'**
+  String get messageBalanceNone;
+
+  /// No description provided for @reminderSheetTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيهات السداد'**
+  String get reminderSheetTitle;
+
+  /// No description provided for @reminderAdd.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة تنبيه'**
+  String get reminderAdd;
+
+  /// No description provided for @reminderEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد تنبيهات لهذا الحساب بعد'**
+  String get reminderEmpty;
+
+  /// No description provided for @reminderDateLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'التاريخ'**
+  String get reminderDateLabel;
+
+  /// No description provided for @reminderTimeLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوقت'**
+  String get reminderTimeLabel;
+
+  /// No description provided for @reminderRepeatLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'التكرار'**
+  String get reminderRepeatLabel;
+
+  /// No description provided for @reminderRepeatNone.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرة واحدة'**
+  String get reminderRepeatNone;
+
+  /// No description provided for @reminderRepeatWeekly.
+  ///
+  /// In ar, this message translates to:
+  /// **'أسبوعياً'**
+  String get reminderRepeatWeekly;
+
+  /// No description provided for @reminderRepeatMonthly.
+  ///
+  /// In ar, this message translates to:
+  /// **'شهرياً'**
+  String get reminderRepeatMonthly;
+
+  /// No description provided for @reminderNoteHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة (اختياري)'**
+  String get reminderNoteHint;
+
+  /// No description provided for @reminderSave.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ التنبيه'**
+  String get reminderSave;
+
+  /// No description provided for @reminderPastTime.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر وقتاً في المستقبل'**
+  String get reminderPastTime;
+
+  /// No description provided for @reminderNext.
+  ///
+  /// In ar, this message translates to:
+  /// **'التنبيه القادم: {when}'**
+  String reminderNext(String when);
+
+  /// No description provided for @reminderFinished.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهى هذا التنبيه'**
+  String get reminderFinished;
+
+  /// No description provided for @reminderDeleted.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حذف التنبيه'**
+  String get reminderDeleted;
+
+  /// No description provided for @reminderSaved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حفظ التنبيه'**
+  String get reminderSaved;
+
+  /// No description provided for @reminderPermissionDenied.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإشعارات غير مفعّلة لتطبيق ديوني. فعّلها من إعدادات الهاتف ليصلك التنبيه في موعده.'**
+  String get reminderPermissionDenied;
+
+  /// No description provided for @reminderNotifTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذكير: {name}'**
+  String reminderNotifTitle(String name);
+
+  /// No description provided for @reminderNotifBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'حان موعد متابعة هذا الحساب'**
+  String get reminderNotifBody;
+
+  /// No description provided for @reminderChannelName.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيهات السداد'**
+  String get reminderChannelName;
+
+  /// No description provided for @reminderChannelDescription.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذكيرات بمواعيد متابعة وسداد الحسابات'**
+  String get reminderChannelDescription;
+
+  /// No description provided for @reminderDeleteConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف هذا التنبيه؟'**
+  String get reminderDeleteConfirm;
+
   /// No description provided for @reportMonthHeader.
   ///
   /// In ar, this message translates to:

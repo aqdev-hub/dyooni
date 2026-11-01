@@ -588,5 +588,121 @@
   "exportAccountsHeading": "Accounts",
   "exportEntriesHeading": "Entries",
   "exportAllDataFileTitle": "All Dyooni data",
-  "createdDateLabel": "Created on"
+  "createdDateLabel": "Created on",
+  "transferTitle": "Transfer",
+  "transferThisAccount": "This account",
+  "transferFromHere": "From this account",
+  "transferToHere": "To this account",
+  "transferOtherAccount": "Other account",
+  "transferChooseAccount": "Choose the other account",
+  "transferSearchHint": "Search accounts",
+  "transferNoOtherAccounts": "There are no other accounts to transfer with. Add another account first.",
+  "transferNoteHint": "Note (optional)",
+  "transferSave": "Make the transfer",
+  "transferPreviewTitle": "Transfer summary",
+  "transferPreviewDebit": "{name}: {amount} is deducted → balance after: {balance}",
+  "@transferPreviewDebit": {
+    "placeholders": {"name": {"type": "String"}, "amount": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "transferPreviewCredit": "{name}: {amount} is added → balance after: {balance}",
+  "@transferPreviewCredit": {
+    "placeholders": {"name": {"type": "String"}, "amount": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "transferSameAccount": "You cannot transfer to the same account",
+  "transferDetailsTo": "Transfer to {name}",
+  "@transferDetailsTo": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "transferDetailsFrom": "Transfer from {name}",
+  "@transferDetailsFrom": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "transferSuccess": "Transfer completed",
+  "transferEntryTitle": "This entry is part of a transfer",
+  "transferEntryBody": "You can delete the whole transfer (both accounts) or edit only this entry. Editing one side does not change the other.",
+  "transferDeleteBoth": "Delete the whole transfer",
+  "transferEditOne": "Edit this entry only",
+  "transferDeleted": "Transfer deleted from both accounts",
+  "messageSheetTitle": "Message to {name}",
+  "@messageSheetTitle": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "messageNoPhoneTitle": "This account has no phone number",
+  "messageNoPhoneBody": "Add a phone number in “Edit account” to send messages directly.",
+  "messageChooseTemplate": "Choose a message type",
+  "messageTemplateFriendly": "Friendly reminder",
+  "messageTemplateDemand": "Payment request",
+  "messageTemplateThanks": "Thanks after payment",
+  "messageTemplateStatement": "Account statement",
+  "messageTemplateConfirm": "Balance confirmation",
+  "messageBodyFriendly": "Hello {name},\nA friendly reminder that the amount due is {balance}.\nPlease settle it when you can. Thank you!",
+  "@messageBodyFriendly": {
+    "placeholders": {"name": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "messageBodyDemand": "Hello {name},\nThe amount you owe is {balance}.\nPlease pay it soon or let us know a suitable date.",
+  "@messageBodyDemand": {
+    "placeholders": {"name": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "messageBodyThanks": "Hello {name},\nThank you for the payment.\nYour balance is now: {balance}.",
+  "@messageBodyThanks": {
+    "placeholders": {"name": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "messageBodyConfirm": "Hello {name},\nTo confirm: your balance with us is {balance}.\nPlease tell us if anything looks wrong.",
+  "@messageBodyConfirm": {
+    "placeholders": {"name": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "messageBodyStatement": "Hello {name},\nYour account statement (latest entries):\n{lines}\nBalance: {balance}",
+  "@messageBodyStatement": {
+    "placeholders": {"name": {"type": "String"}, "lines": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "messageStatementLine": "{date}  {amount}  {direction}  {details}",
+  "@messageStatementLine": {
+    "placeholders": {"date": {"type": "String"}, "amount": {"type": "String"}, "direction": {"type": "String"}, "details": {"type": "String"}}
+  },
+  "messageEditHint": "You can edit the message before sending",
+  "messageSendWhatsapp": "WhatsApp",
+  "messageSendSms": "SMS",
+  "messageCopy": "Copy",
+  "messageCopied": "Message copied",
+  "messageSendFailed": "Could not open the messaging app",
+  "messageLastSent": "Last sent: {date}",
+  "@messageLastSent": {
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "messageBalanceNone": "no balance",
+  "reminderSheetTitle": "Payment reminders",
+  "reminderAdd": "Add reminder",
+  "reminderEmpty": "No reminders for this account yet",
+  "reminderDateLabel": "Date",
+  "reminderTimeLabel": "Time",
+  "reminderRepeatLabel": "Repeat",
+  "reminderRepeatNone": "Once",
+  "reminderRepeatWeekly": "Weekly",
+  "reminderRepeatMonthly": "Monthly",
+  "reminderNoteHint": "Note (optional)",
+  "reminderSave": "Save reminder",
+  "reminderPastTime": "Choose a time in the future",
+  "reminderNext": "Next: {when}",
+  "@reminderNext": {
+    "placeholders": {"when": {"type": "String"}}
+  },
+  "reminderFinished": "This reminder has finished",
+  "reminderDeleted": "Reminder deleted",
+  "reminderSaved": "Reminder saved",
+  "reminderPermissionDenied": "Notifications are off for Dyooni. Turn them on in the phone settings to receive reminders.",
+  "reminderNotifTitle": "Reminder: {name}",
+  "@reminderNotifTitle": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "reminderNotifBody": "Time to follow up on this account",
+  "reminderChannelName": "Payment reminders",
+  "reminderChannelDescription": "Reminders to follow up on or settle accounts",
+  "reminderDeleteConfirm": "Delete this reminder?",
+  "rateOnPageButton": "Rate on the app page",
+  "menuSendMessage": "Send a message",
+  "menuAddReminder": "Add a reminder",
+  "menuQuickCurrency": "Quick currency switch",
+  "menuIssueReport": "Issue a report",
+  "menuTransferAmount": "Transfer an amount",
+  "menuRateApp": "Give us five stars"
 }

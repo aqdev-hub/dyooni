@@ -3,15 +3,15 @@ import '../../../core/theme/app_colors.dart';
 
 class AccountActionIconRow extends StatelessWidget {
   const AccountActionIconRow({
-    required this.onAddAction,
-    required this.onShare,
+    required this.onReminder,
+    required this.onTransfer,
     required this.onMessage,
     required this.onCurrency,
     super.key,
   });
 
-  final VoidCallback onAddAction;
-  final VoidCallback onShare;
+  final VoidCallback onReminder;
+  final VoidCallback onTransfer;
   final VoidCallback onMessage;
   final VoidCallback onCurrency;
 
@@ -26,14 +26,13 @@ class AccountActionIconRow extends StatelessWidget {
         children: [
           _ActionCircle(icon: Icons.attach_money_rounded, onTap: onCurrency),
           const SizedBox(width: 7),
-          // The gold "+" is the one REAL action here — it opens Add Transaction. The other
-          // three are honest placeholders (see account_details_screen.dart) — per your note,
-          // these are meant to open their own popups later; that behavior isn't built yet.
+          // Left to right: currency · messages (claim/remind the account holder) · reminder
+          // (payment-date notification) · transfer (move an amount to another account).
           _ActionCircle(icon: Icons.chat_bubble_outline_rounded, onTap: onMessage),
           const SizedBox(width: 7),
-          _ActionCircle(icon: Icons.alarm_rounded, onTap: onAddAction),
+          _ActionCircle(icon: Icons.alarm_rounded, onTap: onReminder),
           const SizedBox(width: 7),
-          _ActionCircle(icon: Icons.swap_horiz_rounded, onTap: onShare),
+          _ActionCircle(icon: Icons.swap_horiz_rounded, onTap: onTransfer),
         ],
       ),
       ),

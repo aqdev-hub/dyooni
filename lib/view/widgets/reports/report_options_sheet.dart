@@ -118,10 +118,12 @@ class _ReportOptionsSheetState<T> extends State<ReportOptionsSheet<T>> {
                     ),
                   ),
                   const SizedBox(width: 10),
+                  // Back / cancel: closes the sheet without generating anything. (It used to open the
+                  // WhatsApp share chooser, which already has its own icon at the bottom.)
                   IconButton(
-                    icon: Icon(Icons.reply_rounded, color: shell.accent),
-                    onPressed: _openShareFormatSheet,
-                    tooltip: l10n.reportShareFormatTitle,
+                    icon: Icon(Icons.arrow_forward_ios_rounded, color: shell.accent),
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                   ),
                 ],
               ),

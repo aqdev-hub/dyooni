@@ -27,3 +27,11 @@ Future<void> launchSupportEmail({
   final launched = await launchUrl(uri);
   if (!launched) throw StateError('No app available to handle mailto: URIs');
 }
+
+/// Opens the default messaging app with [phone] and a prefilled [body] (a plain SMS). Throws on
+/// failure so the caller shows its own message — same contract as the helpers above.
+Future<void> launchSmsComposer({required String phone, required String body}) async {
+  final uri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': body});
+  final launched = await launchUrl(uri);
+  if (!launched) throw StateError('No app available to handle sms: URIs');
+}

@@ -45,6 +45,7 @@ class TransactionsFirestoreRepositoryImpl implements TransactionsRepository {
       attachmentPath: transaction.attachmentPath,
       voiceRecording: transaction.voiceRecording,
       updatedAt: DateTime.now(),
+      transferId: transaction.transferId,
     );
     final current = await _legacy.getAll();
     final index = current.indexWhere((value) => value.id == stamped.id);

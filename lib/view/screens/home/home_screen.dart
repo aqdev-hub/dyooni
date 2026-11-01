@@ -16,6 +16,7 @@ import '../../../logic/accounts/currency_accounts_provider.dart';
 import '../../../logic/categories/categories_provider.dart';
 import '../../../data/models/category_type.dart';
 import '../../../logic/currencies/currencies_provider.dart';
+import '../../../logic/reminders/reminders_provider.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/drive_backup_controller.dart';
 import '../../widgets/home/account_list_tile.dart';
@@ -158,6 +159,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  bool _remindersSynced = false;
+
+  /// Once accounts are loaded: (1) top up the scheduled reminder notifications once per launch,
+  /// (2) if a notification was tapped, open that account. The tap is kept pending until the
+  /// accounts exist, so a cold start from a notification still lands on the right screen.
+  void _onAccountsReady(List<Account> accounts) {
+    if (!mounted) return;
+    if (!_remindersSynced) {
+      _remindersSynced = true;
+      final l10n = AppLocalizations.of(context);
+      if (l10n != null) {
+        unawaited(ref.read(remindersProvider.notifier).syncAll(l10n).catchError((_) {}));
+      }
+    }
+    final pending = ref.read(pendingNotificationAccountProvider);
+    if (pending == null) return;
+    final match = accounts.where((a) => a.id == pending);
+    ref.read(pendingNotificationAccountProvider.notifier).state = null;
+    if (match.isEmpty) return;
+    unawaited(context.push('/account-details', extra: match.first));
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -192,6 +215,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final selectionMode = ref.watch(accountSelectionModeProvider);
     final selectedIds = ref.watch(selectedAccountIdsProvider);
     final pinMatches = ref.watch(generalSettingsProvider).value?.pinMatchingAccountsOnSearch ?? true;
+
+    ref.listen<AsyncValue<List<Account>>>(accountsProvider, (_, next) {
+      final list = next.value;
+      if (list != null) _onAccountsReady(list);
+    });
+    ref.listen<String?>(pendingNotificationAccountProvider, (_, next) {
+      final list = ref.read(accountsProvider).value;
+      if (next != null && list != null) _onAccountsReady(list);
+    });
 
     return AppScaffold(
       drawer: const AppDrawer(),

@@ -1694,4 +1694,254 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get createdDateLabel => 'Created on';
+
+  @override
+  String get transferTitle => 'Transfer';
+
+  @override
+  String get transferThisAccount => 'This account';
+
+  @override
+  String get transferFromHere => 'From this account';
+
+  @override
+  String get transferToHere => 'To this account';
+
+  @override
+  String get transferOtherAccount => 'Other account';
+
+  @override
+  String get transferChooseAccount => 'Choose the other account';
+
+  @override
+  String get transferSearchHint => 'Search accounts';
+
+  @override
+  String get transferNoOtherAccounts => 'There are no other accounts to transfer with. Add another account first.';
+
+  @override
+  String get transferNoteHint => 'Note (optional)';
+
+  @override
+  String get transferSave => 'Make the transfer';
+
+  @override
+  String get transferPreviewTitle => 'Transfer summary';
+
+  @override
+  String transferPreviewDebit(String name, String amount, String balance) {
+    return '$name: $amount is deducted → balance after: $balance';
+  }
+
+  @override
+  String transferPreviewCredit(String name, String amount, String balance) {
+    return '$name: $amount is added → balance after: $balance';
+  }
+
+  @override
+  String get transferSameAccount => 'You cannot transfer to the same account';
+
+  @override
+  String transferDetailsTo(String name) {
+    return 'Transfer to $name';
+  }
+
+  @override
+  String transferDetailsFrom(String name) {
+    return 'Transfer from $name';
+  }
+
+  @override
+  String get transferSuccess => 'Transfer completed';
+
+  @override
+  String get transferEntryTitle => 'This entry is part of a transfer';
+
+  @override
+  String get transferEntryBody => 'You can delete the whole transfer (both accounts) or edit only this entry. Editing one side does not change the other.';
+
+  @override
+  String get transferDeleteBoth => 'Delete the whole transfer';
+
+  @override
+  String get transferEditOne => 'Edit this entry only';
+
+  @override
+  String get transferDeleted => 'Transfer deleted from both accounts';
+
+  @override
+  String messageSheetTitle(String name) {
+    return 'Message to $name';
+  }
+
+  @override
+  String get messageNoPhoneTitle => 'This account has no phone number';
+
+  @override
+  String get messageNoPhoneBody => 'Add a phone number in “Edit account” to send messages directly.';
+
+  @override
+  String get messageChooseTemplate => 'Choose a message type';
+
+  @override
+  String get messageTemplateFriendly => 'Friendly reminder';
+
+  @override
+  String get messageTemplateDemand => 'Payment request';
+
+  @override
+  String get messageTemplateThanks => 'Thanks after payment';
+
+  @override
+  String get messageTemplateStatement => 'Account statement';
+
+  @override
+  String get messageTemplateConfirm => 'Balance confirmation';
+
+  @override
+  String messageBodyFriendly(String name, String balance) {
+    return 'Hello $name,\nA friendly reminder that the amount due is $balance.\nPlease settle it when you can. Thank you!';
+  }
+
+  @override
+  String messageBodyDemand(String name, String balance) {
+    return 'Hello $name,\nThe amount you owe is $balance.\nPlease pay it soon or let us know a suitable date.';
+  }
+
+  @override
+  String messageBodyThanks(String name, String balance) {
+    return 'Hello $name,\nThank you for the payment.\nYour balance is now: $balance.';
+  }
+
+  @override
+  String messageBodyConfirm(String name, String balance) {
+    return 'Hello $name,\nTo confirm: your balance with us is $balance.\nPlease tell us if anything looks wrong.';
+  }
+
+  @override
+  String messageBodyStatement(String name, String lines, String balance) {
+    return 'Hello $name,\nYour account statement (latest entries):\n$lines\nBalance: $balance';
+  }
+
+  @override
+  String messageStatementLine(String date, String amount, String direction, String details) {
+    return '$date  $amount  $direction  $details';
+  }
+
+  @override
+  String get messageEditHint => 'You can edit the message before sending';
+
+  @override
+  String get messageSendWhatsapp => 'WhatsApp';
+
+  @override
+  String get messageSendSms => 'SMS';
+
+  @override
+  String get messageCopy => 'Copy';
+
+  @override
+  String get messageCopied => 'Message copied';
+
+  @override
+  String get messageSendFailed => 'Could not open the messaging app';
+
+  @override
+  String messageLastSent(String date) {
+    return 'Last sent: $date';
+  }
+
+  @override
+  String get messageBalanceNone => 'no balance';
+
+  @override
+  String get reminderSheetTitle => 'Payment reminders';
+
+  @override
+  String get reminderAdd => 'Add reminder';
+
+  @override
+  String get reminderEmpty => 'No reminders for this account yet';
+
+  @override
+  String get reminderDateLabel => 'Date';
+
+  @override
+  String get reminderTimeLabel => 'Time';
+
+  @override
+  String get reminderRepeatLabel => 'Repeat';
+
+  @override
+  String get reminderRepeatNone => 'Once';
+
+  @override
+  String get reminderRepeatWeekly => 'Weekly';
+
+  @override
+  String get reminderRepeatMonthly => 'Monthly';
+
+  @override
+  String get reminderNoteHint => 'Note (optional)';
+
+  @override
+  String get reminderSave => 'Save reminder';
+
+  @override
+  String get reminderPastTime => 'Choose a time in the future';
+
+  @override
+  String reminderNext(String when) {
+    return 'Next: $when';
+  }
+
+  @override
+  String get reminderFinished => 'This reminder has finished';
+
+  @override
+  String get reminderDeleted => 'Reminder deleted';
+
+  @override
+  String get reminderSaved => 'Reminder saved';
+
+  @override
+  String get reminderPermissionDenied => 'Notifications are off for Dyooni. Turn them on in the phone settings to receive reminders.';
+
+  @override
+  String reminderNotifTitle(String name) {
+    return 'Reminder: $name';
+  }
+
+  @override
+  String get reminderNotifBody => 'Time to follow up on this account';
+
+  @override
+  String get reminderChannelName => 'Payment reminders';
+
+  @override
+  String get reminderChannelDescription => 'Reminders to follow up on or settle accounts';
+
+  @override
+  String get reminderDeleteConfirm => 'Delete this reminder?';
+
+  @override
+  String get rateOnPageButton => 'Rate on the app page';
+
+  @override
+  String get menuSendMessage => 'Send a message';
+
+  @override
+  String get menuAddReminder => 'Add a reminder';
+
+  @override
+  String get menuQuickCurrency => 'Quick currency switch';
+
+  @override
+  String get menuIssueReport => 'Issue a report';
+
+  @override
+  String get menuTransferAmount => 'Transfer an amount';
+
+  @override
+  String get menuRateApp => 'Give us five stars';
 }

@@ -15,6 +15,7 @@ class Transaction {
     this.attachmentPath,
     this.voiceRecording,
     this.updatedAt,
+    this.transferId,
   });
 
   final String id;
@@ -28,6 +29,13 @@ class Transaction {
   final VoiceRecording? voiceRecording;
   final DateTime? updatedAt;
 
+  /// Shared by the TWO entries of one transfer between accounts (the debit on the sending
+  /// account and the credit on the receiving one). `null` for every ordinary entry, including all
+  /// entries saved before transfers existed.
+  final String? transferId;
+
+  bool get isTransfer => transferId != null;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'accountId': accountId,
@@ -39,6 +47,7 @@ class Transaction {
         'attachmentPath': attachmentPath,
         'voiceRecording': voiceRecording?.toJson(),
         'updatedAt': updatedAt?.toIso8601String(),
+        if (transferId != null) 'transferId': transferId,
       };
 
   factory Transaction.fromJson(Map<String, dynamic> json) => Transaction(
@@ -54,6 +63,7 @@ class Transaction {
             ? VoiceRecording.fromJson(json['voiceRecording'] as Map<String, dynamic>)
             : null,
         updatedAt: json['updatedAt'] is String ? DateTime.tryParse(json['updatedAt'] as String) : null,
+        transferId: json['transferId'] as String?,
       );
 }
 

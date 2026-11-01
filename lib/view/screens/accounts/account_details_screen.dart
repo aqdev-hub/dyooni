@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -13,6 +14,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/voice_palette.dart';
+import '../../../core/utils/app_sharing.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/currency_type.dart';
 import '../../../data/models/personal_data.dart';
@@ -24,15 +26,19 @@ import '../../../logic/reports/pdf_report_service.dart';
 import '../../../logic/reports/report_delivery.dart';
 import '../../../logic/reports/report_export_provider.dart';
 import '../../../logic/reports/tabular_report.dart';
+import '../../../logic/settings/locale_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/accounts/account_action_icon_row.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
+import '../../widgets/accounts/account_message_sheet.dart';
 import '../../widgets/accounts/account_phone_row.dart';
+import '../../widgets/accounts/account_reminders_sheet.dart';
 import '../../widgets/accounts/transaction_table.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
+import '../../widgets/home/rate_app_sheet.dart';
 import '../../widgets/reports/report_options_sheet.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/currency_picker_sheet.dart';
@@ -42,6 +48,8 @@ import '../transactions/add_transaction_screen.dart';
 
 /// Real .xlsx MIME type — same reasoning as the earlier CSV export's explicit mimeType: without
 /// it, some spreadsheet/office apps' share-receiver mishandles the file on receipt.
+enum _TransferChoice { editOne, deleteBoth }
+
 const _xlsxMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 class AccountDetailsScreen extends ConsumerStatefulWidget {
@@ -191,6 +199,69 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Entries that belong to a transfer have two sides; changing one silently would unbalance the
+  /// accounts. So the person is asked first: delete the WHOLE transfer, or (when editing) change
+  /// just this entry.
+  Future<void> _editOrTransferEntry(BuildContext context, WidgetRef ref, AppLocalizations l10n, Transaction t) async {
+    if (!t.isTransfer) {
+      _openEditTransaction(context, t);
+      return;
+    }
+    final choice = await _askTransferChoice(context, l10n, allowEdit: true);
+    if (!context.mounted || choice == null) return;
+    if (choice == _TransferChoice.deleteBoth) {
+      await _deleteWholeTransfer(context, ref, l10n, t.transferId!);
+    } else {
+      _openEditTransaction(context, t);
+    }
+  }
+
+  Future<void> _deleteOrTransferEntry(BuildContext context, WidgetRef ref, AppLocalizations l10n, Transaction t) async {
+    if (!t.isTransfer) {
+      await _confirmDeleteTransaction(context, ref, l10n, t);
+      return;
+    }
+    final choice = await _askTransferChoice(context, l10n, allowEdit: false);
+    if (!context.mounted || choice != _TransferChoice.deleteBoth) return;
+    await _deleteWholeTransfer(context, ref, l10n, t.transferId!);
+  }
+
+  Future<void> _deleteWholeTransfer(BuildContext context, WidgetRef ref, AppLocalizations l10n, String transferId) async {
+    try {
+      await ref.read(transactionsProvider.notifier).deleteTransfer(transferId);
+      if (context.mounted) AppSnackBar.showSuccess(context, l10n.transferDeleted);
+    } catch (_) {
+      if (context.mounted) AppSnackBar.showError(context, l10n.unexpectedError);
+    }
+  }
+
+  Future<_TransferChoice?> _askTransferChoice(BuildContext context, AppLocalizations l10n, {required bool allowEdit}) {
+    return showDialog<_TransferChoice>(
+      context: context,
+      builder: (dialogContext) {
+        final dShell = dialogContext.shellColors;
+        return AlertDialog(
+          backgroundColor: dShell.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Text(l10n.transferEntryTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
+          content: Text(l10n.transferEntryBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
+            if (allowEdit)
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(_TransferChoice.editOne),
+                child: Text(l10n.transferEditOne, style: TextStyle(color: dShell.accent, fontWeight: FontWeight.w700)),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(_TransferChoice.deleteBoth),
+              child: Text(l10n.transferDeleteBoth, style: const TextStyle(color: AppColors.debit, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -547,16 +618,48 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                       color: shell.surface,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: shell.border)),
                       onSelected: (value) {
-                        if (value == 'edit') {
-                          _openEditAccount(context);
-                        } else if (value == 'delete') {
-                          _confirmDelete(context, ref, l10n);
+                        switch (value) {
+                          case 'edit':
+                            _openEditAccount(context);
+                          case 'delete':
+                            _confirmDelete(context, ref, l10n);
+                          case 'message':
+                            unawaited(showAccountMessageSheet(context, account: account, transactions: transactions, currencyName: currencyName));
+                          case 'reminder':
+                            unawaited(showAccountRemindersSheet(context, account: account));
+                          case 'currency':
+                            unawaited(_switchCurrency(context));
+                          case 'report':
+                            unawaited(_openReportsSheet(context, ref, l10n, transactions));
+                          case 'transfer':
+                            unawaited(context.push('/transfer', extra: account));
+                          case 'share':
+                            unawaited(shareApp(ref.read(localeProvider).languageCode, l10n));
+                          case 'rate':
+                            unawaited(showRateAppSheet(context));
+                          case 'about':
+                            unawaited(context.push('/about'));
                         }
                       },
-                      itemBuilder: (context) => [
-                        PopupMenuItem(value: 'edit', child: Text(l10n.edit, style: TextStyle(color: shell.textPrimary))),
-                        PopupMenuItem(value: 'delete', child: Text(l10n.delete, style: const TextStyle(color: AppColors.debit))),
-                      ],
+                      itemBuilder: (context) {
+                        PopupMenuItem<String> item(String value, String label, {Color? color}) => PopupMenuItem(
+                              value: value,
+                              child: Text(label, style: TextStyle(color: color ?? shell.textPrimary)),
+                            );
+                        return [
+                          item('message', l10n.menuSendMessage),
+                          item('reminder', l10n.menuAddReminder),
+                          item('currency', l10n.menuQuickCurrency),
+                          item('report', l10n.menuIssueReport),
+                          item('transfer', l10n.menuTransferAmount),
+                          item('share', l10n.drawerShareApp),
+                          item('rate', l10n.menuRateApp),
+                          item('about', l10n.drawerAbout),
+                          const PopupMenuDivider(),
+                          item('edit', l10n.edit),
+                          item('delete', l10n.delete, color: AppColors.debit),
+                        ];
+                      },
                     ),
                   ],
                 ),
@@ -565,9 +668,11 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
               children: [
                 Expanded(
                   child: AccountActionIconRow(
-                    onAddAction: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
-                    onShare: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
-                    onMessage: () => AppSnackBar.showError(context, l10n.comingSoonMessage),
+                    onReminder: () => unawaited(showAccountRemindersSheet(context, account: account)),
+                    onTransfer: () => unawaited(context.push('/transfer', extra: account)),
+                    onMessage: () => unawaited(
+                      showAccountMessageSheet(context, account: account, transactions: transactions, currencyName: currencyName),
+                    ),
                     onCurrency: () => _switchCurrency(context),
                   ),
                 ),
@@ -586,8 +691,8 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                       child: TransactionTable(
                         transactions: transactions,
                         searchQuery: _searchQuery,
-                        onEditTransaction: (t) => _openEditTransaction(context, t),
-                        onDeleteTransaction: (t) => _confirmDeleteTransaction(context, ref, l10n, t),
+                        onEditTransaction: (t) => _editOrTransferEntry(context, ref, l10n, t),
+                        onDeleteTransaction: (t) => _deleteOrTransferEntry(context, ref, l10n, t),
                       ),
                     ),
             ),

@@ -287,6 +287,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       details: _detailsController.text.trim().isEmpty ? null : _detailsController.text.trim(),
       attachmentPath: _attachmentPath,
       voiceRecording: existing?.voiceRecording,
+      transferId: existing?.transferId,
     );
   }
 

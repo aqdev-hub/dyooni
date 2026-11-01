@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +12,7 @@ import 'core/theme/app_theme.dart';
 import 'data/models/general_settings.dart';
 import 'firebase_options.dart';
 import 'logic/onboarding/onboarding_provider.dart';
+import 'logic/reminders/reminders_provider.dart';
 import 'logic/settings/general_settings_provider.dart';
 import 'logic/settings/locale_provider.dart';
 import 'logic/settings/theme_mode_provider.dart';
@@ -50,6 +53,17 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    unawaited(_initReminders());
+  }
+
+  Future<void> _initReminders() async {
+    try {
+      await ref.read(reminderNotificationServiceProvider).initialize(
+            onTap: (id) => ref.read(pendingNotificationAccountProvider.notifier).state = id,
+          );
+    } catch (_) {
+      // Notifications are an enhancement; a failure here must never block app start.
+    }
   }
 
   @override

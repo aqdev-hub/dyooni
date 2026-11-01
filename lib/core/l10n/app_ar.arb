@@ -588,5 +588,121 @@
   "exportAccountsHeading": "الحسابات",
   "exportEntriesHeading": "العمليات",
   "exportAllDataFileTitle": "جميع بيانات ديوني",
-  "createdDateLabel": "تاريخ الإنشاء"
+  "createdDateLabel": "تاريخ الإنشاء",
+  "transferTitle": "تحويل",
+  "transferThisAccount": "هذا الحساب",
+  "transferFromHere": "من هذا الحساب",
+  "transferToHere": "إلى هذا الحساب",
+  "transferOtherAccount": "الحساب الآخر",
+  "transferChooseAccount": "اختر الحساب الآخر",
+  "transferSearchHint": "ابحث عن حساب",
+  "transferNoOtherAccounts": "لا توجد حسابات أخرى للتحويل منها أو إليها. أضف حساباً آخر أولاً.",
+  "transferNoteHint": "ملاحظة (اختياري)",
+  "transferSave": "تنفيذ التحويل",
+  "transferPreviewTitle": "ملخص التحويل",
+  "transferPreviewDebit": "{name}: يُخصم {amount} ← الرصيد بعد التحويل {balance}",
+  "@transferPreviewDebit": {
+    "placeholders": {"name": {"type": "String"}, "amount": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "transferPreviewCredit": "{name}: يُضاف {amount} ← الرصيد بعد التحويل {balance}",
+  "@transferPreviewCredit": {
+    "placeholders": {"name": {"type": "String"}, "amount": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "transferSameAccount": "لا يمكن التحويل إلى نفس الحساب",
+  "transferDetailsTo": "تحويل إلى {name}",
+  "@transferDetailsTo": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "transferDetailsFrom": "تحويل من {name}",
+  "@transferDetailsFrom": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "transferSuccess": "تم التحويل بنجاح",
+  "transferEntryTitle": "هذا القيد جزء من تحويل",
+  "transferEntryBody": "يمكنك حذف التحويل كاملاً (من الحسابين معاً) أو تعديل هذا القيد وحده. تعديل أحد الطرفين وحده لا يغيّر الطرف الآخر.",
+  "transferDeleteBoth": "حذف التحويل كاملاً",
+  "transferEditOne": "تعديل هذا القيد فقط",
+  "transferDeleted": "تم حذف التحويل من الحسابين",
+  "messageSheetTitle": "رسالة إلى {name}",
+  "@messageSheetTitle": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "messageNoPhoneTitle": "لا يوجد رقم هاتف لهذا الحساب",
+  "messageNoPhoneBody": "أضف رقم الهاتف من «تعديل الحساب» لتتمكن من إرسال الرسائل مباشرة.",
+  "messageChooseTemplate": "اختر نوع الرسالة",
+  "messageTemplateFriendly": "تذكير ودّي",
+  "messageTemplateDemand": "مطالبة بالسداد",
+  "messageTemplateThanks": "شكر بعد السداد",
+  "messageTemplateStatement": "كشف الحساب",
+  "messageTemplateConfirm": "تأكيد الرصيد",
+  "messageBodyFriendly": "السلام عليكم {name}،\nتذكير ودّي بأن رصيدكم المستحق لدينا {balance}.\nنرجو التكرم بالسداد في أقرب وقت ممكن، وشكراً لتعاونكم.",
+  "@messageBodyFriendly": {
+    "placeholders": {"name": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "messageBodyDemand": "السلام عليكم {name}،\nنفيدكم بأن المبلغ المستحق عليكم هو {balance}.\nنرجو سداده في أقرب وقت، أو إبلاغنا بموعد السداد المناسب.",
+  "@messageBodyDemand": {
+    "placeholders": {"name": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "messageBodyThanks": "السلام عليكم {name}،\nشكراً لكم على السداد، جزاكم الله خيراً.\nرصيد حسابكم الآن: {balance}.",
+  "@messageBodyThanks": {
+    "placeholders": {"name": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "messageBodyConfirm": "السلام عليكم {name}،\nللتأكيد: رصيد حسابكم لدينا {balance}.\nإن كان لديكم أي ملاحظة فنرجو إبلاغنا.",
+  "@messageBodyConfirm": {
+    "placeholders": {"name": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "messageBodyStatement": "السلام عليكم {name}،\nكشف حسابكم (آخر العمليات):\n{lines}\nالرصيد: {balance}",
+  "@messageBodyStatement": {
+    "placeholders": {"name": {"type": "String"}, "lines": {"type": "String"}, "balance": {"type": "String"}}
+  },
+  "messageStatementLine": "{date}  {amount}  {direction}  {details}",
+  "@messageStatementLine": {
+    "placeholders": {"date": {"type": "String"}, "amount": {"type": "String"}, "direction": {"type": "String"}, "details": {"type": "String"}}
+  },
+  "messageEditHint": "يمكنك تعديل نص الرسالة قبل الإرسال",
+  "messageSendWhatsapp": "واتساب",
+  "messageSendSms": "رسالة نصية",
+  "messageCopy": "نسخ",
+  "messageCopied": "تم نسخ الرسالة",
+  "messageSendFailed": "تعذر فتح تطبيق الإرسال",
+  "messageLastSent": "آخر إرسال: {date}",
+  "@messageLastSent": {
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "messageBalanceNone": "لا يوجد رصيد",
+  "reminderSheetTitle": "تنبيهات السداد",
+  "reminderAdd": "إضافة تنبيه",
+  "reminderEmpty": "لا توجد تنبيهات لهذا الحساب بعد",
+  "reminderDateLabel": "التاريخ",
+  "reminderTimeLabel": "الوقت",
+  "reminderRepeatLabel": "التكرار",
+  "reminderRepeatNone": "مرة واحدة",
+  "reminderRepeatWeekly": "أسبوعياً",
+  "reminderRepeatMonthly": "شهرياً",
+  "reminderNoteHint": "ملاحظة (اختياري)",
+  "reminderSave": "حفظ التنبيه",
+  "reminderPastTime": "اختر وقتاً في المستقبل",
+  "reminderNext": "التنبيه القادم: {when}",
+  "@reminderNext": {
+    "placeholders": {"when": {"type": "String"}}
+  },
+  "reminderFinished": "انتهى هذا التنبيه",
+  "reminderDeleted": "تم حذف التنبيه",
+  "reminderSaved": "تم حفظ التنبيه",
+  "reminderPermissionDenied": "الإشعارات غير مفعّلة لتطبيق ديوني. فعّلها من إعدادات الهاتف ليصلك التنبيه في موعده.",
+  "reminderNotifTitle": "تذكير: {name}",
+  "@reminderNotifTitle": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "reminderNotifBody": "حان موعد متابعة هذا الحساب",
+  "reminderChannelName": "تنبيهات السداد",
+  "reminderChannelDescription": "تذكيرات بمواعيد متابعة وسداد الحسابات",
+  "reminderDeleteConfirm": "حذف هذا التنبيه؟",
+  "rateOnPageButton": "قيّم من صفحة التطبيق",
+  "menuSendMessage": "إرسال رسالة",
+  "menuAddReminder": "إضافة تذكير",
+  "menuQuickCurrency": "الانتقال السريع للعملات",
+  "menuIssueReport": "إصدار تقرير",
+  "menuTransferAmount": "تحويل مبلغ",
+  "menuRateApp": "امنحنا خمس نجوم"
 }

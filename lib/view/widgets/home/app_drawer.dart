@@ -3,14 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
-import '../../../core/constants/app_links.dart';
 import '../../../core/constants/legal_links.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/app_sharing.dart';
 import '../../../core/utils/web_launcher.dart';
 import '../../../logic/settings/locale_provider.dart';
 import '../../../logic/auth/auth_provider.dart';
@@ -33,9 +32,7 @@ class AppDrawer extends ConsumerWidget {
   Future<void> _shareApp(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
     final language = ref.read(localeProvider).languageCode;
     try {
-      await SharePlus.instance.share(
-        ShareParams(text: l10n.shareAppMessage(AppLinks.shareUrl(language)), subject: l10n.shareAppSubject),
-      );
+      await shareApp(language, l10n);
     } catch (_) {
       if (context.mounted) AppSnackBar.showError(context, l10n.unexpectedError);
     }

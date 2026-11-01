@@ -22,6 +22,7 @@ import '../../view/screens/settings/personal_data_screen.dart';
 import '../../view/screens/settings/signature_capture_screen.dart';
 import '../../view/screens/splash/splash_gate.dart';
 import '../../view/screens/transactions/add_transaction_screen.dart';
+import '../../view/screens/transactions/transfer_screen.dart';
 import '../../view/screens/voice/voice_command_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -51,6 +52,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/account-details',
         builder: (_, state) => AccountDetailsScreen(account: state.extra! as Account),
       ),
+      GoRoute(path: '/transfer', builder: (_, state) => TransferScreen(account: state.extra! as Account)),
       GoRoute(
         path: '/add-transaction',
         builder: (_, state) => AddTransactionScreen(accountId: state.extra! as String),

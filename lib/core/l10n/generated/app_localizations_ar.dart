@@ -1679,4 +1679,254 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get createdDateLabel => 'تاريخ الإنشاء';
+
+  @override
+  String get transferTitle => 'تحويل';
+
+  @override
+  String get transferThisAccount => 'هذا الحساب';
+
+  @override
+  String get transferFromHere => 'من هذا الحساب';
+
+  @override
+  String get transferToHere => 'إلى هذا الحساب';
+
+  @override
+  String get transferOtherAccount => 'الحساب الآخر';
+
+  @override
+  String get transferChooseAccount => 'اختر الحساب الآخر';
+
+  @override
+  String get transferSearchHint => 'ابحث عن حساب';
+
+  @override
+  String get transferNoOtherAccounts => 'لا توجد حسابات أخرى للتحويل منها أو إليها. أضف حساباً آخر أولاً.';
+
+  @override
+  String get transferNoteHint => 'ملاحظة (اختياري)';
+
+  @override
+  String get transferSave => 'تنفيذ التحويل';
+
+  @override
+  String get transferPreviewTitle => 'ملخص التحويل';
+
+  @override
+  String transferPreviewDebit(String name, String amount, String balance) {
+    return '$name: يُخصم $amount ← الرصيد بعد التحويل $balance';
+  }
+
+  @override
+  String transferPreviewCredit(String name, String amount, String balance) {
+    return '$name: يُضاف $amount ← الرصيد بعد التحويل $balance';
+  }
+
+  @override
+  String get transferSameAccount => 'لا يمكن التحويل إلى نفس الحساب';
+
+  @override
+  String transferDetailsTo(String name) {
+    return 'تحويل إلى $name';
+  }
+
+  @override
+  String transferDetailsFrom(String name) {
+    return 'تحويل من $name';
+  }
+
+  @override
+  String get transferSuccess => 'تم التحويل بنجاح';
+
+  @override
+  String get transferEntryTitle => 'هذا القيد جزء من تحويل';
+
+  @override
+  String get transferEntryBody => 'يمكنك حذف التحويل كاملاً (من الحسابين معاً) أو تعديل هذا القيد وحده. تعديل أحد الطرفين وحده لا يغيّر الطرف الآخر.';
+
+  @override
+  String get transferDeleteBoth => 'حذف التحويل كاملاً';
+
+  @override
+  String get transferEditOne => 'تعديل هذا القيد فقط';
+
+  @override
+  String get transferDeleted => 'تم حذف التحويل من الحسابين';
+
+  @override
+  String messageSheetTitle(String name) {
+    return 'رسالة إلى $name';
+  }
+
+  @override
+  String get messageNoPhoneTitle => 'لا يوجد رقم هاتف لهذا الحساب';
+
+  @override
+  String get messageNoPhoneBody => 'أضف رقم الهاتف من «تعديل الحساب» لتتمكن من إرسال الرسائل مباشرة.';
+
+  @override
+  String get messageChooseTemplate => 'اختر نوع الرسالة';
+
+  @override
+  String get messageTemplateFriendly => 'تذكير ودّي';
+
+  @override
+  String get messageTemplateDemand => 'مطالبة بالسداد';
+
+  @override
+  String get messageTemplateThanks => 'شكر بعد السداد';
+
+  @override
+  String get messageTemplateStatement => 'كشف الحساب';
+
+  @override
+  String get messageTemplateConfirm => 'تأكيد الرصيد';
+
+  @override
+  String messageBodyFriendly(String name, String balance) {
+    return 'السلام عليكم $name،\nتذكير ودّي بأن رصيدكم المستحق لدينا $balance.\nنرجو التكرم بالسداد في أقرب وقت ممكن، وشكراً لتعاونكم.';
+  }
+
+  @override
+  String messageBodyDemand(String name, String balance) {
+    return 'السلام عليكم $name،\nنفيدكم بأن المبلغ المستحق عليكم هو $balance.\nنرجو سداده في أقرب وقت، أو إبلاغنا بموعد السداد المناسب.';
+  }
+
+  @override
+  String messageBodyThanks(String name, String balance) {
+    return 'السلام عليكم $name،\nشكراً لكم على السداد، جزاكم الله خيراً.\nرصيد حسابكم الآن: $balance.';
+  }
+
+  @override
+  String messageBodyConfirm(String name, String balance) {
+    return 'السلام عليكم $name،\nللتأكيد: رصيد حسابكم لدينا $balance.\nإن كان لديكم أي ملاحظة فنرجو إبلاغنا.';
+  }
+
+  @override
+  String messageBodyStatement(String name, String lines, String balance) {
+    return 'السلام عليكم $name،\nكشف حسابكم (آخر العمليات):\n$lines\nالرصيد: $balance';
+  }
+
+  @override
+  String messageStatementLine(String date, String amount, String direction, String details) {
+    return '$date  $amount  $direction  $details';
+  }
+
+  @override
+  String get messageEditHint => 'يمكنك تعديل نص الرسالة قبل الإرسال';
+
+  @override
+  String get messageSendWhatsapp => 'واتساب';
+
+  @override
+  String get messageSendSms => 'رسالة نصية';
+
+  @override
+  String get messageCopy => 'نسخ';
+
+  @override
+  String get messageCopied => 'تم نسخ الرسالة';
+
+  @override
+  String get messageSendFailed => 'تعذر فتح تطبيق الإرسال';
+
+  @override
+  String messageLastSent(String date) {
+    return 'آخر إرسال: $date';
+  }
+
+  @override
+  String get messageBalanceNone => 'لا يوجد رصيد';
+
+  @override
+  String get reminderSheetTitle => 'تنبيهات السداد';
+
+  @override
+  String get reminderAdd => 'إضافة تنبيه';
+
+  @override
+  String get reminderEmpty => 'لا توجد تنبيهات لهذا الحساب بعد';
+
+  @override
+  String get reminderDateLabel => 'التاريخ';
+
+  @override
+  String get reminderTimeLabel => 'الوقت';
+
+  @override
+  String get reminderRepeatLabel => 'التكرار';
+
+  @override
+  String get reminderRepeatNone => 'مرة واحدة';
+
+  @override
+  String get reminderRepeatWeekly => 'أسبوعياً';
+
+  @override
+  String get reminderRepeatMonthly => 'شهرياً';
+
+  @override
+  String get reminderNoteHint => 'ملاحظة (اختياري)';
+
+  @override
+  String get reminderSave => 'حفظ التنبيه';
+
+  @override
+  String get reminderPastTime => 'اختر وقتاً في المستقبل';
+
+  @override
+  String reminderNext(String when) {
+    return 'التنبيه القادم: $when';
+  }
+
+  @override
+  String get reminderFinished => 'انتهى هذا التنبيه';
+
+  @override
+  String get reminderDeleted => 'تم حذف التنبيه';
+
+  @override
+  String get reminderSaved => 'تم حفظ التنبيه';
+
+  @override
+  String get reminderPermissionDenied => 'الإشعارات غير مفعّلة لتطبيق ديوني. فعّلها من إعدادات الهاتف ليصلك التنبيه في موعده.';
+
+  @override
+  String reminderNotifTitle(String name) {
+    return 'تذكير: $name';
+  }
+
+  @override
+  String get reminderNotifBody => 'حان موعد متابعة هذا الحساب';
+
+  @override
+  String get reminderChannelName => 'تنبيهات السداد';
+
+  @override
+  String get reminderChannelDescription => 'تذكيرات بمواعيد متابعة وسداد الحسابات';
+
+  @override
+  String get reminderDeleteConfirm => 'حذف هذا التنبيه؟';
+
+  @override
+  String get rateOnPageButton => 'قيّم من صفحة التطبيق';
+
+  @override
+  String get menuSendMessage => 'إرسال رسالة';
+
+  @override
+  String get menuAddReminder => 'إضافة تذكير';
+
+  @override
+  String get menuQuickCurrency => 'الانتقال السريع للعملات';
+
+  @override
+  String get menuIssueReport => 'إصدار تقرير';
+
+  @override
+  String get menuTransferAmount => 'تحويل مبلغ';
+
+  @override
+  String get menuRateApp => 'امنحنا خمس نجوم';
 }
