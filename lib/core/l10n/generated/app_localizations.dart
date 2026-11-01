@@ -3075,6 +3075,372 @@ abstract class AppLocalizations {
   /// **'"نعم" أو "احفظ" أو "عدل المبلغ إلى 3500"'**
   String get voiceYouCanSayExamples;
 
+  /// No description provided for @autoSettingsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعدادات الرسائل التلقائية'**
+  String get autoSettingsTitle;
+
+  /// No description provided for @autoIntroCard.
+  ///
+  /// In ar, this message translates to:
+  /// **'بعد حفظ أي عملية تظهر رسالة جاهزة تحمل المبلغ والرصيد لتُرسلها لصاحب الحساب بضغطة واحدة. لا يستطيع أي تطبيق إرسال رسالة بالنيابة عنك دون موافقتك، لذلك تفتح الرسالة جاهزة في واتساب أو الرسائل وتضغط أنت «إرسال».'**
+  String get autoIntroCard;
+
+  /// No description provided for @autoSectionBehavior.
+  ///
+  /// In ar, this message translates to:
+  /// **'السلوك'**
+  String get autoSectionBehavior;
+
+  /// No description provided for @autoEnableTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال رسالة الرصيد بعد حفظ العملية'**
+  String get autoEnableTitle;
+
+  /// No description provided for @autoChannelTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'التطبيق المفضل للإرسال'**
+  String get autoChannelTitle;
+
+  /// No description provided for @autoChannelSms.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسالة نصية (SMS)'**
+  String get autoChannelSms;
+
+  /// No description provided for @autoChannelWhatsapp.
+  ///
+  /// In ar, this message translates to:
+  /// **'واتساب'**
+  String get autoChannelWhatsapp;
+
+  /// No description provided for @autoChannelAsk.
+  ///
+  /// In ar, this message translates to:
+  /// **'التحديد عند كل إرسال'**
+  String get autoChannelAsk;
+
+  /// No description provided for @autoContentTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'محتوى الرسالة'**
+  String get autoContentTitle;
+
+  /// No description provided for @autoContentBalanceOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرصيد فقط'**
+  String get autoContentBalanceOnly;
+
+  /// No description provided for @autoContentDetailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'مع التفاصيل (بيان العملية وآخر العمليات)'**
+  String get autoContentDetailed;
+
+  /// No description provided for @autoSkipPreviewTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح التطبيق مباشرة دون معاينة'**
+  String get autoSkipPreviewTitle;
+
+  /// No description provided for @autoSkipPreviewSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تُكتب الرسالة وتُفتح في التطبيق المختار فورًا بعد الحفظ.'**
+  String get autoSkipPreviewSubtitle;
+
+  /// No description provided for @autoShowDate.
+  ///
+  /// In ar, this message translates to:
+  /// **'إظهار تاريخ العملية'**
+  String get autoShowDate;
+
+  /// No description provided for @autoShowAllCurrencies.
+  ///
+  /// In ar, this message translates to:
+  /// **'إظهار أرصدة العملات الأخرى للحساب'**
+  String get autoShowAllCurrencies;
+
+  /// No description provided for @autoMinAmountTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحد الأدنى للمبلغ'**
+  String get autoMinAmountTitle;
+
+  /// No description provided for @autoMinAmountHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'العمليات الأقل من هذا المبلغ لا تُظهر رسالة. اتركه 0 لتشمل كل العمليات.'**
+  String get autoMinAmountHint;
+
+  /// No description provided for @autoSectionTexts.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير نصوص الرسالة'**
+  String get autoSectionTexts;
+
+  /// No description provided for @autoTextsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اترك أي حقل فارغًا ليُستخدم النص الافتراضي.'**
+  String get autoTextsHint;
+
+  /// No description provided for @autoFieldIntro.
+  ///
+  /// In ar, this message translates to:
+  /// **'المقدمة'**
+  String get autoFieldIntro;
+
+  /// No description provided for @autoFieldBusiness.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم التجاري'**
+  String get autoFieldBusiness;
+
+  /// No description provided for @autoFieldHolderOwes.
+  ///
+  /// In ar, this message translates to:
+  /// **'عبارة: المبلغ على صاحب الحساب'**
+  String get autoFieldHolderOwes;
+
+  /// No description provided for @autoFieldOwedToHolder.
+  ///
+  /// In ar, this message translates to:
+  /// **'عبارة: المبلغ لصاحب الحساب'**
+  String get autoFieldOwedToHolder;
+
+  /// No description provided for @autoFieldTotalHolderOwes.
+  ///
+  /// In ar, this message translates to:
+  /// **'عبارة الإجمالي: عليه'**
+  String get autoFieldTotalHolderOwes;
+
+  /// No description provided for @autoFieldTotalOwedToHolder.
+  ///
+  /// In ar, this message translates to:
+  /// **'عبارة الإجمالي: له'**
+  String get autoFieldTotalOwedToHolder;
+
+  /// No description provided for @autoFieldHolderOwesNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة السداد (تُضاف إذا كان عليه مبلغ)'**
+  String get autoFieldHolderOwesNote;
+
+  /// No description provided for @autoFieldSettledNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة التصفية'**
+  String get autoFieldSettledNote;
+
+  /// No description provided for @autoFieldDetailsPrefix.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة للتفاصيل'**
+  String get autoFieldDetailsPrefix;
+
+  /// No description provided for @autoFieldFooter.
+  ///
+  /// In ar, this message translates to:
+  /// **'ختام الرسالة'**
+  String get autoFieldFooter;
+
+  /// No description provided for @autoResetTexts.
+  ///
+  /// In ar, this message translates to:
+  /// **'استعادة النصوص الافتراضية'**
+  String get autoResetTexts;
+
+  /// No description provided for @autoPreviewTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'معاينة الرسالة'**
+  String get autoPreviewTitle;
+
+  /// No description provided for @autoDefaultIntro.
+  ///
+  /// In ar, this message translates to:
+  /// **'إشعار من'**
+  String get autoDefaultIntro;
+
+  /// No description provided for @autoDefaultHolderOwes.
+  ///
+  /// In ar, this message translates to:
+  /// **'عليك مبلغ وقدره'**
+  String get autoDefaultHolderOwes;
+
+  /// No description provided for @autoDefaultOwedToHolder.
+  ///
+  /// In ar, this message translates to:
+  /// **'لك مبلغ وقدره'**
+  String get autoDefaultOwedToHolder;
+
+  /// No description provided for @autoDefaultTotalHolderOwes.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإجمالي عليك'**
+  String get autoDefaultTotalHolderOwes;
+
+  /// No description provided for @autoDefaultTotalOwedToHolder.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإجمالي لك'**
+  String get autoDefaultTotalOwedToHolder;
+
+  /// No description provided for @autoDefaultSettled.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرصيد مسدّد بالكامل'**
+  String get autoDefaultSettled;
+
+  /// No description provided for @autoDefaultDetailsPrefix.
+  ///
+  /// In ar, this message translates to:
+  /// **'مقابل'**
+  String get autoDefaultDetailsPrefix;
+
+  /// No description provided for @autoDateLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'التاريخ'**
+  String get autoDateLabel;
+
+  /// No description provided for @autoRecentHeader.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر العمليات'**
+  String get autoRecentHeader;
+
+  /// No description provided for @autoShortHolderOwes.
+  ///
+  /// In ar, this message translates to:
+  /// **'عليك'**
+  String get autoShortHolderOwes;
+
+  /// No description provided for @autoShortOwedToHolder.
+  ///
+  /// In ar, this message translates to:
+  /// **'لك'**
+  String get autoShortOwedToHolder;
+
+  /// No description provided for @autoSampleName.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم الحساب'**
+  String get autoSampleName;
+
+  /// No description provided for @autoSampleDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيان العملية'**
+  String get autoSampleDetails;
+
+  /// No description provided for @autoAccountTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرسائل التلقائية لحساب {name}'**
+  String autoAccountTitle(String name);
+
+  /// No description provided for @autoAccountTypeTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'نوع الرسائل التلقائية على مستوى الحساب'**
+  String get autoAccountTypeTitle;
+
+  /// No description provided for @autoAccountBalanceOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرصيد فقط'**
+  String get autoAccountBalanceOnly;
+
+  /// No description provided for @autoAccountDetailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفصيلي'**
+  String get autoAccountDetailed;
+
+  /// No description provided for @autoAccountDefault.
+  ///
+  /// In ar, this message translates to:
+  /// **'الافتراضي في الإعدادات'**
+  String get autoAccountDefault;
+
+  /// No description provided for @autoAccountOff.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف الرسائل التلقائية'**
+  String get autoAccountOff;
+
+  /// No description provided for @autoAccountChannelTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'التطبيق المفضل للإرسال'**
+  String get autoAccountChannelTitle;
+
+  /// No description provided for @autoAccountNoPhone.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد رقم هاتف لهذا الحساب. أضِف الرقم ليتمكن التطبيق من تجهيز الرسالة له.'**
+  String get autoAccountNoPhone;
+
+  /// No description provided for @autoAccountOpenGlobal.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح الإعدادات العامة'**
+  String get autoAccountOpenGlobal;
+
+  /// No description provided for @autoPromptTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال إشعار الرصيد إلى {name}؟'**
+  String autoPromptTitle(String name);
+
+  /// No description provided for @autoPromptSendWhatsapp.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال واتساب'**
+  String get autoPromptSendWhatsapp;
+
+  /// No description provided for @autoPromptSendSms.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال SMS'**
+  String get autoPromptSendSms;
+
+  /// No description provided for @autoPromptSend.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال'**
+  String get autoPromptSend;
+
+  /// No description provided for @autoPromptSkip.
+  ///
+  /// In ar, this message translates to:
+  /// **'تخطي'**
+  String get autoPromptSkip;
+
+  /// No description provided for @autoPromptNoPhone.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد رقم هاتف لهذا الحساب، لذلك لم تُجهَّز رسالة.'**
+  String get autoPromptNoPhone;
+
+  /// No description provided for @autoSendFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر فتح التطبيق لإرسال الرسالة'**
+  String get autoSendFailed;
+
+  /// No description provided for @menuAutoMessages.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعدادات الرسائل التلقائية'**
+  String get menuAutoMessages;
+
   /// No description provided for @rateOnPageButton.
   ///
   /// In ar, this message translates to:

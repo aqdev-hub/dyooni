@@ -1929,4 +1929,191 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get menuRateApp => 'امنحنا خمس نجوم';
+
+  @override
+  String get autoSettingsTitle => 'إعدادات الرسائل التلقائية';
+
+  @override
+  String get autoIntroCard => 'بعد حفظ أي عملية تظهر رسالة جاهزة تحمل المبلغ والرصيد لتُرسلها لصاحب الحساب بضغطة واحدة. لا يستطيع أي تطبيق إرسال رسالة بالنيابة عنك دون موافقتك، لذلك تفتح الرسالة جاهزة في واتساب أو الرسائل وتضغط أنت «إرسال».';
+
+  @override
+  String get autoSectionBehavior => 'السلوك';
+
+  @override
+  String get autoEnableTitle => 'إرسال رسالة الرصيد بعد حفظ العملية';
+
+  @override
+  String get autoChannelTitle => 'التطبيق المفضل للإرسال';
+
+  @override
+  String get autoChannelSms => 'رسالة نصية (SMS)';
+
+  @override
+  String get autoChannelWhatsapp => 'واتساب';
+
+  @override
+  String get autoChannelAsk => 'التحديد عند كل إرسال';
+
+  @override
+  String get autoContentTitle => 'محتوى الرسالة';
+
+  @override
+  String get autoContentBalanceOnly => 'الرصيد فقط';
+
+  @override
+  String get autoContentDetailed => 'مع التفاصيل (بيان العملية وآخر العمليات)';
+
+  @override
+  String get autoSkipPreviewTitle => 'فتح التطبيق مباشرة دون معاينة';
+
+  @override
+  String get autoSkipPreviewSubtitle => 'تُكتب الرسالة وتُفتح في التطبيق المختار فورًا بعد الحفظ.';
+
+  @override
+  String get autoShowDate => 'إظهار تاريخ العملية';
+
+  @override
+  String get autoShowAllCurrencies => 'إظهار أرصدة العملات الأخرى للحساب';
+
+  @override
+  String get autoMinAmountTitle => 'الحد الأدنى للمبلغ';
+
+  @override
+  String get autoMinAmountHint => 'العمليات الأقل من هذا المبلغ لا تُظهر رسالة. اتركه 0 لتشمل كل العمليات.';
+
+  @override
+  String get autoSectionTexts => 'تغيير نصوص الرسالة';
+
+  @override
+  String get autoTextsHint => 'اترك أي حقل فارغًا ليُستخدم النص الافتراضي.';
+
+  @override
+  String get autoFieldIntro => 'المقدمة';
+
+  @override
+  String get autoFieldBusiness => 'الاسم التجاري';
+
+  @override
+  String get autoFieldHolderOwes => 'عبارة: المبلغ على صاحب الحساب';
+
+  @override
+  String get autoFieldOwedToHolder => 'عبارة: المبلغ لصاحب الحساب';
+
+  @override
+  String get autoFieldTotalHolderOwes => 'عبارة الإجمالي: عليه';
+
+  @override
+  String get autoFieldTotalOwedToHolder => 'عبارة الإجمالي: له';
+
+  @override
+  String get autoFieldHolderOwesNote => 'ملاحظة السداد (تُضاف إذا كان عليه مبلغ)';
+
+  @override
+  String get autoFieldSettledNote => 'ملاحظة التصفية';
+
+  @override
+  String get autoFieldDetailsPrefix => 'إضافة للتفاصيل';
+
+  @override
+  String get autoFieldFooter => 'ختام الرسالة';
+
+  @override
+  String get autoResetTexts => 'استعادة النصوص الافتراضية';
+
+  @override
+  String get autoPreviewTitle => 'معاينة الرسالة';
+
+  @override
+  String get autoDefaultIntro => 'إشعار من';
+
+  @override
+  String get autoDefaultHolderOwes => 'عليك مبلغ وقدره';
+
+  @override
+  String get autoDefaultOwedToHolder => 'لك مبلغ وقدره';
+
+  @override
+  String get autoDefaultTotalHolderOwes => 'الإجمالي عليك';
+
+  @override
+  String get autoDefaultTotalOwedToHolder => 'الإجمالي لك';
+
+  @override
+  String get autoDefaultSettled => 'الرصيد مسدّد بالكامل';
+
+  @override
+  String get autoDefaultDetailsPrefix => 'مقابل';
+
+  @override
+  String get autoDateLabel => 'التاريخ';
+
+  @override
+  String get autoRecentHeader => 'آخر العمليات';
+
+  @override
+  String get autoShortHolderOwes => 'عليك';
+
+  @override
+  String get autoShortOwedToHolder => 'لك';
+
+  @override
+  String get autoSampleName => 'اسم الحساب';
+
+  @override
+  String get autoSampleDetails => 'بيان العملية';
+
+  @override
+  String autoAccountTitle(String name) {
+    return 'الرسائل التلقائية لحساب $name';
+  }
+
+  @override
+  String get autoAccountTypeTitle => 'نوع الرسائل التلقائية على مستوى الحساب';
+
+  @override
+  String get autoAccountBalanceOnly => 'الرصيد فقط';
+
+  @override
+  String get autoAccountDetailed => 'تفصيلي';
+
+  @override
+  String get autoAccountDefault => 'الافتراضي في الإعدادات';
+
+  @override
+  String get autoAccountOff => 'إيقاف الرسائل التلقائية';
+
+  @override
+  String get autoAccountChannelTitle => 'التطبيق المفضل للإرسال';
+
+  @override
+  String get autoAccountNoPhone => 'لا يوجد رقم هاتف لهذا الحساب. أضِف الرقم ليتمكن التطبيق من تجهيز الرسالة له.';
+
+  @override
+  String get autoAccountOpenGlobal => 'فتح الإعدادات العامة';
+
+  @override
+  String autoPromptTitle(String name) {
+    return 'إرسال إشعار الرصيد إلى $name؟';
+  }
+
+  @override
+  String get autoPromptSendWhatsapp => 'إرسال واتساب';
+
+  @override
+  String get autoPromptSendSms => 'إرسال SMS';
+
+  @override
+  String get autoPromptSend => 'إرسال';
+
+  @override
+  String get autoPromptSkip => 'تخطي';
+
+  @override
+  String get autoPromptNoPhone => 'لا يوجد رقم هاتف لهذا الحساب، لذلك لم تُجهَّز رسالة.';
+
+  @override
+  String get autoSendFailed => 'تعذّر فتح التطبيق لإرسال الرسالة';
+
+  @override
+  String get menuAutoMessages => 'إعدادات الرسائل التلقائية';
 }

@@ -29,6 +29,7 @@ import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/shared/amount_in_words.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
+import '../../widgets/accounts/auto_message_prompt.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/account_ceiling_exceeded_dialog.dart';
 import '../../widgets/shared/direction_choice.dart';
@@ -364,6 +365,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       // have vanished when it differs from the page that was open.
       ref.read(selectedCurrencyIdProvider.notifier).state = _currencyCode;
       AppSnackBar.showSuccess(context, l10n.transactionSavedSuccessMessage);
+      // Automatic balance message (see logic/messages/auto_message_provider.dart): a no-op unless
+      // the person turned it on for this account.
+      await offerAutoMessage(context, ref, transaction);
+      if (!mounted) return;
       if (keepAdding) {
         _resetForm();
       } else if (context.canPop()) {

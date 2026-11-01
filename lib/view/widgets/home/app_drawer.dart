@@ -164,7 +164,7 @@ class AppDrawer extends ConsumerWidget {
       (Icons.card_giftcard_outlined, l10n.drawerFreePoints, null),
       (Icons.person_outline, l10n.drawerPersonalData, '/personal-data'),
       (Icons.settings_outlined, l10n.drawerSettings, '/general-settings'),
-      (Icons.notifications_active_outlined, l10n.drawerAutoBalanceAlerts, null),
+      (Icons.notifications_active_outlined, l10n.drawerAutoBalanceAlerts, '/auto-messages'),
       (Icons.category_outlined, l10n.drawerCategories, '/categories'),
       (Icons.attach_money_outlined, l10n.drawerCurrencies, '/currencies'),
       (Icons.save_alt_outlined, l10n.drawerLocalBackup, '/local-backup'),

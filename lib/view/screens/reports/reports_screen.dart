@@ -1,12 +1,7 @@
-import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:printing/printing.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
@@ -14,19 +9,13 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/voice_palette.dart';
 import '../../../data/models/account.dart';
-import '../../../data/models/personal_data.dart';
 import '../../../data/models/report_options.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/categories/categories_provider.dart';
 import '../../../data/models/category_type.dart';
-import '../../../logic/reports/pdf_report_service.dart';
 import '../../../logic/reports/report_delivery.dart';
-import '../../../logic/reports/report_export_provider.dart';
 import '../../../logic/reports/tabular_report.dart';
-import '../../../logic/settings/direction_labels.dart';
-import '../../../logic/settings/general_settings_provider.dart';
-import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/home/summary_card.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
@@ -34,10 +23,6 @@ import '../../widgets/home/app_drawer.dart';
 import '../../widgets/reports/report_options_sheet.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/main_bottom_nav.dart';
-
-/// Real .xlsx MIME type — Excel/Sheets and most spreadsheet apps use this to recognize the file
-/// on receipt, the same reason the earlier CSV export always set an explicit mimeType too.
-const _xlsxMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -55,154 +40,24 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   String _categoryLabel(AppLocalizations l10n) =>
       categoryNameOf(ref.read(categoryTypesProvider), _categoryFilter?.id ?? generalCategoryId);
 
-  Map<String, String> _categoryNames() => {for (final c in ref.read(categoryTypesProvider)) c.id: c.name};
-
-  List<ReportRow> _buildSummaryRows(List<Account> accounts, DateTimeRange? range, ReportSortOption? sort) {
-    final allTx = ref.read(transactionsProvider).value ?? const [];
-    final rows = <ReportRow>[];
-    for (final account in accounts) {
-      var accountTx = allTx.where((t) => t.accountId == account.id).toList();
-      if (range != null) {
-        accountTx = accountTx.where((t) => !t.date.isBefore(range.start) && !t.date.isAfter(range.end)).toList();
-      }
-      var balance = 0.0;
-      DateTime? lastDate;
-      for (final t in accountTx) {
-        balance += t.direction == AccountDirection.credit ? t.amount : -t.amount;
-        if (lastDate == null || t.date.isAfter(lastDate)) lastDate = t.date;
-      }
-      rows.add(ReportRow(account: account, balance: balance, transactionCount: accountTx.length, lastActivityDate: lastDate));
-    }
-    if (sort != null) {
-      switch (sort) {
-        case ReportSortOption.dateAsc:
-          rows.sort((a, b) => (a.lastActivityDate ?? DateTime(1970)).compareTo(b.lastActivityDate ?? DateTime(1970)));
-        case ReportSortOption.dateDesc:
-          rows.sort((a, b) => (b.lastActivityDate ?? DateTime(1970)).compareTo(a.lastActivityDate ?? DateTime(1970)));
-        case ReportSortOption.balanceAsc:
-          rows.sort((a, b) => a.balance.compareTo(b.balance));
-        case ReportSortOption.balanceDesc:
-          rows.sort((a, b) => b.balance.compareTo(a.balance));
-        case ReportSortOption.nameAsc:
-          rows.sort((a, b) => a.account.name.compareTo(b.account.name));
-        case ReportSortOption.nameDesc:
-          rows.sort((a, b) => b.account.name.compareTo(a.account.name));
-      }
-    }
-    return rows;
-  }
-
-  Future<Uint8List> _generateSummaryPdf(AppLocalizations l10n, List<ReportRow> rows) {
-    final personalData = ref.read(personalDataProvider).value ?? PersonalData.dyooniDefault;
-    final settings = ref.read(generalSettingsProvider).value;
-    return ref.read(pdfReportServiceProvider).buildSummaryTotals(
-          personalData: personalData,
-          appName: l10n.appName,
-          reportTitle: '${l10n.reportTypeTotalAmounts} - ${_categoryLabel(l10n)}',
-          dateHeader: l10n.dateLabel,
-          directionHeader: l10n.reportStatusHeader,
-          balanceHeader: l10n.reportBalanceHeader,
-          accountNameHeader: l10n.accountNameLabel,
-          creditLabel: resolveCreditLabel(l10n, settings),
-          debitLabel: resolveDebitLabel(l10n, settings),
-          totalRowLabel: l10n.homeTotalBalance,
-          signatureLabel: l10n.reportSignatureLabel,
-          stampLabel: l10n.reportStampLabel,
-          rows: rows,
-        );
-  }
-
-  Uint8List _generateSummaryXlsx(AppLocalizations l10n, List<ReportRow> rows) {
-    final settings = ref.read(generalSettingsProvider).value;
-    return ref.read(xlsxReportServiceProvider).build(
-          reportTitle: '${l10n.reportTypeTotalAmounts} - ${_categoryLabel(l10n)}',
-          accountNameHeader: l10n.accountNameLabel,
-          categoryHeader: l10n.categoryLabel,
-          balanceHeader: l10n.reportBalanceHeader,
-          directionHeader: l10n.reportStatusHeader,
-          entriesHeader: l10n.reportEntriesHeader,
-          creditLabel: resolveCreditLabel(l10n, settings),
-          debitLabel: resolveDebitLabel(l10n, settings),
-          clientLabel: l10n.categoryClient,
-          supplierLabel: l10n.categorySupplier,
-          categoryNames: _categoryNames(),
-          rows: rows,
-        );
-  }
-
   List<Account> _filteredAccounts() {
     final accounts = ref.read(accountsProvider).value ?? const [];
     return _categoryFilter == null ? accounts : accounts.where((a) => a.category == _categoryFilter).toList();
   }
 
-  Future<void> _handleGeneratePdf(SummaryReportType type, ReportSortOption? sort, DateTimeRange? range) async {
-    final l10n = AppLocalizations.of(context)!;
-    if (type != SummaryReportType.totalAmounts) {
-      return _handleTabular(type, sort, range, TabularDelivery.printPdf);
-    }
-    setState(() => _isExporting = true);
-    try {
-      final rows = _buildSummaryRows(_filteredAccounts(), range, sort);
-      final bytes = await _generateSummaryPdf(l10n, rows);
-      await Printing.layoutPdf(onLayout: (_) async => bytes, name: '${l10n.reportsTitle}.pdf');
-    } catch (_) {
-      if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
-    } finally {
-      if (mounted) setState(() => _isExporting = false);
-    }
-  }
+  Future<void> _handleGeneratePdf(SummaryReportType type, ReportSortOption? sort, DateTimeRange? range) =>
+      _handleTabular(type, sort, range, TabularDelivery.printPdf);
 
-  Future<void> _handleGenerateExcel(SummaryReportType type, ReportSortOption? sort, DateTimeRange? range) async {
-    final l10n = AppLocalizations.of(context)!;
-    if (type != SummaryReportType.totalAmounts) {
-      return _handleTabular(type, sort, range, TabularDelivery.shareExcel);
-    }
-    setState(() => _isExporting = true);
-    try {
-      final rows = _buildSummaryRows(_filteredAccounts(), range, sort);
-      final bytes = _generateSummaryXlsx(l10n, rows);
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/${l10n.reportsTitle}.xlsx');
-      await file.writeAsBytes(bytes);
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: _xlsxMimeType)]));
-    } catch (_) {
-      if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
-    } finally {
-      if (mounted) setState(() => _isExporting = false);
-    }
-  }
+  Future<void> _handleGenerateExcel(SummaryReportType type, ReportSortOption? sort, DateTimeRange? range) =>
+      _handleTabular(type, sort, range, TabularDelivery.shareExcel);
 
   Future<void> _handleShareViaWhatsapp(
     SummaryReportType type,
     ReportSortOption? sort,
     DateTimeRange? range,
     ReportShareFormat format,
-  ) async {
-    final l10n = AppLocalizations.of(context)!;
-    if (type != SummaryReportType.totalAmounts) {
-      return _handleTabular(type, sort, range, format == ReportShareFormat.pdf ? TabularDelivery.sharePdf : TabularDelivery.shareExcel);
-    }
-    setState(() => _isExporting = true);
-    try {
-      final rows = _buildSummaryRows(_filteredAccounts(), range, sort);
-      if (format == ReportShareFormat.pdf) {
-        final bytes = await _generateSummaryPdf(l10n, rows);
-        // Opens the OS's general share sheet (WhatsApp is one option there if installed) — there
-        // is no stable cross-platform API to hand a file directly and exclusively to WhatsApp.
-        await Printing.sharePdf(bytes: bytes, filename: '${l10n.reportsTitle}.pdf');
-      } else {
-        final bytes = _generateSummaryXlsx(l10n, rows);
-        final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/${l10n.reportsTitle}.xlsx');
-        await file.writeAsBytes(bytes);
-        await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: _xlsxMimeType)]));
-      }
-    } catch (_) {
-      if (mounted) AppSnackBar.showError(context, l10n.exportFailedMessage);
-    } finally {
-      if (mounted) setState(() => _isExporting = false);
-    }
-  }
+  ) =>
+      _handleTabular(type, sort, range, format == ReportShareFormat.pdf ? TabularDelivery.sharePdf : TabularDelivery.shareExcel);
 
   String _typeTitle(AppLocalizations l10n, SummaryReportType type) => switch (type) {
         SummaryReportType.totalAmounts => l10n.reportTypeTotalAmounts,
@@ -212,7 +67,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         SummaryReportType.monthlyDetailsForCurrentCategory => l10n.reportTypeMonthlyDetailsCurrentCategory,
       };
 
-  /// The four newer summary reports. They are built as plain tables ([TabularReport]) so PDF,
+  /// All the summary reports. They are built as plain tables ([TabularReport]) so PDF,
   /// Excel and sharing all come from the same data. Amounts are always grouped per currency.
   Future<void> _handleTabular(
     SummaryReportType type,
@@ -238,7 +93,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             title: title, accounts: accounts, transactions: transactions, labels: labels, from: from, to: to, sort: sort),
         SummaryReportType.monthlyDetailsForCurrentCategory => ReportBuilders.monthlyDetails(
             title: title, accounts: accounts, transactions: transactions, labels: labels, from: from, to: to, sort: sort),
-        SummaryReportType.totalAmounts => throw StateError('handled by the original report'),
+        SummaryReportType.totalAmounts => ReportBuilders.accountTotals(
+            title: title, accounts: accounts, transactions: transactions, labels: labels, from: from, to: to, sort: sort),
       };
       if (report.isEmpty) {
         if (mounted) AppSnackBar.showError(context, l10n.reportNoDataMessage);

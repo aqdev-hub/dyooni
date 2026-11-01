@@ -33,6 +33,7 @@ import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/accounts/account_action_icon_row.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
+import '../../widgets/accounts/account_auto_message_dialog.dart';
 import '../../widgets/accounts/account_message_sheet.dart';
 import '../../widgets/accounts/account_phone_row.dart';
 import '../../widgets/accounts/account_reminders_sheet.dart';
@@ -627,6 +628,8 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                             unawaited(showAccountMessageSheet(context, account: account, transactions: transactions, currencyName: currencyName));
                           case 'reminder':
                             unawaited(showAccountRemindersSheet(context, account: account));
+                          case 'auto':
+                            unawaited(showAccountAutoMessageDialog(context, account: account));
                           case 'currency':
                             unawaited(_switchCurrency(context));
                           case 'report':
@@ -649,6 +652,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                         return [
                           item('message', l10n.menuSendMessage),
                           item('reminder', l10n.menuAddReminder),
+                          item('auto', l10n.menuAutoMessages),
                           item('currency', l10n.menuQuickCurrency),
                           item('report', l10n.menuIssueReport),
                           item('transfer', l10n.menuTransferAmount),

@@ -1944,4 +1944,191 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get menuRateApp => 'Give us five stars';
+
+  @override
+  String get autoSettingsTitle => 'Automatic message settings';
+
+  @override
+  String get autoIntroCard => 'After you save an entry, a ready message with the amount and balance appears so you can send it to the account holder in one tap. No app can send a message for you without your approval, so it opens ready in WhatsApp or Messages and you press Send.';
+
+  @override
+  String get autoSectionBehavior => 'Behaviour';
+
+  @override
+  String get autoEnableTitle => 'Offer a balance message after saving an entry';
+
+  @override
+  String get autoChannelTitle => 'Preferred app for sending';
+
+  @override
+  String get autoChannelSms => 'Text message (SMS)';
+
+  @override
+  String get autoChannelWhatsapp => 'WhatsApp';
+
+  @override
+  String get autoChannelAsk => 'Choose every time';
+
+  @override
+  String get autoContentTitle => 'Message content';
+
+  @override
+  String get autoContentBalanceOnly => 'Balance only';
+
+  @override
+  String get autoContentDetailed => 'With details (entry note and recent entries)';
+
+  @override
+  String get autoSkipPreviewTitle => 'Open the app directly, no preview';
+
+  @override
+  String get autoSkipPreviewSubtitle => 'The message is written and opened in the chosen app right after saving.';
+
+  @override
+  String get autoShowDate => 'Show the entry date';
+
+  @override
+  String get autoShowAllCurrencies => 'Show the account\'s balances in other currencies';
+
+  @override
+  String get autoMinAmountTitle => 'Minimum amount';
+
+  @override
+  String get autoMinAmountHint => 'Entries below this amount do not offer a message. Leave 0 to include every entry.';
+
+  @override
+  String get autoSectionTexts => 'Edit the message wording';
+
+  @override
+  String get autoTextsHint => 'Leave a field empty to use the default text.';
+
+  @override
+  String get autoFieldIntro => 'Introduction';
+
+  @override
+  String get autoFieldBusiness => 'Business name';
+
+  @override
+  String get autoFieldHolderOwes => 'Wording: amount the holder owes';
+
+  @override
+  String get autoFieldOwedToHolder => 'Wording: amount owed to the holder';
+
+  @override
+  String get autoFieldTotalHolderOwes => 'Total wording: holder owes';
+
+  @override
+  String get autoFieldTotalOwedToHolder => 'Total wording: owed to holder';
+
+  @override
+  String get autoFieldHolderOwesNote => 'Payment note (added when the holder owes)';
+
+  @override
+  String get autoFieldSettledNote => 'Settled note';
+
+  @override
+  String get autoFieldDetailsPrefix => 'Details prefix';
+
+  @override
+  String get autoFieldFooter => 'Closing line';
+
+  @override
+  String get autoResetTexts => 'Restore default wording';
+
+  @override
+  String get autoPreviewTitle => 'Message preview';
+
+  @override
+  String get autoDefaultIntro => 'Notice from';
+
+  @override
+  String get autoDefaultHolderOwes => 'You owe the amount of';
+
+  @override
+  String get autoDefaultOwedToHolder => 'You are owed the amount of';
+
+  @override
+  String get autoDefaultTotalHolderOwes => 'Total you owe';
+
+  @override
+  String get autoDefaultTotalOwedToHolder => 'Total owed to you';
+
+  @override
+  String get autoDefaultSettled => 'Balance fully settled';
+
+  @override
+  String get autoDefaultDetailsPrefix => 'For';
+
+  @override
+  String get autoDateLabel => 'Date';
+
+  @override
+  String get autoRecentHeader => 'Recent entries';
+
+  @override
+  String get autoShortHolderOwes => 'you owe';
+
+  @override
+  String get autoShortOwedToHolder => 'owed to you';
+
+  @override
+  String get autoSampleName => 'Account name';
+
+  @override
+  String get autoSampleDetails => 'Entry note';
+
+  @override
+  String autoAccountTitle(String name) {
+    return 'Automatic messages for $name';
+  }
+
+  @override
+  String get autoAccountTypeTitle => 'Automatic message type for this account';
+
+  @override
+  String get autoAccountBalanceOnly => 'Balance only';
+
+  @override
+  String get autoAccountDetailed => 'Detailed';
+
+  @override
+  String get autoAccountDefault => 'Default from settings';
+
+  @override
+  String get autoAccountOff => 'Turn automatic messages off';
+
+  @override
+  String get autoAccountChannelTitle => 'Preferred app for sending';
+
+  @override
+  String get autoAccountNoPhone => 'This account has no phone number. Add one so a message can be prepared for it.';
+
+  @override
+  String get autoAccountOpenGlobal => 'Open general settings';
+
+  @override
+  String autoPromptTitle(String name) {
+    return 'Send a balance notice to $name?';
+  }
+
+  @override
+  String get autoPromptSendWhatsapp => 'Send via WhatsApp';
+
+  @override
+  String get autoPromptSendSms => 'Send via SMS';
+
+  @override
+  String get autoPromptSend => 'Send';
+
+  @override
+  String get autoPromptSkip => 'Skip';
+
+  @override
+  String get autoPromptNoPhone => 'No phone number on this account, so no message was prepared.';
+
+  @override
+  String get autoSendFailed => 'Could not open the app to send the message';
+
+  @override
+  String get menuAutoMessages => 'Automatic message settings';
 }

@@ -159,6 +159,78 @@ class ReportBuilders {
     return seen;
   }
 
+  // ───────────── 0. إجمالي المبالغ ─────────────
+
+  /// One table PER CURRENCY, one line per account that has entries in that currency: category,
+  /// number of entries, له, عليه and the net — then a total line for the currency. Amounts of
+  /// different currencies are never added together (the old single-table version did, which made
+  /// its total meaningless as soon as an account used two currencies).
+  ///
+  /// [sort] orders the accounts INSIDE each currency table, by that currency's own figures.
+  static TabularReport accountTotals({
+    required String title,
+    required List<Account> accounts,
+    required List<Transaction> transactions,
+    required ReportLabels labels,
+    DateTime? from,
+    DateTime? to,
+    ReportSortOption? sort,
+  }) {
+    final l = labels;
+    final byId = {for (final a in accounts) a.id: a};
+    final tx = transactions.where((t) => byId.containsKey(t.accountId) && inRange(t.date, from, to)).toList();
+    final tables = <ReportTable>[];
+    for (final currency in _currencies(_chrono(tx))) {
+      final perAccount = _byAccount(tx.where((t) => t.currency == currency).toList());
+      var ids = perAccount.keys.toList();
+      DateTime last(String id) => perAccount[id]!.map((t) => t.date).reduce((x, y) => x.isAfter(y) ? x : y);
+      switch (sort) {
+        case null:
+          ids.sort((a, b) => byId[a]!.name.compareTo(byId[b]!.name));
+        case ReportSortOption.nameAsc:
+          ids.sort((a, b) => byId[a]!.name.compareTo(byId[b]!.name));
+        case ReportSortOption.nameDesc:
+          ids.sort((a, b) => byId[b]!.name.compareTo(byId[a]!.name));
+        case ReportSortOption.balanceAsc:
+          ids.sort((a, b) => _sum(perAccount[a]!).compareTo(_sum(perAccount[b]!)));
+        case ReportSortOption.balanceDesc:
+          ids.sort((a, b) => _sum(perAccount[b]!).compareTo(_sum(perAccount[a]!)));
+        case ReportSortOption.dateAsc:
+          ids.sort((a, b) => last(a).compareTo(last(b)));
+        case ReportSortOption.dateDesc:
+          ids.sort((a, b) => last(b).compareTo(last(a)));
+      }
+      final lines = <ReportLine>[];
+      var credit = 0.0, debit = 0.0, count = 0;
+      for (final id in ids) {
+        final list = perAccount[id]!;
+        final c = list.where((t) => t.direction == AccountDirection.credit).fold(0.0, (s, t) => s + t.amount);
+        final d = list.where((t) => t.direction == AccountDirection.debit).fold(0.0, (s, t) => s + t.amount);
+        credit += c;
+        debit += d;
+        count += list.length;
+        lines.add(ReportLine([
+          byId[id]!.name,
+          l.categoryName(byId[id]!.category.id),
+          '${list.length}',
+          formatAmount(c),
+          formatAmount(d),
+          formatNet(c - d, l),
+        ]));
+      }
+      lines.add(ReportLine(
+        [l.total, '${ids.length} ${l.accountsCount}', '$count', formatAmount(credit), formatAmount(debit), formatNet(credit - debit, l)],
+        style: ReportLineStyle.total,
+      ));
+      tables.add(ReportTable(
+        heading: l.currencyName(currency),
+        headers: [l.account, l.category, l.entries, l.credit, l.debit, l.net],
+        lines: lines,
+      ));
+    }
+    return TabularReport(title: title, tables: tables);
+  }
+
   // ───────────── 1. تفاصيل جميع المبالغ ─────────────
 
   /// Every entry of every account, one table per account: date, details, currency, له, عليه and

@@ -9,6 +9,7 @@ import '../../core/utils/arabic_pdf_text.dart';
 import '../../data/models/account.dart';
 import '../../data/models/personal_data.dart';
 import '../../data/models/transaction.dart';
+import 'report_palette.dart';
 import 'tabular_report.dart';
 
 /// One row of the "إجمالي المبالغ" (summary totals) report — one line per account.
@@ -174,7 +175,7 @@ class PdfReportService {
         pw.SizedBox(height: 10),
         pw.Text(
           shapeArabicForPdf(reportTitle),
-          style: pw.TextStyle(font: boldFont, fontSize: 13, color: PdfColors.blueGrey800, decoration: pw.TextDecoration.underline),
+          style: pw.TextStyle(font: boldFont, fontSize: 13, color: ReportPalette.navy, decoration: pw.TextDecoration.underline),
         ),
         pw.SizedBox(height: 8),
         pw.Divider(color: PdfColors.grey400),
@@ -200,7 +201,7 @@ class PdfReportService {
         mainAxisSize: pw.MainAxisSize.min,
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
-          pw.Text(shapeArabicForPdf(label), style: pw.TextStyle(font: boldFont, fontSize: 11, color: PdfColors.blueGrey800)),
+          pw.Text(shapeArabicForPdf(label), style: pw.TextStyle(font: boldFont, fontSize: 11, color: ReportPalette.navy)),
           pw.SizedBox(height: 8),
             pw.SizedBox(
               width: width,
@@ -306,7 +307,7 @@ class PdfReportService {
         footer: (context) => _footer(context, appName, regularFont),
         build: (context) => [
           pw.Table(
-            border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+            border: pw.TableBorder.all(color: ReportPalette.border, width: 0.5),
             columnWidths: const {
               0: pw.FlexColumnWidth(3),
               1: pw.FlexColumnWidth(2),
@@ -315,7 +316,7 @@ class PdfReportService {
             },
             children: [
               pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.blueGrey800),
+                decoration: const pw.BoxDecoration(color: ReportPalette.navy),
                 children: [
                   _headerCell(shapeArabicForPdf(accountNameHeader), boldFont),
                   _headerCell(shapeArabicForPdf(balanceHeader), boldFont),
@@ -333,7 +334,7 @@ class PdfReportService {
                   ],
                 ),
               pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.green100),
+                decoration: const pw.BoxDecoration(color: ReportPalette.totalFill),
                 children: [
                   _headerCellPlain(shapeArabicForPdf(totalRowLabel), boldFont, PdfColors.black),
                   _bodyCellBold(net.abs().toStringAsFixed(0), boldFont),
@@ -413,7 +414,7 @@ class PdfReportService {
         footer: (context) => _footer(context, appName, regularFont),
         build: (context) => [
           pw.Table(
-            border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+            border: pw.TableBorder.all(color: ReportPalette.border, width: 0.5),
             columnWidths: const {
               0: pw.FlexColumnWidth(2),
               1: pw.FlexColumnWidth(2),
@@ -423,7 +424,7 @@ class PdfReportService {
             },
             children: [
               pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.blueGrey800),
+                decoration: const pw.BoxDecoration(color: ReportPalette.navy),
                 children: [
                   _headerCell(shapeArabicForPdf(balanceHeader), boldFont),
                   _headerCell(shapeArabicForPdf(creditHeader), boldFont),
@@ -462,7 +463,7 @@ class PdfReportService {
                 ],
               ),
               pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.green100),
+                decoration: const pw.BoxDecoration(color: ReportPalette.totalFill),
                 children: [
                   _bodyCellBold(finalBalance.abs().toStringAsFixed(0), boldFont),
                   pw.SizedBox(),
@@ -524,31 +525,31 @@ class PdfReportService {
           if (table.heading != null)
             pw.Container(
               width: double.infinity,
-              margin: const pw.EdgeInsets.only(top: 10, bottom: 4),
-              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              decoration: const pw.BoxDecoration(color: PdfColors.blueGrey100),
-              child: pw.Text(shapeArabicForPdf(table.heading!), style: pw.TextStyle(font: boldFont, fontSize: 11)),
+              margin: const pw.EdgeInsets.only(top: 12, bottom: 4),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: const pw.BoxDecoration(color: ReportPalette.headingFill),
+              child: pw.Text(shapeArabicForPdf(table.heading!), style: pw.TextStyle(font: boldFont, fontSize: 12, color: ReportPalette.navy)),
             ),
           pw.Table(
-            border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+            border: pw.TableBorder.all(color: ReportPalette.border, width: 0.5),
             columnWidths: {for (var c = 0; c < columns; c++) c: pw.FlexColumnWidth(weights[c])},
             children: [
               pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.blueGrey800),
+                decoration: const pw.BoxDecoration(color: ReportPalette.navy),
                 children: [for (final h in table.headers) _headerCell(shapeArabicForPdf(h), boldFont)],
               ),
-              for (final line in table.lines)
+              for (var i = 0; i < table.lines.length; i++)
                 pw.TableRow(
-                  decoration: switch (line.style) {
-                    ReportLineStyle.total => const pw.BoxDecoration(color: PdfColors.green100),
-                    ReportLineStyle.subtle => const pw.BoxDecoration(color: PdfColors.grey200),
-                    ReportLineStyle.normal => null,
+                  decoration: switch (table.lines[i].style) {
+                    ReportLineStyle.total => const pw.BoxDecoration(color: ReportPalette.totalFill),
+                    ReportLineStyle.subtle => const pw.BoxDecoration(color: ReportPalette.subtleFill),
+                    ReportLineStyle.normal => i.isOdd ? const pw.BoxDecoration(color: ReportPalette.zebraFill) : null,
                   },
                   children: [
                     for (var c = 0; c < columns; c++)
-                      line.style == ReportLineStyle.total
-                          ? _bodyCellBold(shapeArabicForPdf(c < line.cells.length ? line.cells[c] : ''), boldFont)
-                          : _bodyCell(shapeArabicForPdf(c < line.cells.length ? line.cells[c] : ''), regularFont),
+                      table.lines[i].style == ReportLineStyle.total
+                          ? _bodyCellBold(shapeArabicForPdf(c < table.lines[i].cells.length ? table.lines[i].cells[c] : ''), boldFont)
+                          : _bodyCell(shapeArabicForPdf(c < table.lines[i].cells.length ? table.lines[i].cells[c] : ''), regularFont),
                   ],
                 ),
             ],

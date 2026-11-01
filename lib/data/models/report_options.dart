@@ -1,6 +1,6 @@
 /// The five summary-report variants offered on the "التقارير" sheet reached from the Reports
-/// screen (all accounts). [totalAmounts] has its own builder; the other four are produced by
-/// ReportBuilders (logic/reports/tabular_report.dart), which groups every amount per currency.
+/// screen (all accounts). All five are built by ReportBuilders
+/// (logic/reports/tabular_report.dart), which groups every amount per currency — one table each.
 enum SummaryReportType {
   totalAmounts,
   allAmountsDetails,

@@ -142,4 +142,38 @@ void main() {
     );
     expect(report.isEmpty, isTrue);
   });
+
+  test('accountTotals: one table per currency, never mixing currencies', () {
+    final report = ReportBuilders.accountTotals(
+      title: 't',
+      accounts: [a, b],
+      transactions: [
+        tx('1', 'a', 100, 'YER', AccountDirection.credit, DateTime(2026, 1, 2)),
+        tx('2', 'a', 30, 'YER', AccountDirection.debit, DateTime(2026, 1, 3)),
+        tx('3', 'b', 50, 'YER', AccountDirection.credit, DateTime(2026, 1, 4)),
+        tx('4', 'a', 7, 'USD', AccountDirection.credit, DateTime(2026, 1, 5)),
+      ],
+      labels: labels,
+    );
+    expect(report.tables.length, 2);
+    final yer = report.tables.firstWhere((t) => t.heading == 'YER');
+    // two accounts + the total line
+    expect(yer.lines.length, 3);
+    expect(yer.lines.last.style, ReportLineStyle.total);
+    expect(yer.lines.last.cells.last, '120 له'); // (100-30)+50
+    final usd = report.tables.firstWhere((t) => t.heading == 'USD');
+    expect(usd.lines.length, 2);
+    expect(usd.lines.last.cells.last, '7 له');
+  });
+
+  test('accountTotals: nothing in range gives an empty report', () {
+    final report = ReportBuilders.accountTotals(
+      title: 't',
+      accounts: [a],
+      transactions: [tx('1', 'a', 100, 'YER', AccountDirection.credit, DateTime(2026, 1, 2))],
+      labels: labels,
+      from: DateTime(2027, 1, 1),
+    );
+    expect(report.isEmpty, isTrue);
+  });
 }

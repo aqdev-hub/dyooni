@@ -33,13 +33,16 @@ import 'tabular_report.dart';
 /// rightmost = first column in the PDF export) differs from the PDF version.
 class XlsxReportService {
   static const _titleFill = '#021534'; // brand navy — matches AppColors.backgroundTop
-  static const _titleFont = '#CA8906'; // brand gold — matches AppColors.gold
-  static const _headerFill = '#021534';
+  static const _titleFont = '#F0C24B'; // vivid brand gold (AppColors.gold, brighter for contrast on navy)
+  static const _headerFill = '#0B2A6B'; // royal navy, lighter than the title bar so the two read as layers
   static const _headerFont = '#FFFFFF';
-  static const _creditFill = '#DCEFE0'; // matches AppColors.creditCell
-  static const _debitFill = '#F6D9D2'; // matches AppColors.debitCell
-  static const _totalsFill = '#C8E6C9'; // matches PdfColors.green100 used in the PDF export
-  static const _gridlineColor = '#C7CDD6'; // thin neutral gray, close to PDF's PdfColors.grey300
+  static const _creditFill = '#BDE8C9'; // stronger than AppColors.creditCell so rows read at a glance
+  static const _debitFill = '#F7C1B8';
+  static const _totalsFill = '#FFE08A'; // gold total rows (same as ReportPalette.totalFill in the PDF)
+  static const _headingFill = '#F0C24B'; // gold band above each table
+  static const _zebraFill = '#EAF0FF';
+  static const _bodyFont = '#0B1B3F';
+  static const _gridlineColor = '#8FA3D1'; // soft blue-grey grid
 
   /// One shared thin-gray border, reused on every side of every styled cell below — this is what
   /// makes the sheet read as an actual bordered TABLE rather than just colored blocks of text,
@@ -178,8 +181,10 @@ class XlsxReportService {
         final cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex));
         cell.value = TextCellValue(table.heading!);
         cell.cellStyle = CellStyle(
-          backgroundColorHex: ExcelColor.fromHexString('#DDE3EC'),
+          backgroundColorHex: ExcelColor.fromHexString(_headingFill),
+          fontColorHex: ExcelColor.fromHexString(_titleFill),
           bold: true,
+          fontSize: 12,
           horizontalAlign: HorizontalAlign.Center,
           verticalAlign: VerticalAlign.Center,
           topBorder: _gridBorder,
@@ -195,14 +200,16 @@ class XlsxReportService {
         final w = table.headers[c].length + 4.0;
         if (w > widths[c]) widths[c] = w;
       }
+      var zebra = 0;
       for (final line in table.lines) {
         switch (line.style) {
           case ReportLineStyle.total:
             _writeTotalsRow(sheet, rowIndex, line.cells);
           case ReportLineStyle.subtle:
-            _writeDataRow(sheet, rowIndex, line.cells, fillHex: '#EEF0F3');
+            _writeDataRow(sheet, rowIndex, line.cells, fillHex: '#D5DDF2');
           case ReportLineStyle.normal:
-            _writeDataRow(sheet, rowIndex, line.cells, fillHex: '#FFFFFF');
+            _writeDataRow(sheet, rowIndex, line.cells, fillHex: zebra.isEven ? '#FFFFFF' : _zebraFill);
+            zebra++;
         }
         for (var c = 0; c < line.cells.length && c < columnCount; c++) {
           final w = line.cells[c].length + 3.0;
@@ -277,6 +284,7 @@ class XlsxReportService {
       cell.value = TextCellValue(values[col]);
       cell.cellStyle = CellStyle(
         backgroundColorHex: ExcelColor.fromHexString(fillHex),
+        fontColorHex: ExcelColor.fromHexString(_bodyFont),
         horizontalAlign: HorizontalAlign.Center,
         verticalAlign: VerticalAlign.Center,
         topBorder: _gridBorder,
@@ -293,6 +301,7 @@ class XlsxReportService {
       cell.value = TextCellValue(values[col]);
       cell.cellStyle = CellStyle(
         backgroundColorHex: ExcelColor.fromHexString(_totalsFill),
+        fontColorHex: ExcelColor.fromHexString(_titleFill),
         bold: true,
         horizontalAlign: HorizontalAlign.Center,
         verticalAlign: VerticalAlign.Center,
