@@ -1,5 +1,4 @@
 import 'package:dyooni/data/models/account.dart';
-import 'package:dyooni/data/models/report_options.dart';
 import 'package:dyooni/data/models/transaction.dart';
 import 'package:dyooni/logic/reports/tabular_report.dart';
 import 'package:flutter_test/flutter_test.dart';

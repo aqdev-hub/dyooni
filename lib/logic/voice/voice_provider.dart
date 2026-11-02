@@ -552,7 +552,7 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   Future<void> startBluetoothMode() async {
     _reconnectWatch?.cancel();
-    _wakeSubscription?.cancel();
+    unawaited(_wakeSubscription?.cancel());
     final attempt = ++_bluetoothAttempt;
     state = const VoiceState(status: VoiceStatus.bluetoothConnecting, bluetoothMode: true);
     final bluetooth = _ref.read(bluetoothAudioRouteServiceProvider);
@@ -1695,7 +1695,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     _clearSpeechEndTimer();
     _bluetoothMonitor?.cancel();
     _reconnectWatch?.cancel();
-    _wakeSubscription?.cancel();
+    unawaited(_wakeSubscription?.cancel());
     ++_bluetoothAttempt;
     await _voiceOutput.stop();
     try {

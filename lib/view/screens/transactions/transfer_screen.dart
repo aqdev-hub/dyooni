@@ -11,6 +11,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/dyooni_picker_theme.dart';
 import '../../../data/models/account.dart';
+import '../../../data/models/currency_type.dart';
 import '../../../data/models/transaction.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/currencies/currencies_provider.dart';
@@ -72,10 +73,12 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => _AccountPickerSheet(accounts: accounts),
     );
-    if (picked != null && mounted) setState(() {
-      _other = picked;
-      _accountError = null;
-    });
+    if (picked != null && mounted) {
+      setState(() {
+        _other = picked;
+        _accountError = null;
+      });
+    }
   }
 
   Future<void> _pickCurrency() async {

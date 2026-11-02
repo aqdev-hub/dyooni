@@ -182,7 +182,7 @@ class ReportBuilders {
     final tables = <ReportTable>[];
     for (final currency in _currencies(_chrono(tx))) {
       final perAccount = _byAccount(tx.where((t) => t.currency == currency).toList());
-      var ids = perAccount.keys.toList();
+      final ids = perAccount.keys.toList();
       DateTime last(String id) => perAccount[id]!.map((t) => t.date).reduce((x, y) => x.isAfter(y) ? x : y);
       switch (sort) {
         case null:
