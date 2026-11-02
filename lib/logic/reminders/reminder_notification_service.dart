@@ -30,7 +30,7 @@ class ReminderNotificationService {
     if (_ready) return;
     tzdata.initializeTimeZones();
     await _plugin.initialize(
-      const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
+      settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
       onDidReceiveNotificationResponse: (response) {
         final payload = response.payload;
         if (payload != null && payload.isNotEmpty) onTap(payload);
@@ -71,7 +71,7 @@ class ReminderNotificationService {
 
   Future<void> cancel(AccountReminder reminder) async {
     for (var k = 0; k < reminderSlots; k++) {
-      await _plugin.cancel(_idFor(reminder, k));
+      await _plugin.cancel(id: _idFor(reminder, k));
     }
   }
 
@@ -97,13 +97,13 @@ class ReminderNotificationService {
     );
     for (var i = 0; i < times.length && i < reminderSlots; i++) {
       await _plugin.zonedSchedule(
-        _idFor(reminder, i),
-        title,
-        body,
+        id: _idFor(reminder, i),
+        title: title,
+        body: body,
         // An absolute instant: the UTC location is only a carrier; the exact moment is the
         // device-local time the person picked.
-        tz.TZDateTime.from(times[i], tz.UTC),
-        details,
+        scheduledDate: tz.TZDateTime.from(times[i], tz.UTC),
+        notificationDetails: details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: reminder.accountId,
       );
