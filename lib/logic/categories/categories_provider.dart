@@ -56,13 +56,16 @@ class CategoryTypesStore extends Notifier<List<CategoryType>> {
     return saved;
   }
 
+  /// The same list [categoryTypesProvider] exposes, computed here without reading that provider.
+  List<CategoryType> _everyCategory() => mergeWithAccountCategories(state, ref.read(accountsProvider).value ?? const <Account>[]);
+
   static String _normalize(String text) => text.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
 
   /// `null` when [raw] is acceptable; [excludeId] is the category being renamed.
   CategoryNameError? validateName(String raw, {String? excludeId}) {
     final name = _normalize(raw);
     if (name.isEmpty) return CategoryNameError.empty;
-    final taken = ref.read(categoryTypesProvider).any((c) => c.id != excludeId && _normalize(c.name) == name);
+    final taken = _everyCategory().any((c) => c.id != excludeId && _normalize(c.name) == name);
     return taken ? CategoryNameError.duplicate : null;
   }
 
@@ -87,7 +90,7 @@ class CategoryTypesStore extends Notifier<List<CategoryType>> {
   Future<CategoryType> add(String rawName) async {
     final error = validateName(rawName);
     if (error != null) throw CategoryNameException(error);
-    final current = ref.read(categoryTypesProvider);
+    final current = _everyCategory();
     final created = CategoryType(id: _uniqueId(rawName, current.map((c) => c.id)), name: rawName.trim());
     await _persist([...current, created]);
     return created;
@@ -96,7 +99,7 @@ class CategoryTypesStore extends Notifier<List<CategoryType>> {
   Future<void> rename(String id, String rawName) async {
     final error = validateName(rawName, excludeId: id);
     if (error != null) throw CategoryNameException(error);
-    final current = ref.read(categoryTypesProvider);
+    final current = _everyCategory();
     await _persist([
       for (final c in current)
         if (c.id == id) c.copyWith(name: rawName.trim()) else c,
@@ -105,7 +108,7 @@ class CategoryTypesStore extends Notifier<List<CategoryType>> {
 
   /// Show/hide a category's tab on Home. At least one tab always stays visible.
   Future<void> setVisible(String id, bool visible) async {
-    final current = ref.read(categoryTypesProvider);
+    final current = _everyCategory();
     if (!visible && current.where((c) => c.visible && c.id != id).isEmpty) {
       throw const CategoryVisibilityException();
     }
@@ -120,7 +123,7 @@ class CategoryTypesStore extends Notifier<List<CategoryType>> {
     if ((ref.read(categoryUsageProvider)[id] ?? 0) > 0) {
       throw const CategoryDeleteException(CategoryDeleteBlock.inUse);
     }
-    final current = ref.read(categoryTypesProvider);
+    final current = _everyCategory();
     if (current.where((c) => !c.isGeneral && c.id != id).isEmpty) {
       throw const CategoryDeleteException(CategoryDeleteBlock.lastOne);
     }
@@ -137,8 +140,14 @@ class CategoryTypesStore extends Notifier<List<CategoryType>> {
 /// that is missing from it (data from before this feature, or restored from another device).
 /// No account can therefore ever end up in a category that cannot be seen or chosen.
 final categoryTypesProvider = Provider<List<CategoryType>>((ref) {
-  final stored = ref.watch(categoryTypesStoreProvider);
-  final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
+  return mergeWithAccountCategories(ref.watch(categoryTypesStoreProvider), ref.watch(accountsProvider).value ?? const <Account>[]);
+});
+
+/// The merge behind [categoryTypesProvider], as a plain function. The store needs the same merged
+/// list when it edits, but must NOT read [categoryTypesProvider] to get it: that provider watches
+/// the store, so reading it from inside the store is a circular dependency (Riverpod rejects it
+/// in debug mode).
+List<CategoryType> mergeWithAccountCategories(List<CategoryType> stored, List<Account> accounts) {
   final known = {for (final c in stored) c.id};
   final extra = <CategoryType>[];
   for (final a in accounts) {
@@ -147,7 +156,7 @@ final categoryTypesProvider = Provider<List<CategoryType>>((ref) {
     }
   }
   return extra.isEmpty ? stored : [...stored, ...extra];
-});
+}
 
 /// Real categories only — what an account can be put in (everything except "عام").
 final assignableCategoriesProvider = Provider<List<CategoryType>>((ref) {

@@ -15,6 +15,7 @@ import 'package:dyooni/logic/accounts/accounts_provider.dart';
 import 'package:dyooni/logic/auth/auth_provider.dart';
 import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
+import 'package:dyooni/view/screens/accounts/add_account_screen.dart';
 import 'package:dyooni/view/screens/home/home_screen.dart';
 
 class MockAccountsRepository extends Mock implements AccountsRepository {
@@ -118,18 +119,19 @@ void main() {
     expect(find.text('500'), findsWidgets);
   });
 
-  testWidgets('tapping the FAB navigates to add-account', (tester) async {
+  testWidgets('tapping the add button in the summary bar opens the add-account form', (tester) async {
     when(() => accountsRepo.getAccounts()).thenAnswer((_) async => []);
 
     await tester.pumpWidget(_wrap(accountsRepo, txRepo, authRepo, prefs));
     await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
-    // The FAB is icon-only now (tooltip carries the label, matching the reference's compact
-    // FAB) — tap by widget type instead of visible text.
-    await tester.tap(find.byType(FloatingActionButton));
+    // Adding an account is the "+" in the bottom summary bar (tooltip homeAddAccount); it opens
+    // the form in a dialog instead of navigating to a route.
+    await tester.tap(find.byTooltip(l10n.homeAddAccount));
     await tester.pumpAndSettle();
 
-    expect(find.text('add-account'), findsOneWidget);
+    expect(find.byType(AddAccountScreen), findsOneWidget);
   });
 
   testWidgets('opening the drawer and confirming logout calls signOut and navigates to login',

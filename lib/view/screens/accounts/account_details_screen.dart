@@ -108,7 +108,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
       await ref.read(accountsProvider.notifier).deleteAccount(account.id);
       if (!context.mounted) return;
       AppSnackBar.showSuccess(context, l10n.accountDeletedSuccessMessage);
-      context.pop();
+      if (context.canPop()) context.pop();
     } catch (_) {
       if (!context.mounted) return;
       AppSnackBar.showError(context, l10n.unexpectedError);

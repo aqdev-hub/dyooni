@@ -71,12 +71,33 @@ class TranscriptCleaner {
       if (norm.contains(phrase) && norm.length <= phrase.length + _maxExtraChars) return '';
     }
 
-    final promptNorm = _norm(_strip(prompt));
-    // Whisper echoes its prompt on silence. Only multi-word texts are compared: a genuine one-word
-    // answer ("نعم", "حفظ") is also a substring of the prompt and must be kept.
-    if (promptNorm.isNotEmpty && norm.split(' ').length >= 4 && promptNorm.contains(norm)) return '';
+    if (_isPromptEcho(norm, prompt)) return '';
 
     return _fixKnownConfusions(collapsed);
+  }
+
+  /// Whisper echoes its `initial_prompt` on silence. An echo is a text that reproduces whole
+  /// sentences of the prompt (one sentence, or several in a row), or a very long stretch of it.
+  /// A text that merely ENDS like a prompt sentence is a real utterance: the prompt's own example
+  /// "دين لفلان عليه خمسة آلاف ريال" contains "عليه خمسة آلاف ريال", which is exactly what a person
+  /// says — treating any substring as an echo threw those away. Single words ("نعم", "حفظ") are
+  /// never echoes.
+  static bool _isPromptEcho(String norm, String prompt) {
+    if (norm.split(' ').length < 4) return false;
+    final sentences = prompt
+        .split(RegExp(r'[.!؟?\n]'))
+        .map((e) => _norm(_strip(e)))
+        .where((e) => e.isNotEmpty)
+        .toList();
+    for (var start = 0; start < sentences.length; start++) {
+      var joined = '';
+      for (var end = start; end < sentences.length; end++) {
+        joined = joined.isEmpty ? sentences[end] : '$joined ${sentences[end]}';
+        if (joined == norm) return true;
+      }
+    }
+    final promptNorm = _norm(_strip(prompt));
+    return norm.split(' ').length >= 8 && promptNorm.contains(norm);
   }
 
   /// Words the local model is known to produce INSTEAD of "ريال" right after an amount

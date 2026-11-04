@@ -49,6 +49,9 @@ class CurrencyTypesStore extends Notifier<List<CurrencyType>> {
     return saved;
   }
 
+  /// Same list [currencyTypesProvider] exposes, computed without reading that provider.
+  List<CurrencyType> _everyCurrency() => mergeWithTransactionCurrencies(state, ref.read(transactionsProvider).value ?? const <Transaction>[]);
+
   static String _normalize(String text) => text.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
 
   /// `null` when [raw] is acceptable. [excludeId] is the currency being renamed (it may keep its
@@ -56,7 +59,7 @@ class CurrencyTypesStore extends Notifier<List<CurrencyType>> {
   CurrencyNameError? validateName(String raw, {String? excludeId}) {
     final name = _normalize(raw);
     if (name.isEmpty) return CurrencyNameError.empty;
-    final taken = ref.read(currencyTypesProvider).any((c) => c.id != excludeId && _normalize(c.name) == name);
+    final taken = _everyCurrency().any((c) => c.id != excludeId && _normalize(c.name) == name);
     return taken ? CurrencyNameError.duplicate : null;
   }
 
@@ -83,7 +86,7 @@ class CurrencyTypesStore extends Notifier<List<CurrencyType>> {
   Future<CurrencyType> add(String rawName) async {
     final error = validateName(rawName);
     if (error != null) throw CurrencyNameException(error);
-    final current = ref.read(currencyTypesProvider);
+    final current = _everyCurrency();
     final created = CurrencyType(id: _uniqueId(rawName, current.map((c) => c.id)), name: rawName.trim());
     await _persist([...current, created]);
     return created;
@@ -92,7 +95,7 @@ class CurrencyTypesStore extends Notifier<List<CurrencyType>> {
   Future<void> rename(String id, String rawName) async {
     final error = validateName(rawName, excludeId: id);
     if (error != null) throw CurrencyNameException(error);
-    final current = ref.read(currencyTypesProvider);
+    final current = _everyCurrency();
     await _persist([
       for (final c in current)
         if (c.id == id) c.copyWith(name: rawName.trim()) else c,
@@ -104,7 +107,7 @@ class CurrencyTypesStore extends Notifier<List<CurrencyType>> {
     if ((ref.read(currencyUsageProvider)[id] ?? 0) > 0) {
       throw const CurrencyDeleteException(CurrencyDeleteBlock.inUse);
     }
-    final current = ref.read(currencyTypesProvider);
+    final current = _everyCurrency();
     await _persist([for (final c in current) if (c.id != id) c]);
   }
 }
@@ -113,8 +116,12 @@ class CurrencyTypesStore extends Notifier<List<CurrencyType>> {
 /// transaction already uses that is missing from it (data from before this feature, or restored
 /// from another device). Nothing recorded can therefore ever fall out of the lists.
 final currencyTypesProvider = Provider<List<CurrencyType>>((ref) {
-  final stored = ref.watch(currencyTypesStoreProvider);
-  final transactions = ref.watch(transactionsProvider).value ?? const <Transaction>[];
+  return mergeWithTransactionCurrencies(ref.watch(currencyTypesStoreProvider), ref.watch(transactionsProvider).value ?? const <Transaction>[]);
+});
+
+/// The merge behind [currencyTypesProvider], as a plain function — the store needs the same list
+/// but must not read that provider (it watches the store: a circular dependency).
+List<CurrencyType> mergeWithTransactionCurrencies(List<CurrencyType> stored, List<Transaction> transactions) {
   final known = {for (final c in stored) c.id};
   final extra = <CurrencyType>[];
   for (final t in transactions) {
@@ -123,7 +130,7 @@ final currencyTypesProvider = Provider<List<CurrencyType>>((ref) {
     }
   }
   return extra.isEmpty ? stored : [...stored, ...extra];
-});
+}
 
 /// How many transactions (across all accounts) are recorded in each currency id.
 final currencyUsageProvider = Provider<Map<String, int>>((ref) {

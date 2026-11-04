@@ -132,9 +132,9 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
 
-    // "التقارير" is also the header title and the bottom-nav label, so the button is found by its
-    // icon instead of by text.
-    await tester.tap(find.byIcon(Icons.description_outlined));
+    // "التقارير" is also the header title and the bottom-nav label (which uses the same icon), so
+    // the button is found as the ElevatedButton carrying that icon.
+    await tester.tap(find.widgetWithIcon(ElevatedButton, Icons.description_outlined));
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.reportsSheetTitle), findsWidgets);

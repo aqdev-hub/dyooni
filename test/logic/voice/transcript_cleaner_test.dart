@@ -44,6 +44,12 @@ void main() {
       expect(clean('نعم، حفظ، تعديل، إلغاء.'), '');
     });
 
+    test('a whole prompt sentence (or several in a row) is an echo; its tail alone is real speech', () {
+      expect(clean('دين لفلان عليه خمسة آلاف ريال.'), '');
+      expect(clean('دين لفلان عليه خمسة آلاف ريال. سدد ثلاثة آلاف وخمسمائة ريال.'), '');
+      expect(clean('عليه خمسة آلاف ريال'), 'عليه خمسة آلاف ريال');
+    });
+
     test('one-word answers that also occur in the prompt are kept', () {
       expect(clean('حفظ.'), 'حفظ');
       expect(clean('نعم'), 'نعم');

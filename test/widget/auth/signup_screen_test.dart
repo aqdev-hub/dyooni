@@ -42,12 +42,21 @@ Future<void> _fillValidForm(WidgetTester tester, {String confirmPassword = 'pass
   await tester.enterText(fields.at(5), confirmPassword); // confirm password
 }
 
+/// The signup form is taller than the default 800x600 test surface, so taps on the checkbox and
+/// the button would land off-screen. A tall surface makes the whole form visible.
+void _useTallScreen(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
+
 void main() {
   late MockAuthRepository repository;
 
   setUp(() => repository = MockAuthRepository());
 
   testWidgets('shows every signup field and no stepper (dropped by design)', (tester) async {
+    _useTallScreen(tester);
     await tester.pumpWidget(_wrap(repository));
     await tester.pumpAndSettle();
 
@@ -58,6 +67,7 @@ void main() {
 
   testWidgets('rejects submission when passwords do not match, without calling the repository',
       (tester) async {
+    _useTallScreen(tester);
     await tester.pumpWidget(_wrap(repository));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
@@ -81,6 +91,7 @@ void main() {
 
   testWidgets('rejects submission when terms are not accepted, without calling the repository',
       (tester) async {
+    _useTallScreen(tester);
     await tester.pumpWidget(_wrap(repository));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
@@ -103,6 +114,7 @@ void main() {
   });
 
   testWidgets('successful signup shows a success message and navigates to home', (tester) async {
+    _useTallScreen(tester);
     when(
       () => repository.signUpWithEmail(
         firstName: any(named: 'firstName'),
@@ -127,6 +139,7 @@ void main() {
   });
 
   testWidgets('tapping the login link navigates back to /login', (tester) async {
+    _useTallScreen(tester);
     await tester.pumpWidget(_wrap(repository));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('ar'));

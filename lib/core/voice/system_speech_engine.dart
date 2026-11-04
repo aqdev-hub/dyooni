@@ -75,6 +75,15 @@ class SystemSpeechEngine implements SpeechEngine {
   bool? _nativeSupported;
   bool _nativeFailed = false;
   bool _nativeActive = false;
+
+  /// Whether the app-supplied-audio path has EVER produced text in this app run. A recognizer
+  /// service may accept EXTRA_AUDIO_SOURCE yet never use it (it then reports "no speech" or just
+  /// stays silent while the person talks). Until the path has proven itself, an empty outcome is
+  /// treated as "this path does not work here" and the plain plugin path takes over — see
+  /// [_fallbackToPlugin].
+  bool _nativeProducedText = false;
+  Timer? _nativeWatchdog;
+  static const _nativeWatchdogDelay = Duration(seconds: 9);
   final stt.SpeechToText _speech;
   final _soundMuter = _SystemSoundMuter();
   // Keeps a replayable copy of the voice while the OS recognizer listens — see ParallelRecorder.
@@ -249,16 +258,27 @@ class SystemSpeechEngine implements SpeechEngine {
   }
 
   void _onNativeEvent(NativeSpeechEvent event) {
+    debugPrint('[voice] native recognizer event: ${event.type} texts=${event.texts.length} code=${event.code}');
     switch (event.type) {
       case 'partial':
       case 'final':
         if (event.texts.isEmpty) return;
+        _nativeProducedText = true;
+        _nativeWatchdog?.cancel();
         _handleResult(event.texts.first, event.type == 'final', event.texts.skip(1).toList());
       case 'error':
         // 3 audio, 5 client, 12/13 language: this recognizer cannot work through the audio-source
         // path. Remember it so the next session uses the plain plugin path instead.
         const unusable = {3, 5, 12, 13};
         if (unusable.contains(event.code)) _nativeFailed = true;
+        // "No speech / no match" from a path that has never produced any text is the signature
+        // of a recognizer that ignores the audio we feed it: switch paths instead of telling the
+        // person nothing was heard.
+        if ((event.code == 6 || event.code == 7) && !_nativeProducedText && _wantListening && _nativeActive) {
+          _nativeFailed = true;
+          unawaited(_fallbackToPlugin('native path ended empty (code ${event.code})'));
+          return;
+        }
         const network = {1, 2, 4, 10, 11};
         const noMatch = {6, 7};
         final type = network.contains(event.code)
@@ -287,10 +307,43 @@ class SystemSpeechEngine implements SpeechEngine {
     await _recorder.start();
     _nativeActive = true;
     debugPrint('[voice] system recognizer running on app-supplied audio');
+    _armNativeWatchdog();
     return true;
   }
 
+  /// If the app-supplied-audio path has never produced text and nothing at all happens for a while,
+  /// give up on it (once) and use the plain plugin path.
+  void _armNativeWatchdog() {
+    _nativeWatchdog?.cancel();
+    if (_nativeProducedText) return;
+    _nativeWatchdog = Timer(_nativeWatchdogDelay, () {
+      if (_wantListening && _nativeActive && !_nativeProducedText) {
+        _nativeFailed = true;
+        unawaited(_fallbackToPlugin('native path silent for ${_nativeWatchdogDelay.inSeconds}s'));
+      }
+    });
+  }
+
+  Future<void> _fallbackToPlugin(String reason) async {
+    if (_restarting) return;
+    _restarting = true;
+    try {
+      debugPrint('[voice] switching to the plain system recognizer: $reason');
+      _nativeWatchdog?.cancel();
+      _nativeActive = false;
+      _recorder.onChunk = null;
+      await _native.cancel();
+      await _recorder.cancel();
+      if (_wantListening) await _listenWithPlugin();
+    } catch (e) {
+      debugPrint('[voice] fallback to the plain recognizer failed: $e');
+    } finally {
+      _restarting = false;
+    }
+  }
+
   Future<void> _stopRecognizer() async {
+    _nativeWatchdog?.cancel();
     if (_nativeActive) {
       _nativeActive = false;
       _recorder.onChunk = null;
@@ -332,6 +385,7 @@ class SystemSpeechEngine implements SpeechEngine {
 
   @override
   Future<void> cancel() async {
+    _nativeWatchdog?.cancel();
     _wantListening = false;
     _latestTranscript = '';
     _nativeActive = false;
@@ -344,6 +398,7 @@ class SystemSpeechEngine implements SpeechEngine {
 
   @override
   Future<void> release() async {
+    _nativeWatchdog?.cancel();
     _wantListening = false;
     _latestTranscript = '';
     _nativeActive = false;
@@ -360,6 +415,7 @@ class SystemSpeechEngine implements SpeechEngine {
 
   @override
   void dispose() {
+    _nativeWatchdog?.cancel();
     _wantListening = false;
     unawaited(_native.cancel());
     unawaited(_nativeSub?.cancel());

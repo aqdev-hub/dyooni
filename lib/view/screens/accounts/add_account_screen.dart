@@ -416,7 +416,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
         await _clearDraft();
         if (!mounted) return;
         AppSnackBar.showSuccess(context, l10n.accountUpdatedSuccessMessage);
-        context.pop();
+        if (context.canPop()) context.pop();
       } catch (_) {
         if (!mounted) return;
         AppSnackBar.showError(context, l10n.unexpectedError);
@@ -465,7 +465,8 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       // Show the currency page the new account was created in, so it is visible on Home.
       ref.read(selectedCurrencyIdProvider.notifier).state = _currencyCode;
       AppSnackBar.showSuccess(context, l10n.accountSavedSuccessMessage);
-      context.pop();
+      // Guarded: with nothing to close, pop() throws and would turn a successful save into an error.
+      if (context.canPop()) context.pop();
     } catch (_) {
       if (!mounted) return;
       AppSnackBar.showError(context, l10n.unexpectedError);
