@@ -12,10 +12,6 @@ import io.flutter.plugin.common.MethodChannel
 // prompt used in general_settings_screen.dart / app_lock_screen.dart. FlutterActivity alone
 // cannot host the native BiometricPrompt dialog local_auth relies on.
 class MainActivity : FlutterFragmentActivity() {
-  // Saved so `dyooni/voice_audio_cues`'s "restore" call can put the person's own volume back
-  // EXACTLY as it was, never a guessed/default value — see configureFlutterEngine below.
-  private var savedNotificationVolume: Int? = null
-  private var savedMusicVolume: Int? = null
   private var nativeSpeech: NativeSpeechBridge? = null
 
   override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -75,39 +71,66 @@ class MainActivity : FlutterFragmentActivity() {
     // Muting the two streams that carry these system cues for the brief moment a session is
     // starting/stopping, then restoring the person's own volume immediately after, is the
     // standard, production-proven workaround for this well-known `speech_to_text` limitation.
+    // The recognizer's own "start/stop listening" tones are silenced by lowering ONLY the
+    // notification stream for the moment a session runs. The MUSIC (media) stream is never touched
+    // any more: lowering it was the reported "the speaker volume drops to zero every time a voice
+    // operation starts" — and it also silenced the app's own spoken questions. The previous value
+    // is stored on disk, so even if the app is killed mid-session the person's volume comes back
+    // on the next launch (restoreStuckVolume below).
     MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dyooni/voice_audio_cues")
       .setMethodCallHandler { call, result ->
-        val manager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         when (call.method) {
           "muteRecognitionSounds" -> {
-            // Only remember the volume once, the FIRST time we mute — if a second mute call
-            // arrives before a restore (e.g. two overlapping listen attempts), overwriting the
-            // saved value here with "0" (already-muted) would make the eventual restore leave
-            // the person permanently muted. Guarding on `== null` makes this idempotent.
-            if (savedNotificationVolume == null) {
-              savedNotificationVolume = manager.getStreamVolume(AudioManager.STREAM_NOTIFICATION)
-            }
-            if (savedMusicVolume == null) {
-              savedMusicVolume = manager.getStreamVolume(AudioManager.STREAM_MUSIC)
-            }
-            manager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, 0, 0)
-            manager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
+            muteNotificationStream()
             result.success(null)
           }
           "restoreRecognitionSounds" -> {
-            savedNotificationVolume?.let {
-              manager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, it, 0)
-            }
-            savedMusicVolume?.let {
-              manager.setStreamVolume(AudioManager.STREAM_MUSIC, it, 0)
-            }
-            savedNotificationVolume = null
-            savedMusicVolume = null
+            restoreStuckVolume()
             result.success(null)
           }
           else -> result.notImplemented()
         }
       }
+    // A previous run may have been killed while muted.
+    restoreStuckVolume()
+  }
+
+  private val audioPrefs by lazy { getSharedPreferences("dyooni_audio_cues", Context.MODE_PRIVATE) }
+
+  private fun muteNotificationStream() {
+    try {
+      val manager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+      // Remember the person's volume only the FIRST time: a second mute before a restore must not
+      // overwrite it with the already-lowered value.
+      if (!audioPrefs.contains(SAVED_NOTIFICATION_KEY)) {
+        audioPrefs.edit().putInt(SAVED_NOTIFICATION_KEY, manager.getStreamVolume(AudioManager.STREAM_NOTIFICATION)).commit()
+      }
+      manager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, 0, 0)
+    } catch (_: Throwable) {
+      // Some devices refuse to change this stream (Do Not Disturb policy); the tones then simply play.
+    }
+  }
+
+  private fun restoreStuckVolume() {
+    try {
+      if (!audioPrefs.contains(SAVED_NOTIFICATION_KEY)) return
+      val saved = audioPrefs.getInt(SAVED_NOTIFICATION_KEY, -1)
+      if (saved >= 0) {
+        val manager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        manager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, saved, 0)
+      }
+      audioPrefs.edit().remove(SAVED_NOTIFICATION_KEY).commit()
+    } catch (_: Throwable) {
+    }
+  }
+
+  override fun onDestroy() {
+    restoreStuckVolume()
+    super.onDestroy()
+  }
+
+  companion object {
+    private const val SAVED_NOTIFICATION_KEY = "saved_notification_volume"
   }
 
   /// Name (and, when the OS exposes it, battery %) of the connected Bluetooth headset. Battery

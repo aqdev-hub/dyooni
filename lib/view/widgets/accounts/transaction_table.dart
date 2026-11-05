@@ -27,6 +27,7 @@ class TransactionTable extends ConsumerWidget {
     required this.onEditTransaction,
     required this.onDeleteTransaction,
     this.searchQuery = '',
+    this.dateRange,
     super.key,
   });
 
@@ -39,6 +40,22 @@ class TransactionTable extends ConsumerWidget {
   /// below, never before: filtering the input list first would silently corrupt every balance
   /// figure, since running balance is inherently cumulative over the whole chronological history.
   final String searchQuery;
+
+  /// When set, only entries dated inside it (both ends included, the whole last day) are shown.
+  /// Like [searchQuery] it is applied AFTER the running balance is computed, so every balance
+  /// shown is still the true balance at that entry, not one restarted at the range's first row.
+  final DateTimeRange? dateRange;
+
+  bool _inDateRange(Transaction t) {
+    final range = dateRange;
+    if (range == null) return true;
+    final day = DateTime(t.date.year, t.date.month, t.date.day);
+    final from = DateTime(range.start.year, range.start.month, range.start.day);
+    final to = DateTime(range.end.year, range.end.month, range.end.day);
+    return !day.isBefore(from) && !day.isAfter(to);
+  }
+
+  bool _visible(Transaction t) => _inDateRange(t) && _matchesSearch(t);
 
   bool _matchesSearch(Transaction t) {
     final query = searchQuery.trim().toLowerCase();
@@ -112,7 +129,7 @@ class TransactionTable extends ConsumerWidget {
                 ],
               ),
             ),
-            if (searchQuery.trim().isNotEmpty && !rows.any((row) => _matchesSearch(row.$1)))
+            if ((searchQuery.trim().isNotEmpty || dateRange != null) && !rows.any((row) => _visible(row.$1)))
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Text(
@@ -122,7 +139,7 @@ class TransactionTable extends ConsumerWidget {
                 ),
               ),
             for (final row in rows.reversed)
-              if (_matchesSearch(row.$1))
+              if (_visible(row.$1))
                 _DataRow(
                 transaction: row.$1,
                 runningBalance: row.$2,

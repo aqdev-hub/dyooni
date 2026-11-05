@@ -29,5 +29,10 @@ enum ReportSortOption {
   nameDesc,
 }
 
+/// "تصفية حسب الحالة" in the report options: keep only the accounts whose balance, in the
+/// reported period, is له / عليه / settled — judged per currency (see
+/// ReportBuilders.filterByBalanceState). Not choosing it means everything is reported.
+enum ReportStatusFilter { credit, debit, settled }
+
 /// The two exportable file formats, used by the WhatsApp-share format-choice sheet.
 enum ReportShareFormat { excel, pdf }

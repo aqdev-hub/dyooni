@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,11 +9,13 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/voice_palette.dart';
+import '../../../core/voice/voice_log.dart';
 import '../../../logic/voice/voice_provider.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../data/models/general_settings.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
+import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/main_bottom_nav.dart';
 import '../../widgets/voice/voice_command_sheet.dart';
 import '../../widgets/voice/whisper_model_gate.dart';
@@ -94,10 +97,19 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
                     ),
                   ),
                   Expanded(
-                    child: Text(
-                      isConfirming ? l10n.voiceConfirmTitle : l10n.voiceScreenTitle,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.headline(context).copyWith(color: palette.headerGold, fontSize: 21, height: 1.3),
+                    // Long-press: copies the voice diagnostic log (see VoiceLog) so it can be pasted
+                    // when the phone is not attached to a computer.
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onLongPress: () async {
+                        await Clipboard.setData(ClipboardData(text: VoiceLog.dump()));
+                        if (context.mounted) AppSnackBar.showSuccess(context, l10n.voiceLogCopied);
+                      },
+                      child: Text(
+                        isConfirming ? l10n.voiceConfirmTitle : l10n.voiceScreenTitle,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.headline(context).copyWith(color: palette.headerGold, fontSize: 21, height: 1.3),
+                      ),
                     ),
                   ),
                   if (isConfirming)

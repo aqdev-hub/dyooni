@@ -38,7 +38,7 @@ class NativeSpeechBridge(private val context: Context, messenger: BinaryMessenge
           result.success(
             Build.VERSION.SDK_INT >= 33 && SpeechRecognizer.isRecognitionAvailable(context)
           )
-        "start" -> result.success(start(call.argument<String>("locale")))
+        "start" -> result.success(start(call.argument<String>("locale"), call.argument<Boolean>("preferOffline") == true))
         "feed" -> {
           val bytes = call.argument<ByteArray>("bytes")
           val stream = out
@@ -71,7 +71,7 @@ class NativeSpeechBridge(private val context: Context, messenger: BinaryMessenge
   }
 
   @TargetApi(33)
-  private fun start(locale: String?): Boolean {
+  private fun start(locale: String?, preferOffline: Boolean): Boolean {
     if (Build.VERSION.SDK_INT < 33) return false
     teardown()
     return try {
@@ -85,6 +85,8 @@ class NativeSpeechBridge(private val context: Context, messenger: BinaryMessenge
         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
         putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+        // Weak or missing connection: ask the recognizer to use its on-device model.
+        if (preferOffline) putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
         if (!locale.isNullOrEmpty()) putExtra(RecognizerIntent.EXTRA_LANGUAGE, locale.replace('_', '-'))
         putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, readEnd)
         putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE, 16000)
@@ -138,11 +140,11 @@ class NativeSpeechBridge(private val context: Context, messenger: BinaryMessenge
     bundle?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.toList() ?: emptyList()
 
   private fun listener(id: Int) = object : RecognitionListener {
-    override fun onReadyForSpeech(params: Bundle?) {}
-    override fun onBeginningOfSpeech() {}
+    override fun onReadyForSpeech(params: Bundle?) { if (id == session) emit("state", listOf("ready"), 0) }
+    override fun onBeginningOfSpeech() { if (id == session) emit("state", listOf("speechBegin"), 0) }
     override fun onRmsChanged(rmsdB: Float) {}
     override fun onBufferReceived(buffer: ByteArray?) {}
-    override fun onEndOfSpeech() {}
+    override fun onEndOfSpeech() { if (id == session) emit("state", listOf("speechEnd"), 0) }
     override fun onEvent(eventType: Int, params: Bundle?) {}
     override fun onPartialResults(partialResults: Bundle?) {
       if (id == session) emit("partial", texts(partialResults), 0)

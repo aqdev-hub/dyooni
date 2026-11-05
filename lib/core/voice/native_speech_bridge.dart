@@ -44,9 +44,9 @@ class NativeSpeechBridge {
     }
   }
 
-  Future<bool> start(String locale) async {
+  Future<bool> start(String locale, {bool preferOffline = false}) async {
     try {
-      return await _channel.invokeMethod<bool>('start', {'locale': locale}) ?? false;
+      return await _channel.invokeMethod<bool>('start', {'locale': locale, 'preferOffline': preferOffline}) ?? false;
     } catch (_) {
       return false;
     }

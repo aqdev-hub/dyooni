@@ -18,6 +18,9 @@ class ReportOptionsSheet<T> extends StatefulWidget {
     required this.onGeneratePdf,
     required this.onGenerateExcel,
     required this.onShareViaWhatsapp,
+    this.statusFilter,
+    this.creditLabel,
+    this.debitLabel,
     super.key,
   });
 
@@ -26,6 +29,15 @@ class ReportOptionsSheet<T> extends StatefulWidget {
   final void Function(T type, ReportSortOption? sort, DateTimeRange? range) onGeneratePdf;
   final void Function(T type, ReportSortOption? sort, DateTimeRange? range) onGenerateExcel;
   final void Function(T type, ReportSortOption? sort, DateTimeRange? range, ReportShareFormat format) onShareViaWhatsapp;
+
+  /// When given, the sheet offers "تصفية حسب الحالة" and writes the choice here (null = no
+  /// filter). The caller reads it when a generate/share action fires, so the three callbacks keep
+  /// their signature. Omitted for single-account reports, where it would mean nothing.
+  final ValueNotifier<ReportStatusFilter?>? statusFilter;
+
+  /// The person's own words for له / عليه (settings can rename them).
+  final String? creditLabel;
+  final String? debitLabel;
 
   @override
   State<ReportOptionsSheet<T>> createState() => _ReportOptionsSheetState<T>();
@@ -36,6 +48,7 @@ class _ReportOptionsSheetState<T> extends State<ReportOptionsSheet<T>> {
   bool _showSortOptions = false;
   ReportSortOption? _selectedSort;
   bool _showDateRange = false;
+  bool _showStatus = false;
   DateTimeRange? _selectedRange;
 
   Future<void> _toggleSortOptions(bool value) async {
@@ -100,7 +113,11 @@ class _ReportOptionsSheetState<T> extends State<ReportOptionsSheet<T>> {
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(16)),
-        child: SingleChildScrollView(
+        // The list tiles paint their ink on the nearest Material; without this one they would paint
+        // behind the coloured Container above (Flutter asserts about exactly that).
+        child: Material(
+          type: MaterialType.transparency,
+          child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -177,6 +194,52 @@ class _ReportOptionsSheetState<T> extends State<ReportOptionsSheet<T>> {
                 controlAffinity: ListTileControlAffinity.leading,
                 contentPadding: EdgeInsets.zero,
               ),
+              if (widget.statusFilter != null) ...[
+                CheckboxListTile(
+                  value: _showStatus,
+                  onChanged: (v) => setState(() {
+                    _showStatus = v ?? false;
+                    widget.statusFilter!.value = _showStatus ? (widget.statusFilter!.value ?? ReportStatusFilter.credit) : null;
+                  }),
+                  title: Text(
+                    l10n.reportFilterByStatus,
+                    textAlign: TextAlign.end,
+                    style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
+                  ),
+                  activeColor: shell.accent,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                if (_showStatus)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Wrap(
+                      spacing: 8,
+                      children: [
+                        for (final (value, label) in [
+                          (ReportStatusFilter.credit, widget.creditLabel ?? l10n.directionCredit),
+                          (ReportStatusFilter.debit, widget.debitLabel ?? l10n.directionDebit),
+                          (ReportStatusFilter.settled, l10n.homeFilterSettled),
+                        ])
+                          ChoiceChip(
+                            label: Text(
+                              label,
+                              style: TextStyle(
+                                color: widget.statusFilter!.value == value ? shell.headerBottom : shell.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            selected: widget.statusFilter!.value == value,
+                            selectedColor: shell.accent,
+                            backgroundColor: shell.surface,
+                            side: BorderSide(color: widget.statusFilter!.value == value ? shell.accent : shell.border),
+                            showCheckmark: false,
+                            onSelected: (_) => setState(() => widget.statusFilter!.value = value),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -207,6 +270,7 @@ class _ReportOptionsSheetState<T> extends State<ReportOptionsSheet<T>> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

@@ -771,5 +771,47 @@
   "autoPromptSkip": "تخطي",
   "autoPromptNoPhone": "لا يوجد رقم هاتف لهذا الحساب، لذلك لم تُجهَّز رسالة.",
   "autoSendFailed": "تعذّر فتح التطبيق لإرسال الرسالة",
-  "menuAutoMessages": "إعدادات الرسائل التلقائية"
+  "menuAutoMessages": "إعدادات الرسائل التلقائية",
+  "homeSortNameNewest": "الأحدث أولًا",
+  "homeSortNameOldest": "الأقدم أولًا",
+  "homeSortNameNameAsc": "الاسم (أ ← ي)",
+  "homeSortNameNameDesc": "الاسم (ي ← أ)",
+  "homeSortNameBalanceDesc": "الأكبر رصيدًا",
+  "homeSortNameBalanceAsc": "الأصغر رصيدًا",
+  "homeSortNameRecentActivity": "آخر نشاط",
+  "homeSortPrefix": "ترتيب: {sort}",
+  "@homeSortPrefix": {
+    "placeholders": {"sort": {"type": "String"}}
+  },
+  "homeArrangeTitle": "ترتيب وتصفية الحسابات",
+  "homeSortSectionTitle": "الترتيب",
+  "homeFilterSectionTitle": "تصفية حسب الحالة",
+  "homeFilterAll": "الكل",
+  "homeFilterSettled": "مسدّد",
+  "homeArrangeReset": "إعادة الضبط",
+  "homeArrangeDone": "تم",
+  "menuDateSearch": "البحث بالتاريخ",
+  "dateFilterSummary": "من {from} إلى {to} · {count} عملية",
+  "@dateFilterSummary": {
+    "placeholders": {"from": {"type": "String"}, "to": {"type": "String"}, "count": {"type": "String"}}
+  },
+  "dateFilterClear": "إلغاء تصفية التاريخ",
+  "reportFilterByStatus": "تصفية حسب حالة الحساب",
+  "updateAvailableTitle": "يتوفر تحديث جديد",
+  "updateNewVersion": "الإصدار الجديد: {version}",
+  "@updateNewVersion": {
+    "placeholders": {"version": {"type": "String"}}
+  },
+  "updateRequiredNote": "هذا التحديث إلزامي لمتابعة استخدام التطبيق.",
+  "updateWhatsNew": "ما الجديد:",
+  "updateNow": "تحديث الآن",
+  "updateLater": "لاحقًا",
+  "updateCheckButton": "البحث عن تحديث",
+  "updateUpToDate": "أنت تستخدم أحدث إصدار.",
+  "updateCheckFailed": "تعذّر فحص التحديثات. تأكد من الاتصال بالإنترنت وحاول مجددًا.",
+  "updateBuildLabel": "رقم الإصدار الداخلي: {build}",
+  "@updateBuildLabel": {
+    "placeholders": {"build": {"type": "String"}}
+  },
+  "voiceLogCopied": "نُسخ سجل الصوت. الصقه في المحادثة."
 }

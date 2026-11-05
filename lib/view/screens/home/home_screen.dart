@@ -13,6 +13,9 @@ import '../../../data/models/account.dart';
 import '../../../data/models/currency_type.dart';
 import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/accounts/currency_accounts_provider.dart';
+import '../../../logic/accounts/home_arrangement.dart';
+import '../../../logic/transactions/transactions_provider.dart';
+import '../../../data/models/transaction.dart';
 import '../../../logic/categories/categories_provider.dart';
 import '../../../data/models/category_type.dart';
 import '../../../logic/currencies/currencies_provider.dart';
@@ -24,6 +27,9 @@ import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/main_bottom_nav.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/home/bottom_summary_bar.dart';
+import '../../widgets/home/home_arrange_sheet.dart';
+import '../../../logic/updates/update_service.dart';
+import '../../widgets/settings/update_dialog.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/currency_picker_sheet.dart';
 import '../../widgets/shared/entity_actions_sheet.dart';
@@ -148,6 +154,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // DriveBackupController.build() itself, but this extra try/catch is what stops a failure
     // from ever surfacing as an unhandled Future error in this screen's own zone.
     unawaited(_checkDriveBackupSilently());
+    WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_checkForUpdate()));
+  }
+
+  /// Once-a-day "a new version exists" check; every failure is silent (offline is normal).
+  Future<void> _checkForUpdate() async {
+    try {
+      final decision = await ref.read(updateServiceProvider).checkOnStartup();
+      if (decision == null || !mounted) return;
+      await showUpdateDialog(context, ref, decision);
+    } catch (_) {}
   }
 
   Future<void> _checkDriveBackupSilently() async {
@@ -216,6 +232,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final selectedIds = ref.watch(selectedAccountIdsProvider);
     final pinMatches = ref.watch(generalSettingsProvider).value?.pinMatchingAccountsOnSearch ?? true;
 
+    // Sort + balance-state filter (the sheet behind the "ترتيب" label and the 3-dot menu). The
+    // search below then works on this arranged list.
+    final sort = ref.watch(homeSortProvider);
+    final statusFilter = ref.watch(homeStatusFilterProvider);
+    final arrangementActive = isHomeArrangementActive(sort, statusFilter);
+    final lastActivity = <String, DateTime>{};
+    for (final t in ref.watch(transactionsProvider).value ?? const <Transaction>[]) {
+      final seen = lastActivity[t.accountId];
+      if (seen == null || t.date.isAfter(seen)) lastActivity[t.accountId] = t.date;
+    }
+    final arranged = arrangeAccounts(
+      accounts: categoryFiltered,
+      sort: sort,
+      status: statusFilter,
+      balanceOf: (a) => ref.watch(accountCurrencyBalanceProvider((accountId: a.id, currency: currencyId))),
+      lastActivityOf: (a) => lastActivity[a.id],
+    );
+
     ref.listen<AsyncValue<List<Account>>>(accountsProvider, (_, next) {
       final list = next.value;
       if (list != null) _onAccountsReady(list);
@@ -263,7 +297,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Row(
                 children: [
                   Text(
-                    '(${summary.count})',
+                    '(${arrangementActive ? arranged.length : summary.count})',
                     style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(width: 6),
@@ -301,19 +335,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                   const Spacer(),
-                  Text(
-                    l10n.homeSortNewest,
-                    style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => unawaited(showHomeArrangeSheet(context)),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.homeSortPrefix(homeSortName(l10n, sort)),
+                            style: AppTextStyles.bodySecondary(context).copyWith(color: arrangementActive ? shell.accent : shell.textSecondary),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.sort_rounded, size: 18, color: arrangementActive ? shell.accent : shell.textSecondary),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.sort_rounded, size: 18, color: shell.textSecondary),
                 ],
               ),
             ),
             Expanded(
               child: accountsAsync.when(
                 data: (_) {
-                  final filtered = _visibleAccounts(categoryFiltered, pinMatches);
+                  final filtered = _visibleAccounts(arranged, pinMatches);
 
                   return RefreshIndicator(
                     onRefresh: () => ref.refresh(accountsProvider.future),
@@ -336,7 +382,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         : ListView(
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
                             children: [
-                              for (final account in filtered.reversed)
+                              for (final account in filtered)
                                 AccountListTile(
                                   account: account,
                                   currencyId: currencyId,
@@ -488,9 +534,9 @@ class _Header extends StatelessWidget {
                 icon: Icon(Icons.more_vert_rounded, color: shell.accent),
                 color: shell.surface,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: shell.border)),
-                onSelected: (_) => AppSnackBar.showError(context, l10n.comingSoonMessage),
+                onSelected: (_) => unawaited(showHomeArrangeSheet(context)),
                 itemBuilder: (context) => [
-                  PopupMenuItem(value: 'sort', child: Text(l10n.homeSortNewest, style: TextStyle(color: shell.textPrimary))),
+                  PopupMenuItem(value: 'arrange', child: Text(l10n.homeArrangeTitle, style: TextStyle(color: shell.textPrimary))),
                 ],
               ),
             ],

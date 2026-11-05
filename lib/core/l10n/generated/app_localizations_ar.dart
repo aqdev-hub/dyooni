@@ -2116,4 +2116,102 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get menuAutoMessages => 'إعدادات الرسائل التلقائية';
+
+  @override
+  String get homeSortNameNewest => 'الأحدث أولًا';
+
+  @override
+  String get homeSortNameOldest => 'الأقدم أولًا';
+
+  @override
+  String get homeSortNameNameAsc => 'الاسم (أ ← ي)';
+
+  @override
+  String get homeSortNameNameDesc => 'الاسم (ي ← أ)';
+
+  @override
+  String get homeSortNameBalanceDesc => 'الأكبر رصيدًا';
+
+  @override
+  String get homeSortNameBalanceAsc => 'الأصغر رصيدًا';
+
+  @override
+  String get homeSortNameRecentActivity => 'آخر نشاط';
+
+  @override
+  String homeSortPrefix(String sort) {
+    return 'ترتيب: $sort';
+  }
+
+  @override
+  String get homeArrangeTitle => 'ترتيب وتصفية الحسابات';
+
+  @override
+  String get homeSortSectionTitle => 'الترتيب';
+
+  @override
+  String get homeFilterSectionTitle => 'تصفية حسب الحالة';
+
+  @override
+  String get homeFilterAll => 'الكل';
+
+  @override
+  String get homeFilterSettled => 'مسدّد';
+
+  @override
+  String get homeArrangeReset => 'إعادة الضبط';
+
+  @override
+  String get homeArrangeDone => 'تم';
+
+  @override
+  String get menuDateSearch => 'البحث بالتاريخ';
+
+  @override
+  String dateFilterSummary(String from, String to, String count) {
+    return 'من $from إلى $to · $count عملية';
+  }
+
+  @override
+  String get dateFilterClear => 'إلغاء تصفية التاريخ';
+
+  @override
+  String get reportFilterByStatus => 'تصفية حسب حالة الحساب';
+
+  @override
+  String get updateAvailableTitle => 'يتوفر تحديث جديد';
+
+  @override
+  String updateNewVersion(String version) {
+    return 'الإصدار الجديد: $version';
+  }
+
+  @override
+  String get updateRequiredNote => 'هذا التحديث إلزامي لمتابعة استخدام التطبيق.';
+
+  @override
+  String get updateWhatsNew => 'ما الجديد:';
+
+  @override
+  String get updateNow => 'تحديث الآن';
+
+  @override
+  String get updateLater => 'لاحقًا';
+
+  @override
+  String get updateCheckButton => 'البحث عن تحديث';
+
+  @override
+  String get updateUpToDate => 'أنت تستخدم أحدث إصدار.';
+
+  @override
+  String get updateCheckFailed => 'تعذّر فحص التحديثات. تأكد من الاتصال بالإنترنت وحاول مجددًا.';
+
+  @override
+  String updateBuildLabel(String build) {
+    return 'رقم الإصدار الداخلي: $build';
+  }
+
+  @override
+  String get voiceLogCopied => 'نُسخ سجل الصوت. الصقه في المحادثة.';
 }

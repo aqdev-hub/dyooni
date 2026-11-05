@@ -13,6 +13,7 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/dyooni_picker_theme.dart';
 import '../../../core/theme/voice_palette.dart';
 import '../../../core/utils/app_sharing.dart';
 import '../../../data/models/account.dart';
@@ -66,6 +67,10 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
   bool _searchOpen = false;
   String _searchQuery = '';
 
+  /// "البحث بالتاريخ": when set, the table shows only entries inside this range and a bar under
+  /// the header summarises them. A view filter only — the real totals stay in the bottom bar.
+  DateTimeRange? _dateRange;
+
   Account get account => widget.account;
 
   @override
@@ -75,6 +80,22 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
   }
 
   void _openSearch() => setState(() => _searchOpen = true);
+
+  Future<void> _pickDateRange(List<Transaction> transactions) async {
+    final now = DateTime.now();
+    var first = DateTime(now.year - 10);
+    for (final t in transactions) {
+      if (t.date.isBefore(first)) first = DateTime(t.date.year, t.date.month, t.date.day);
+    }
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: _dateRange,
+      firstDate: first,
+      lastDate: DateTime(now.year + 1, 12, 31),
+      builder: dyooniPickerTheme,
+    );
+    if (picked != null && mounted) setState(() => _dateRange = picked);
+  }
 
   void _closeSearch() => setState(() {
         _searchOpen = false;
@@ -630,6 +651,8 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                             unawaited(showAccountRemindersSheet(context, account: account));
                           case 'auto':
                             unawaited(showAccountAutoMessageDialog(context, account: account));
+                          case 'dateSearch':
+                            unawaited(_pickDateRange(transactions));
                           case 'currency':
                             unawaited(_switchCurrency(context));
                           case 'report':
@@ -653,6 +676,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                           item('message', l10n.menuSendMessage),
                           item('reminder', l10n.menuAddReminder),
                           item('auto', l10n.menuAutoMessages),
+                          item('dateSearch', l10n.menuDateSearch),
                           item('currency', l10n.menuQuickCurrency),
                           item('report', l10n.menuIssueReport),
                           item('transfer', l10n.menuTransferAmount),
@@ -685,6 +709,13 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                 if (hasPhone) AccountPhoneRow(phone: account.phone!),
               ],
             ),
+            if (_dateRange != null)
+              _DateFilterBar(
+                range: _dateRange!,
+                transactions: transactions,
+                onChange: () => unawaited(_pickDateRange(transactions)),
+                onClear: () => setState(() => _dateRange = null),
+              ),
             Expanded(
               child: transactions.isEmpty
                   ? Center(
@@ -695,6 +726,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                       child: TransactionTable(
                         transactions: transactions,
                         searchQuery: _searchQuery,
+                        dateRange: _dateRange,
                         onEditTransaction: (t) => _editOrTransferEntry(context, ref, l10n, t),
                         onDeleteTransaction: (t) => _deleteOrTransferEntry(context, ref, l10n, t),
                       ),
@@ -724,6 +756,72 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Under the header while a date range is applied: which range, how many entries fall in it, and
+/// their له / عليه totals — plus change / clear.
+class _DateFilterBar extends ConsumerWidget {
+  const _DateFilterBar({required this.range, required this.transactions, required this.onChange, required this.onClear});
+  final DateTimeRange range;
+  final List<Transaction> transactions;
+  final VoidCallback onChange;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final shell = context.shellColors;
+    final settings = ref.watch(generalSettingsProvider).value;
+    var credit = 0.0, debit = 0.0, count = 0;
+    for (final t in transactions) {
+      if (!ReportBuilders.inRange(t.date, range.start, range.end)) continue;
+      count++;
+      if (t.direction == AccountDirection.credit) {
+        credit += t.amount;
+      } else {
+        debit += t.amount;
+      }
+    }
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: shell.accent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: shell.accent.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.date_range_rounded, color: shell.accent, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: InkWell(
+              onTap: onChange,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.dateFilterSummary(ReportBuilders.formatDate(range.start), ReportBuilders.formatDate(range.end), '$count'),
+                    style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    '${resolveCreditLabel(l10n, settings)} ${ReportBuilders.formatAmount(credit)}   ·   ${resolveDebitLabel(l10n, settings)} ${ReportBuilders.formatAmount(debit)}',
+                    style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.close_rounded, color: shell.textSecondary),
+            tooltip: l10n.dateFilterClear,
+            onPressed: onClear,
+          ),
+        ],
       ),
     );
   }

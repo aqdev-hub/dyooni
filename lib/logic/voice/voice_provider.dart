@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/voice/bluetooth_audio_route_service.dart';
 import '../../core/voice/speech_engine.dart';
 import '../../core/voice/system_speech_engine.dart';
+import '../../core/voice/voice_log.dart';
 import '../../core/voice/voice_output_service.dart';
 import '../../core/voice/whisper_model_provider.dart';
 import '../../core/voice/whisper_speech_engine.dart';
 import '../../data/models/account.dart';
+import '../../data/models/currency_type.dart';
 import '../../data/models/general_settings.dart';
 import '../../data/models/transaction.dart';
 import '../accounts/accounts_provider.dart';
@@ -22,6 +23,7 @@ import '../transactions/transactions_provider.dart';
 import 'arabic_number_parser.dart';
 import 'transcript_cleaner.dart';
 import 'voice_command_parser.dart';
+import 'spoken_currency.dart';
 import 'wake_word_matcher.dart';
 
 /// Local recognition (Whisper). The engine looks the model files up when recording starts, so
@@ -294,12 +296,12 @@ class VoiceController extends StateNotifier<VoiceState> {
     _speechSilenceTimer = null;
   }
 
-  void _bindEngine() {
+  void _bindEngine({SpeechEngine? override}) {
     _partialSubscription?.cancel();
     _finalSubscription?.cancel();
     _errorSubscription?.cancel();
     _activitySubscription?.cancel();
-    _engine = _ref.read(speechEngineProvider);
+    _engine = override ?? _ref.read(speechEngineProvider);
     _partialSubscription = _engine.partialResults.listen(_onPartial);
     _finalSubscription = _engine.finalResults.listen(_onFinal);
     _errorSubscription = _engine.errors.listen(_onEngineError);
@@ -324,7 +326,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     try {
       return await _engine.stop();
     } catch (e) {
-      debugPrint('[voice] engine stop failed: $e');
+      VoiceLog.d('dialogue', 'engine stop failed: $e');
       ++_session;
       _clearSpeechEndTimer();
       state = state.copyWith(status: VoiceStatus.error, errorCode: e is SpeechEngineException ? e.code : 'recognition');
@@ -336,8 +338,48 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// are acted on here — everything else (genuine silence, permission problems) is left to the
   /// existing silence-timeout / permission-check paths, which already handle those correctly.
   void _onEngineError(SpeechEngineError error) {
+    VoiceLog.d('dialogue', 'engine error: ${error.type.name} (${error.message}) while ${state.status.name}');
+    if (state.status == VoiceStatus.bluetoothWaitingWakeWord) {
+      // Waiting for the call word: every kind of recognizer hiccup (silence, no match, network)
+      // is just "keep waiting" — restart quietly instead of showing an error.
+      unawaited(_resumeWakeWaiting('error ${error.type.name}'));
+      return;
+    }
     if (error.type == SpeechEngineErrorType.network) {
       unawaited(_retryAfterNetworkBlip());
+    } else if (error.type == SpeechEngineErrorType.languageUnavailable) {
+      unawaited(_switchToLocalEngineOrFail('recognizer has no model for offline use'));
+    }
+  }
+
+  /// Weak/no internet: the cloud recognizer cannot answer, and the on-device attempt (see
+  /// SystemSpeechEngine) found no Arabic pack. When the local model is installed, this listening
+  /// session continues on it — for this screen only; the person's chosen mode is not changed.
+  Future<bool> _switchToLocalEngineOrFail(String why) async {
+    final listening = state.status == VoiceStatus.listening ||
+        state.status == VoiceStatus.bluetoothListeningCommand ||
+        state.status == VoiceStatus.confirmationListening;
+    if (!listening) return false;
+    final local = _ref.read(whisperSpeechEngineProvider);
+    final ready = _ref.read(whisperModelControllerProvider) is WhisperModelReady;
+    if (_engine is! SystemSpeechEngine || !ready) {
+      VoiceLog.d('dialogue', 'no local fallback ($why): engine=${_engine.runtimeType} localReady=$ready');
+      state = state.copyWith(status: VoiceStatus.error, errorCode: 'network');
+      return false;
+    }
+    VoiceLog.d('dialogue', 'switching this session to the local recognizer ($why)');
+    try {
+      await _engine.release();
+    } catch (_) {}
+    _bindEngine(override: local);
+    try {
+      await _startEngine();
+      _armSpeechEndTimer(_noSpeechAfter);
+      return true;
+    } catch (e) {
+      VoiceLog.d('dialogue', 'local fallback failed to start: $e');
+      state = state.copyWith(status: VoiceStatus.error, errorCode: 'network');
+      return false;
     }
   }
 
@@ -352,9 +394,11 @@ class VoiceController extends StateNotifier<VoiceState> {
         state.status == VoiceStatus.confirmationListening;
     if (!listening) return;
 
-    if (_networkRetryCount >= _maxNetworkRetries) {
+    if (_networkRetryCount >= _maxNetworkRetries || (_networkRetryCount >= 2 && _engine is SystemSpeechEngine)) {
       _networkRetryCount = 0;
-      state = state.copyWith(status: VoiceStatus.error, errorCode: 'network');
+      // Two failed tries on a weak connection are enough: go to the installed local recognizer
+      // rather than keep the person waiting (the engine already tried on-device mode).
+      await _switchToLocalEngineOrFail('network errors');
       return;
     }
     _networkRetryCount++;
@@ -392,7 +436,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     try {
       await _engine.start().timeout(_engineStartTimeout);
     } on TimeoutException {
-      debugPrint('[voice] engine start timed out - releasing and retrying once');
+      VoiceLog.d('dialogue', 'engine start timed out - releasing and retrying once');
       try {
         await _engine.release().timeout(const Duration(seconds: 3));
       } catch (_) {
@@ -429,7 +473,22 @@ class VoiceController extends StateNotifier<VoiceState> {
   // ─────────────────────────── Phrase builders (all spoken aloud) ───────────────────────────
 
   /// Spoken currency names — the raw code ("LOCAL", "YER") must never reach the speech engine.
+  String _currencyNamesSpoken() => _ref.read(currencyTypesProvider).map((c) => c.name).join('، ');
+
+  /// Parses with the person's OWN currency list, so a spoken currency maps to one of their
+  /// currencies instead of a fixed code that may not exist for them.
+  VoiceCommandDraft _parse(String text) =>
+      _ref.read(voiceCommandParserProvider).parse(text, currencies: _ref.read(currencyTypesProvider));
+
   String _currencySpoken(String code, String languageCode) {
+    final list = _ref.read(currencyTypesProvider);
+    for (final c in list) {
+      if (c.id == code) return c.name;
+    }
+    return _legacyCurrencySpoken(code, languageCode);
+  }
+
+  String _legacyCurrencySpoken(String code, String languageCode) {
     if (languageCode == 'en') {
       return switch (code) {
         'YER' => 'Yemeni rial',
@@ -503,9 +562,7 @@ class VoiceController extends StateNotifier<VoiceState> {
         'accountName' =>
           "The account name needs a first and last name. Please say the full account name.",
         'sameAccount' => 'Do you mean the existing account $detail? Say yes or no.',
-        'currency' =>
-          "That currency isn't supported. Please say a supported one — Yemeni Rial, Saudi Riyal, "
-              "US Dollar, Dirham, Pound, or Dinar.",
+        'currency' => "I couldn't match that currency. Please say one of yours: $detail.",
         'direction' => 'Is this credit or debit? Please say credit or debit.',
         'editWhat' => 'Please say your edit.',
         _ => "I didn't hear anything. Please try speaking clearly.",
@@ -517,7 +574,7 @@ class VoiceController extends StateNotifier<VoiceState> {
       'account' => 'لم أتعرف على اسم الحساب. من فضلك قل اسم الحساب بوضوح.',
       'accountName' => 'اسم الحساب يجب أن يتكون من اسمين على الأقل. من فضلك أكمل الاسم الناقص.',
       'sameAccount' => 'هل تقصد الحساب الموجود $detail؟ قل نعم أو لا.',
-      'currency' => 'هذه العملة غير مدعومة. من فضلك قل عملة مدعومة، مثل ريال يمني أو سعودي أو دولار أو درهم أو جنيه أو دينار.',
+      'currency' => 'لم أجد هذه العملة ضمن عملاتك. من فضلك قل واحدة منها: $detail.',
       'direction' => 'لم أفهم هل هذا الدين له أم عليه. من فضلك قل له أو عليه.',
       _ => 'لم ألتقط أي صوت. من فضلك حاول التحدث بوضوح.',
     };
@@ -606,7 +663,7 @@ class VoiceController extends StateNotifier<VoiceState> {
         await engine.startWakeListening();
         return;
       } catch (e) {
-        debugPrint('[voice] local wake word unavailable ($e) - listening for the command directly');
+        VoiceLog.d('dialogue', 'local wake word unavailable ($e) - listening for the command directly');
         await _wakeSubscription?.cancel();
         _wakeSubscription = null;
       }
@@ -755,10 +812,30 @@ class VoiceController extends StateNotifier<VoiceState> {
       return;
     }
     if (state.status == VoiceStatus.bluetoothWaitingWakeWord) {
-      if (text.replaceAll(' ', '').contains(wakeWord)) {
+      final heard = WakeWordMatcher.matches(text);
+      VoiceLog.d('dialogue', 'waiting for wake word, partial="$text" -> heard=$heard');
+      if (heard) {
         state = state.copyWith(status: VoiceStatus.bluetoothWakeWordDetected, transcript: text);
         unawaited(_restartAfterWakeWord());
       }
+    }
+  }
+
+  /// The cloud recognizer ends a session after every utterance (a FINAL result) and after silence
+  /// or errors. While waiting for «ديوني» that must never leave the app deaf: this puts the
+  /// recognizer back on, a moment later. Reported symptom: "it rarely answers the wake word".
+  Future<void> _resumeWakeWaiting(String why) async {
+    if (state.status != VoiceStatus.bluetoothWaitingWakeWord) return;
+    VoiceLog.d('dialogue', 'wake waiting: restarting the recognizer ($why)');
+    try {
+      await _engine.cancel();
+    } catch (_) {}
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (state.status != VoiceStatus.bluetoothWaitingWakeWord) return;
+    try {
+      await _startEngine();
+    } catch (e) {
+      VoiceLog.d('dialogue', 'wake waiting: restart failed ($e)');
     }
   }
 
@@ -793,6 +870,17 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (state.status == VoiceStatus.confirmationListening) {
       state = state.copyWith(transcript: text);
       unawaited(_finishVoiceConfirmation(text));
+      return;
+    }
+    if (state.status == VoiceStatus.bluetoothWaitingWakeWord) {
+      final heard = WakeWordMatcher.matches(text);
+      VoiceLog.d('dialogue', 'waiting for wake word, final="$text" -> heard=$heard');
+      if (heard) {
+        state = state.copyWith(status: VoiceStatus.bluetoothWakeWordDetected, transcript: text);
+        unawaited(_restartAfterWakeWord());
+      } else if (_engine.endsSessionOnFinal) {
+        unawaited(_resumeWakeWaiting('session ended without the wake word'));
+      }
     }
   }
 
@@ -881,7 +969,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     }
 
     state = state.copyWith(processingStep: 1);
-    var draft = _ref.read(voiceCommandParserProvider).parse(effectiveTranscript);
+    var draft = _parse(effectiveTranscript);
     if (_amountDoubtedByAlternatives(effectiveTranscript, _engine.lastAlternatives)) {
       // Same audio, different hypotheses about the number → the recognizer itself is not sure.
       // Ask for the amount instead of saving a guess.
@@ -994,7 +1082,7 @@ class VoiceController extends StateNotifier<VoiceState> {
         updatedAccount = matched;
         updatedDraft = draft.copyWith(accountName: matched?.name ?? combinedName);
       case 'currency':
-        final reparsedCurrency = _ref.read(voiceCommandParserProvider).parse(effective);
+        final reparsedCurrency = _parse(effective);
         if (!reparsedCurrency.currencyUnsupported) {
           updatedDraft = draft.copyWith(currency: reparsedCurrency.currency, currencyUnsupported: false);
         }
@@ -1066,7 +1154,8 @@ class VoiceController extends StateNotifier<VoiceState> {
   Future<void> _speakThenListenForClarification(String field, {String? detail}) async {
     final session = _session;
     _clearSpeechEndTimer();
-    await _speak(_clarificationSpeech(field, _ref.read(voiceRecognitionLanguageProvider), detail: detail));
+    final spokenDetail = field == 'currency' ? _currencyNamesSpoken() : detail;
+    await _speak(_clarificationSpeech(field, _ref.read(voiceRecognitionLanguageProvider), detail: spokenDetail));
     if (session != _session) return;
     state = state.copyWith(
       status: state.bluetoothMode ? VoiceStatus.bluetoothListeningCommand : VoiceStatus.listening,
@@ -1414,9 +1503,7 @@ class VoiceController extends StateNotifier<VoiceState> {
   /// A currency the speaker NAMED explicitly (a bare "ريال" does not count — it must never
   /// silently change the currency of an amount that is only being corrected).
   String? _explicitCurrency(String text) {
-    if (!RegExp('يمني|سعودي|دولار|درهم|جنيه|دينار|اماراتي|إماراتي|مصري|كويتي').hasMatch(text)) return null;
-    final parsed = _ref.read(voiceCommandParserProvider).parse(text);
-    return parsed.currencyUnsupported ? null : parsed.currency;
+    return SpokenCurrency.match(text, _ref.read(currencyTypesProvider));
   }
 
   /// Cloud recognizers return several ranked hypotheses. Keep the first unless a LATER one parses

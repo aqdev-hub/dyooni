@@ -1,4 +1,5 @@
 import 'package:dyooni/data/models/account.dart';
+import 'package:dyooni/data/models/report_options.dart';
 import 'package:dyooni/data/models/transaction.dart';
 import 'package:dyooni/logic/reports/tabular_report.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -174,5 +175,54 @@ void main() {
       from: DateTime(2027, 1, 1),
     );
     expect(report.isEmpty, isTrue);
+  });
+
+  group('filterByBalanceState', () {
+    // a: YER net +1200 (credit), USD net +50; b: YER net -200 (debit).
+    test('null keeps everything', () {
+      expect(ReportBuilders.filterByBalanceState(transactions, null), transactions);
+    });
+
+    test('credit keeps only positive nets, per currency', () {
+      final kept = ReportBuilders.filterByBalanceState(transactions, ReportStatusFilter.credit);
+      expect(kept.map((t) => t.id), ['1', '2', '3', '4']);
+    });
+
+    test('debit keeps only negative nets', () {
+      final kept = ReportBuilders.filterByBalanceState(transactions, ReportStatusFilter.debit);
+      expect(kept.map((t) => t.id), ['5']);
+    });
+
+    test('settled keeps accounts whose net is zero', () {
+      final all = [
+        ...transactions,
+        tx('6', 'c', 100, 'YER', AccountDirection.credit, DateTime(2026, 3, 1)),
+        tx('7', 'c', 100, 'YER', AccountDirection.debit, DateTime(2026, 3, 2)),
+      ];
+      final kept = ReportBuilders.filterByBalanceState(all, ReportStatusFilter.settled);
+      expect(kept.map((t) => t.id), ['6', '7']);
+    });
+
+    test('a currency is judged on its own', () {
+      final mixed = [
+        tx('1', 'a', 500, 'YER', AccountDirection.credit, DateTime(2026, 1, 1)),
+        tx('2', 'a', 300, 'USD', AccountDirection.debit, DateTime(2026, 1, 2)),
+      ];
+      expect(ReportBuilders.filterByBalanceState(mixed, ReportStatusFilter.credit).map((t) => t.id), ['1']);
+      expect(ReportBuilders.filterByBalanceState(mixed, ReportStatusFilter.debit).map((t) => t.id), ['2']);
+    });
+
+    test('the period decides the net', () {
+      final kept = ReportBuilders.filterByBalanceState(
+        transactions,
+        ReportStatusFilter.debit,
+        from: DateTime(2026, 1, 15),
+        to: DateTime(2026, 1, 31),
+      );
+      // Inside the period only a/YER's 300 debit counts, so a/YER is "debit" — and ALL of its
+      // entries are kept (the report builders apply the period themselves, which keeps the
+      // opening balance right).
+      expect(kept.map((t) => t.id), ['1', '2', '3']);
+    });
   });
 }

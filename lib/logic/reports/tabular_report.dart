@@ -159,6 +159,36 @@ class ReportBuilders {
     return seen;
   }
 
+  // ───────────── تصفية حسب الحالة ─────────────
+
+  /// Keeps only the entries of (account, currency) pairs whose net balance in the period
+  /// [from]..[to] matches [status]. Judged per currency on purpose: an account that is owed 500 in
+  /// one currency and owes 300 in another is "له" in the first and "عليه" in the second, and each
+  /// currency's table must follow its own figures. `null` keeps everything.
+  static List<Transaction> filterByBalanceState(
+    List<Transaction> transactions,
+    ReportStatusFilter? status, {
+    DateTime? from,
+    DateTime? to,
+  }) {
+    if (status == null) return transactions;
+    final nets = <(String, String), double>{};
+    for (final t in transactions) {
+      if (!inRange(t.date, from, to)) continue;
+      final key = (t.accountId, t.currency);
+      nets[key] = (nets[key] ?? 0) + signed(t);
+    }
+    bool keep(double net) => switch (status) {
+          ReportStatusFilter.credit => net > 0.005,
+          ReportStatusFilter.debit => net < -0.005,
+          ReportStatusFilter.settled => net.abs() <= 0.005,
+        };
+    return [
+      for (final t in transactions)
+        if (nets.containsKey((t.accountId, t.currency)) && keep(nets[(t.accountId, t.currency)]!)) t,
+    ];
+  }
+
   // ───────────── 0. إجمالي المبالغ ─────────────
 
   /// One table PER CURRENCY, one line per account that has entries in that currency: category,

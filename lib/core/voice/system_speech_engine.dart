@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:typed_data' show Uint8List;
 
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:speech_to_text/speech_recognition_error.dart';
@@ -9,6 +9,7 @@ import 'package:speech_to_text/speech_recognition_error.dart';
 import 'native_speech_bridge.dart';
 import 'parallel_recorder.dart';
 import 'speech_engine.dart';
+import 'voice_log.dart';
 
 /// Suppresses the Android system's own "start listening" / "stop listening" notification tones
 /// that `android.speech.SpeechRecognizer` plays on every session, at the OS level — NOT
@@ -85,6 +86,15 @@ class SystemSpeechEngine implements SpeechEngine {
   Timer? _nativeWatchdog;
   static const _nativeWatchdogDelay = Duration(seconds: 9);
   final stt.SpeechToText _speech;
+
+  /// After a network-class error the recognizer is asked to work ON THE DEVICE (no round trip), so
+  /// a weak connection no longer means "hears nothing". Online is tried again after
+  /// [_offlineHold] — the connection may be back.
+  bool _preferOffline = false;
+  DateTime? _lastNetworkErrorAt;
+  static const _offlineHold = Duration(minutes: 2);
+  String? _localeId;
+  final _clock = Stopwatch();
   final _soundMuter = _SystemSoundMuter();
   // Keeps a replayable copy of the voice while the OS recognizer listens — see ParallelRecorder.
   final ParallelRecorder _recorder;
@@ -117,10 +127,12 @@ class SystemSpeechEngine implements SpeechEngine {
 
   Future<bool> _ensureInitialized() async {
     if (_initialized) return true;
+    final sw = Stopwatch()..start();
     _initialized = await _speech.initialize(
       onError: _handleNativeError,
-      onStatus: (status) => debugPrint('[voice] system recognizer status: $status'),
+      onStatus: (status) => VoiceLog.d('system', 'plugin status: $status (+${_clock.elapsedMilliseconds}ms since start)'),
     );
+    VoiceLog.d('system', 'plugin initialised=$_initialized in ${sw.elapsedMilliseconds}ms');
     return _initialized;
   }
 
@@ -146,6 +158,7 @@ class SystemSpeechEngine implements SpeechEngine {
     };
     const noMatchCodes = {'error_no_match', 'error_speech_timeout'};
     const permissionCodes = {'error_insufficient_permissions'};
+    const languageCodes = {'error_language_not_supported', 'error_language_unavailable'};
 
     final code = error.errorMsg;
     final type = networkCodes.contains(code)
@@ -154,10 +167,14 @@ class SystemSpeechEngine implements SpeechEngine {
             ? SpeechEngineErrorType.noMatch
             : permissionCodes.contains(code)
                 ? SpeechEngineErrorType.permission
-                : SpeechEngineErrorType.other;
+                : languageCodes.contains(code)
+                    ? SpeechEngineErrorType.languageUnavailable
+                    : SpeechEngineErrorType.other;
+    if (type == SpeechEngineErrorType.network) _noteNetworkTrouble('plugin $code');
+    if (type == SpeechEngineErrorType.languageUnavailable) _preferOffline = false;
     // Kept in the logs on purpose: the exact Android code is what identifies a device-specific
     // recognizer problem.
-    debugPrint('[voice] system recognizer error: $code (permanent: ${error.permanent})');
+    VoiceLog.d('system', 'plugin error: $code permanent=${error.permanent} type=${type.name} offlineMode=$_preferOffline wantListening=$_wantListening nativeActive=$_nativeActive (+${_clock.elapsedMilliseconds}ms)');
     if (type == SpeechEngineErrorType.noMatch && _wantListening && !_nativeActive) {
       unawaited(_restartDeadSession());
       return;
@@ -173,18 +190,35 @@ class SystemSpeechEngine implements SpeechEngine {
     if (!await _ensureInitialized()) {
       throw StateError('System speech recognition is unavailable.');
     }
+    _clock
+      ..reset()
+      ..start();
     _latestTranscript = '';
     _lastAlternatives = const [];
-    // Muted BEFORE listen() starts so the very first of the two system tones is covered too —
-    // restored in stop()/cancel(), both of which run on every exit path (see voice_provider.dart,
-    // every code path that ends a session calls one of the two).
-    await _soundMuter.mute();
+    final held = _lastNetworkErrorAt;
+    if (_preferOffline && held != null && DateTime.now().difference(held) > _offlineHold) {
+      _preferOffline = false;
+      VoiceLog.d('system', 'trying the online recognizer again');
+    }
+    VoiceLog.d('system', 'start(): offlineMode=$_preferOffline nativePath=${useNativeAudioSource && !_nativeFailed}');
+    // Tones are silenced WITHOUT waiting (the muter only touches the notification stream now) so
+    // listening begins as early as possible.
+    unawaited(_soundMuter.mute());
     _wantListening = true;
     _deadRestarts = 0;
     if (await _tryStartNative()) return;
     await _listenWithPlugin();
     // After listen() so the recognizer has already claimed the microphone; never throws.
     if (recordInParallel) await _recorder.start();
+    VoiceLog.d('system', 'plugin listening after ${_clock.elapsedMilliseconds}ms');
+  }
+
+  void _noteNetworkTrouble(String why) {
+    _lastNetworkErrorAt = DateTime.now();
+    if (!_preferOffline) {
+      _preferOffline = true;
+      VoiceLog.d('system', 'network trouble ($why) -> switching the recognizer to on-device mode');
+    }
   }
 
   /// Whether the dialogue currently wants the recognizer running (between start() and
@@ -195,9 +229,12 @@ class SystemSpeechEngine implements SpeechEngine {
   static const _maxDeadRestarts = 20;
 
   Future<void> _listenWithPlugin() async {
+    final locale = await _arabicLocaleId();
+    VoiceLog.d('system', 'plugin listen(locale=$locale onDevice=$_preferOffline) at +${_clock.elapsedMilliseconds}ms');
     await _speech.listen(
       listenOptions: stt.SpeechListenOptions(
-        localeId: await _arabicLocaleId(),
+        localeId: locale,
+        onDevice: _preferOffline,
         partialResults: true,
         listenFor: const Duration(minutes: 2),
         pauseFor: const Duration(seconds: 3),
@@ -229,10 +266,10 @@ class SystemSpeechEngine implements SpeechEngine {
           await _speech.cancel();
         } catch (_) {}
         await _listenWithPlugin();
-        debugPrint('[voice] system recognizer restarted after an empty session ($_deadRestarts)');
+        VoiceLog.d('system', 'system recognizer restarted after an empty session ($_deadRestarts)');
       }
     } catch (e) {
-      debugPrint('[voice] system recognizer restart failed: $e');
+      VoiceLog.d('system', 'system recognizer restart failed: $e');
     } finally {
       _restarting = false;
     }
@@ -241,7 +278,7 @@ class SystemSpeechEngine implements SpeechEngine {
   void _handleResult(String raw, bool isFinal, List<String> alternates) {
     final text = raw.trim();
     // Diagnostic only: length and finality, never the words themselves.
-    debugPrint('[voice] system recognizer result: final=$isFinal chars=${text.length} alternates=${alternates.length}');
+    VoiceLog.d('system', 'plugin result: final=$isFinal alternates=${alternates.length} text="$text" (+${_clock.elapsedMilliseconds}ms)');
     if (text.isEmpty) return;
     _latestTranscript = text;
     _deadRestarts = 0;
@@ -258,8 +295,10 @@ class SystemSpeechEngine implements SpeechEngine {
   }
 
   void _onNativeEvent(NativeSpeechEvent event) {
-    debugPrint('[voice] native recognizer event: ${event.type} texts=${event.texts.length} code=${event.code}');
+    VoiceLog.d('system', 'native event: ${event.type} code=${event.code} texts=${event.texts} (+${_clock.elapsedMilliseconds}ms)');
     switch (event.type) {
+      case 'state':
+        return; // ready / speechBegin / speechEnd — logged above, nothing else to do
       case 'partial':
       case 'final':
         if (event.texts.isEmpty) return;
@@ -269,8 +308,16 @@ class SystemSpeechEngine implements SpeechEngine {
       case 'error':
         // 3 audio, 5 client, 12/13 language: this recognizer cannot work through the audio-source
         // path. Remember it so the next session uses the plain plugin path instead.
-        const unusable = {3, 5, 12, 13};
+        const unusable = {3, 5};
         if (unusable.contains(event.code)) _nativeFailed = true;
+        // 12/13: no language model (often because OFFLINE was requested and no Arabic pack is
+        // installed). Not a reason to abandon the audio-source path — drop offline mode and let the
+        // dialogue decide (switch to the local engine).
+        if (event.code == 12 || event.code == 13) {
+          _preferOffline = false;
+          _errorController.add(SpeechEngineError(SpeechEngineErrorType.languageUnavailable, message: 'native_${event.code}'));
+          return;
+        }
         // "No speech / no match" from a path that has never produced any text is the signature
         // of a recognizer that ignores the audio we feed it: switch paths instead of telling the
         // person nothing was heard.
@@ -281,6 +328,7 @@ class SystemSpeechEngine implements SpeechEngine {
         }
         const network = {1, 2, 4, 10, 11};
         const noMatch = {6, 7};
+        if (network.contains(event.code)) _noteNetworkTrouble('native ${event.code}');
         final type = network.contains(event.code)
             ? SpeechEngineErrorType.network
             : noMatch.contains(event.code)
@@ -288,7 +336,7 @@ class SystemSpeechEngine implements SpeechEngine {
                 : event.code == 9
                     ? SpeechEngineErrorType.permission
                     : SpeechEngineErrorType.other;
-        debugPrint('[voice] native recognizer error: ${event.code}');
+        VoiceLog.d('system', 'native error ${event.code} -> ${type.name} offlineMode=$_preferOffline');
         _errorController.add(SpeechEngineError(type, message: 'native_${event.code}'));
     }
   }
@@ -298,15 +346,37 @@ class SystemSpeechEngine implements SpeechEngine {
     _nativeSupported ??= await _native.isSupported();
     if (_nativeSupported != true) return false;
     _nativeSub ??= _native.events.listen(_onNativeEvent);
-    final started = await _native.start(await _arabicLocaleId());
+    // The microphone is opened FIRST and its audio is held in memory until the recognizer is up,
+    // then handed over in order — so the first words after the start are no longer lost to the
+    // recognizer's start-up time (the "first part of my sentence is cut" symptom).
+    final early = <Uint8List>[];
+    var handedOver = false;
+    _recorder.onChunk = (chunk) {
+      if (handedOver) {
+        _native.feed(chunk);
+      } else {
+        early.add(chunk);
+      }
+    };
+    final recorderStarted = _recorder.start();
+    final locale = await _arabicLocaleId();
+    final started = await _native.start(locale, preferOffline: _preferOffline);
+    await recorderStarted;
     if (!started) {
+      _recorder.onChunk = null;
+      await _recorder.cancel();
       _nativeFailed = true;
+      VoiceLog.d('system', 'native recognizer refused to start');
       return false;
     }
-    _recorder.onChunk = _native.feed;
-    await _recorder.start();
+    for (final chunk in early) {
+      _native.feed(chunk);
+    }
+    VoiceLog.d('system', 'native: handed over ${early.length} pre-roll chunks after ${_clock.elapsedMilliseconds}ms');
+    early.clear();
+    handedOver = true;
     _nativeActive = true;
-    debugPrint('[voice] system recognizer running on app-supplied audio');
+    VoiceLog.d('system', 'native recognizer running on app-supplied audio (offline=$_preferOffline)');
     _armNativeWatchdog();
     return true;
   }
@@ -328,7 +398,7 @@ class SystemSpeechEngine implements SpeechEngine {
     if (_restarting) return;
     _restarting = true;
     try {
-      debugPrint('[voice] switching to the plain system recognizer: $reason');
+      VoiceLog.d('system', 'switching to the plain system recognizer: $reason');
       _nativeWatchdog?.cancel();
       _nativeActive = false;
       _recorder.onChunk = null;
@@ -336,7 +406,7 @@ class SystemSpeechEngine implements SpeechEngine {
       await _recorder.cancel();
       if (_wantListening) await _listenWithPlugin();
     } catch (e) {
-      debugPrint('[voice] fallback to the plain recognizer failed: $e');
+      VoiceLog.d('system', 'fallback to the plain recognizer failed: $e');
     } finally {
       _restarting = false;
     }
@@ -356,6 +426,16 @@ class SystemSpeechEngine implements SpeechEngine {
   /// Use Yemeni Arabic when the installed recognizer offers it, rather than forcing a Saudi
   /// locale. That gives the cloud/system provider the best available chance with local names.
   Future<String> _arabicLocaleId() async {
+    final cached = _localeId;
+    if (cached != null) return cached;
+    final sw = Stopwatch()..start();
+    final found = await _lookupArabicLocale();
+    _localeId = found;
+    VoiceLog.d('system', 'locale resolved: $found in ${sw.elapsedMilliseconds}ms');
+    return found;
+  }
+
+  Future<String> _lookupArabicLocale() async {
     final locales = await _speech.locales();
     final yemeni = locales.where((locale) => locale.localeId.toLowerCase() == 'ar_ye');
     if (yemeni.isNotEmpty) return yemeni.first.localeId;

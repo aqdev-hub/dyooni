@@ -2131,4 +2131,102 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get menuAutoMessages => 'Automatic message settings';
+
+  @override
+  String get homeSortNameNewest => 'Newest first';
+
+  @override
+  String get homeSortNameOldest => 'Oldest first';
+
+  @override
+  String get homeSortNameNameAsc => 'Name (A → Z)';
+
+  @override
+  String get homeSortNameNameDesc => 'Name (Z → A)';
+
+  @override
+  String get homeSortNameBalanceDesc => 'Largest balance';
+
+  @override
+  String get homeSortNameBalanceAsc => 'Smallest balance';
+
+  @override
+  String get homeSortNameRecentActivity => 'Latest activity';
+
+  @override
+  String homeSortPrefix(String sort) {
+    return 'Sort: $sort';
+  }
+
+  @override
+  String get homeArrangeTitle => 'Sort & filter accounts';
+
+  @override
+  String get homeSortSectionTitle => 'Sort by';
+
+  @override
+  String get homeFilterSectionTitle => 'Filter by status';
+
+  @override
+  String get homeFilterAll => 'All';
+
+  @override
+  String get homeFilterSettled => 'Settled';
+
+  @override
+  String get homeArrangeReset => 'Reset';
+
+  @override
+  String get homeArrangeDone => 'Done';
+
+  @override
+  String get menuDateSearch => 'Search by date';
+
+  @override
+  String dateFilterSummary(String from, String to, String count) {
+    return '$from to $to · $count entries';
+  }
+
+  @override
+  String get dateFilterClear => 'Clear date filter';
+
+  @override
+  String get reportFilterByStatus => 'Filter by account status';
+
+  @override
+  String get updateAvailableTitle => 'A new update is available';
+
+  @override
+  String updateNewVersion(String version) {
+    return 'New version: $version';
+  }
+
+  @override
+  String get updateRequiredNote => 'This update is required to keep using the app.';
+
+  @override
+  String get updateWhatsNew => 'What\'s new:';
+
+  @override
+  String get updateNow => 'Update now';
+
+  @override
+  String get updateLater => 'Later';
+
+  @override
+  String get updateCheckButton => 'Check for updates';
+
+  @override
+  String get updateUpToDate => 'You have the latest version.';
+
+  @override
+  String get updateCheckFailed => 'Couldn\'t check for updates. Check your connection and try again.';
+
+  @override
+  String updateBuildLabel(String build) {
+    return 'Build number: $build';
+  }
+
+  @override
+  String get voiceLogCopied => 'Voice log copied. Paste it in the chat.';
 }

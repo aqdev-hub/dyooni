@@ -771,5 +771,47 @@
   "autoPromptSkip": "Skip",
   "autoPromptNoPhone": "No phone number on this account, so no message was prepared.",
   "autoSendFailed": "Could not open the app to send the message",
-  "menuAutoMessages": "Automatic message settings"
+  "menuAutoMessages": "Automatic message settings",
+  "homeSortNameNewest": "Newest first",
+  "homeSortNameOldest": "Oldest first",
+  "homeSortNameNameAsc": "Name (A → Z)",
+  "homeSortNameNameDesc": "Name (Z → A)",
+  "homeSortNameBalanceDesc": "Largest balance",
+  "homeSortNameBalanceAsc": "Smallest balance",
+  "homeSortNameRecentActivity": "Latest activity",
+  "homeSortPrefix": "Sort: {sort}",
+  "@homeSortPrefix": {
+    "placeholders": {"sort": {"type": "String"}}
+  },
+  "homeArrangeTitle": "Sort & filter accounts",
+  "homeSortSectionTitle": "Sort by",
+  "homeFilterSectionTitle": "Filter by status",
+  "homeFilterAll": "All",
+  "homeFilterSettled": "Settled",
+  "homeArrangeReset": "Reset",
+  "homeArrangeDone": "Done",
+  "menuDateSearch": "Search by date",
+  "dateFilterSummary": "{from} to {to} · {count} entries",
+  "@dateFilterSummary": {
+    "placeholders": {"from": {"type": "String"}, "to": {"type": "String"}, "count": {"type": "String"}}
+  },
+  "dateFilterClear": "Clear date filter",
+  "reportFilterByStatus": "Filter by account status",
+  "updateAvailableTitle": "A new update is available",
+  "updateNewVersion": "New version: {version}",
+  "@updateNewVersion": {
+    "placeholders": {"version": {"type": "String"}}
+  },
+  "updateRequiredNote": "This update is required to keep using the app.",
+  "updateWhatsNew": "What's new:",
+  "updateNow": "Update now",
+  "updateLater": "Later",
+  "updateCheckButton": "Check for updates",
+  "updateUpToDate": "You have the latest version.",
+  "updateCheckFailed": "Couldn't check for updates. Check your connection and try again.",
+  "updateBuildLabel": "Build number: {build}",
+  "@updateBuildLabel": {
+    "placeholders": {"build": {"type": "String"}}
+  },
+  "voiceLogCopied": "Voice log copied. Paste it in the chat."
 }

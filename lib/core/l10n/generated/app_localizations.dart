@@ -3075,6 +3075,186 @@ abstract class AppLocalizations {
   /// **'"نعم" أو "احفظ" أو "عدل المبلغ إلى 3500"'**
   String get voiceYouCanSayExamples;
 
+  /// No description provided for @voiceLogCopied.
+  ///
+  /// In ar, this message translates to:
+  /// **'نُسخ سجل الصوت. الصقه في المحادثة.'**
+  String get voiceLogCopied;
+
+  /// No description provided for @updateAvailableTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'يتوفر تحديث جديد'**
+  String get updateAvailableTitle;
+
+  /// No description provided for @updateNewVersion.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإصدار الجديد: {version}'**
+  String updateNewVersion(String version);
+
+  /// No description provided for @updateRequiredNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا التحديث إلزامي لمتابعة استخدام التطبيق.'**
+  String get updateRequiredNote;
+
+  /// No description provided for @updateWhatsNew.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما الجديد:'**
+  String get updateWhatsNew;
+
+  /// No description provided for @updateNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث الآن'**
+  String get updateNow;
+
+  /// No description provided for @updateLater.
+  ///
+  /// In ar, this message translates to:
+  /// **'لاحقًا'**
+  String get updateLater;
+
+  /// No description provided for @updateCheckButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'البحث عن تحديث'**
+  String get updateCheckButton;
+
+  /// No description provided for @updateUpToDate.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت تستخدم أحدث إصدار.'**
+  String get updateUpToDate;
+
+  /// No description provided for @updateCheckFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر فحص التحديثات. تأكد من الاتصال بالإنترنت وحاول مجددًا.'**
+  String get updateCheckFailed;
+
+  /// No description provided for @updateBuildLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم الإصدار الداخلي: {build}'**
+  String updateBuildLabel(String build);
+
+  /// No description provided for @homeSortNameNewest.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأحدث أولًا'**
+  String get homeSortNameNewest;
+
+  /// No description provided for @homeSortNameOldest.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأقدم أولًا'**
+  String get homeSortNameOldest;
+
+  /// No description provided for @homeSortNameNameAsc.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم (أ ← ي)'**
+  String get homeSortNameNameAsc;
+
+  /// No description provided for @homeSortNameNameDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم (ي ← أ)'**
+  String get homeSortNameNameDesc;
+
+  /// No description provided for @homeSortNameBalanceDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأكبر رصيدًا'**
+  String get homeSortNameBalanceDesc;
+
+  /// No description provided for @homeSortNameBalanceAsc.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأصغر رصيدًا'**
+  String get homeSortNameBalanceAsc;
+
+  /// No description provided for @homeSortNameRecentActivity.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر نشاط'**
+  String get homeSortNameRecentActivity;
+
+  /// No description provided for @homeSortPrefix.
+  ///
+  /// In ar, this message translates to:
+  /// **'ترتيب: {sort}'**
+  String homeSortPrefix(String sort);
+
+  /// No description provided for @homeArrangeTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ترتيب وتصفية الحسابات'**
+  String get homeArrangeTitle;
+
+  /// No description provided for @homeSortSectionTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الترتيب'**
+  String get homeSortSectionTitle;
+
+  /// No description provided for @homeFilterSectionTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصفية حسب الحالة'**
+  String get homeFilterSectionTitle;
+
+  /// No description provided for @homeFilterAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get homeFilterAll;
+
+  /// No description provided for @homeFilterSettled.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسدّد'**
+  String get homeFilterSettled;
+
+  /// No description provided for @homeArrangeReset.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة الضبط'**
+  String get homeArrangeReset;
+
+  /// No description provided for @homeArrangeDone.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم'**
+  String get homeArrangeDone;
+
+  /// No description provided for @menuDateSearch.
+  ///
+  /// In ar, this message translates to:
+  /// **'البحث بالتاريخ'**
+  String get menuDateSearch;
+
+  /// No description provided for @dateFilterSummary.
+  ///
+  /// In ar, this message translates to:
+  /// **'من {from} إلى {to} · {count} عملية'**
+  String dateFilterSummary(String from, String to, String count);
+
+  /// No description provided for @dateFilterClear.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء تصفية التاريخ'**
+  String get dateFilterClear;
+
+  /// No description provided for @reportFilterByStatus.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصفية حسب حالة الحساب'**
+  String get reportFilterByStatus;
+
   /// No description provided for @autoSettingsTitle.
   ///
   /// In ar, this message translates to:

@@ -1,5 +1,7 @@
 import '../../data/models/account.dart';
+import '../../data/models/currency_type.dart';
 import 'arabic_number_parser.dart';
+import 'spoken_currency.dart';
 
 /// Pure, deterministic command parser. It has no plugin/UI dependency, which
 /// makes it safe to test and replace only the STT service later.
@@ -60,7 +62,9 @@ class VoiceCommandParser {
     return ArabicNumberParser.extract(_tokens(prepared));
   }
 
-  VoiceCommandDraft parse(String transcript, {DateTime? now}) {
+  /// [currencies] = the person's own currency list. When given, the spoken currency is matched
+  /// against THOSE names (see SpokenCurrency); without it the legacy fixed codes are used.
+  VoiceCommandDraft parse(String transcript, {DateTime? now, List<CurrencyType>? currencies}) {
     final prepared = _prepare(transcript);
     // A stated date must never compete with the real amount (class doc point 4), nor leak into
     // the name/details — so it is cut out of the text before tokenizing.
@@ -75,7 +79,9 @@ class VoiceCommandParser {
 
     final lower = cleanedText.toLowerCase();
     final direction = _direction(cleanTokens.where((t) => t.isNotEmpty).toList());
-    final (currencyCode, currencyUnsupported) = _currency(lower);
+    final (currencyCode, currencyUnsupported) = currencies == null
+        ? _currency(lower)
+        : _personCurrency(lower, currencies);
     final date = _date(prepared.toLowerCase(), now ?? DateTime.now());
     final accountName = _accountName(cleanTokens, extraction);
     final details = _details(cleanedText);
@@ -163,6 +169,25 @@ class VoiceCommandParser {
   /// unsupported)` — `unsupported` is `true` only when the speaker clearly named a REAL currency
   /// that isn't one of these (see class doc comment point 6), so the caller can ask them to
   /// repeat a supported one instead of silently mis-recording the entry's currency.
+  /// Same question as [_currency], answered from the person's own list.
+  static (String code, bool unsupported) _personCurrency(String value, List<CurrencyType> currencies) {
+    final id = SpokenCurrency.match(value, currencies);
+    if (id != null) return (id, false);
+    // A currency the person has not added (e.g. "يورو") must be asked about, never silently
+    // recorded as the default one.
+    if (SpokenCurrency.namesUnknownCurrency(value, currencies) || _containsAny(value, _unsupportedMarkers)) {
+      return (defaultCurrencyId, true);
+    }
+    // Nothing (or only a bare "ريال") said: the default currency.
+    return (defaultCurrencyId, false);
+  }
+
+  static const _unsupportedMarkers = [
+    'يورو', 'استرليني', 'جنيه استرليني', 'ين ياباني', 'روبية',
+    'ريال قطري', 'ريال عماني', 'ريال بحريني', 'دولار كندي', 'دولار استرالي',
+    'يوان', 'وون', 'ليرة',
+  ];
+
   static (String code, bool unsupported) _currency(String value) {
     // Checked BEFORE the supported-currency checks below, since some of these share a substring
     // with a supported currency's own keyword (e.g. "ريال قطري" contains "ريال", which alone

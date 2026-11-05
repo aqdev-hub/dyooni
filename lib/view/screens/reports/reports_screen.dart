@@ -16,6 +16,8 @@ import '../../../logic/categories/categories_provider.dart';
 import '../../../data/models/category_type.dart';
 import '../../../logic/reports/report_delivery.dart';
 import '../../../logic/reports/tabular_report.dart';
+import '../../../logic/settings/direction_labels.dart';
+import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/home/summary_card.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
@@ -36,6 +38,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   // this filter must never leak back and change what Home shows, and vice versa.
   AccountCategory? _categoryFilter;
   bool _isExporting = false;
+
+  /// Written by the report-options sheet ("تصفية حسب الحالة"), read when a report is generated.
+  final ValueNotifier<ReportStatusFilter?> _statusFilter = ValueNotifier(null);
+
+  @override
+  void dispose() {
+    _statusFilter.dispose();
+    super.dispose();
+  }
 
   String _categoryLabel(AppLocalizations l10n) =>
       categoryNameOf(ref.read(categoryTypesProvider), _categoryFilter?.id ?? generalCategoryId);
@@ -80,10 +91,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     try {
       final labels = buildReportLabels(ref, l10n);
       final accounts = _filteredAccounts();
-      final transactions = ref.read(transactionsProvider).value ?? const <Transaction>[];
-      final title = '${_typeTitle(l10n, type)} - ${_categoryLabel(l10n)}';
       final from = range?.start;
       final to = range?.end;
+      final transactions = ReportBuilders.filterByBalanceState(
+        ref.read(transactionsProvider).value ?? const <Transaction>[],
+        _statusFilter.value,
+        from: from,
+        to: to,
+      );
+      final title = '${_typeTitle(l10n, type)} - ${_categoryLabel(l10n)}';
       final report = switch (type) {
         SummaryReportType.allAmountsDetails => ReportBuilders.allAmountsDetails(
             title: title, accounts: accounts, transactions: transactions, labels: labels, from: from, to: to, sort: sort),
@@ -110,12 +126,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   Future<void> _openReportsSheet() async {
     final l10n = AppLocalizations.of(context)!;
+    _statusFilter.value = null; // every time the sheet opens, start without a status filter
+    final settings = ref.read(generalSettingsProvider).value;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ReportOptionsSheet<SummaryReportType>(
         initialType: SummaryReportType.totalAmounts,
+        statusFilter: _statusFilter,
+        creditLabel: resolveCreditLabel(l10n, settings),
+        debitLabel: resolveDebitLabel(l10n, settings),
         options: [
           (SummaryReportType.totalAmounts, l10n.reportTypeTotalAmounts),
           (SummaryReportType.allAmountsDetails, l10n.reportTypeAllAmountsDetails),

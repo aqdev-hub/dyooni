@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import 'voice_log.dart';
 import 'wav_file_writer.dart';
 
 /// Keeps a copy of the person's voice as a .wav WHILE the system/cloud recognizer is listening,
@@ -83,7 +83,7 @@ class ParallelRecorder {
       );
       _sub = stream.listen(_onChunk, onError: (_) {});
     } catch (e) {
-      debugPrint('[voice] cloud parallel recording could not start: $e');
+      VoiceLog.d('recorder', 'cloud parallel recording could not start: $e');
       await _discard();
     }
   }
@@ -120,7 +120,7 @@ class ParallelRecorder {
     final peak = _peak;
     await _finish();
     final ms = bytes * 1000 ~/ (sampleRate * 2);
-    debugPrint('[voice] cloud parallel recording: ms=$ms peak=${peak.toStringAsFixed(3)}');
+    VoiceLog.d('recorder', 'cloud parallel recording: ms=$ms peak=${peak.toStringAsFixed(3)}');
     if (path == null) return null;
     if (ms < _minAudioMs || peak < _silentPeak) {
       await _delete(path);

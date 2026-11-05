@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:whisper_ggml/whisper_ggml.dart' show TranscribeRequest, Whisper, WhisperModel;
@@ -10,6 +9,7 @@ import 'package:whisper_ggml/whisper_ggml.dart' show TranscribeRequest, Whisper,
 import 'energy_vad.dart';
 import 'fast_conformer_decoder.dart';
 import 'speech_engine.dart';
+import 'voice_log.dart';
 import 'wav_file_writer.dart';
 import 'whisper_model_provider.dart';
 
@@ -124,10 +124,11 @@ class WhisperSpeechEngine implements SpeechEngine {
     await stopWakeListening();
     await _stopping;
     if (isListening) return;
+    final startClock = Stopwatch()..start();
     if (modelFiles() == null) {
       throw StateError('The Whisper model is not ready yet.');
     }
-    if (!await hasPermission()) {
+    if (!await _hasMicPermissionCached()) {
       _errorController.add(const SpeechEngineError(SpeechEngineErrorType.permission));
       throw StateError('Microphone permission was not granted.');
     }
@@ -136,18 +137,16 @@ class WhisperSpeechEngine implements SpeechEngine {
     final files = modelFiles();
     if (files != null && files.option.engine == VoiceModelEngine.sherpa && files.tokensPath != null) {
       unawaited(_fast.ensureLoaded(modelPath: files.modelPath, tokensPath: files.tokensPath!).catchError((Object e) {
-        debugPrint('[voice] fastconformer preload failed: $e');
+        VoiceLog.d('local', 'fastconformer preload failed: $e');
       }));
     }
 
-    final dir = await getApplicationDocumentsDirectory();
-    final recordings = Directory('${dir.path}/voice_recordings');
-    if (!await recordings.exists()) await recordings.create(recursive: true);
-    final path = '${recordings.path}/voice_${DateTime.now().microsecondsSinceEpoch}.wav';
-    _wavWriter = WavFileWriter(path: path, sampleRate: sampleRate);
-    await _wavWriter!.open();
+    // The MICROPHONE opens first and everything it hears is held in memory while the file is being
+    // prepared, then written in order. Preparing the file first (folder lookup, header) used to
+    // cost the first part of the sentence — the "start of my sentence is missing" symptom.
+    final early = <Uint8List>[];
+    var fileReady = false;
     _vad.reset();
-
     final recorder = _recorder = AudioRecorder();
     final Stream<Uint8List> stream;
     try {
@@ -166,7 +165,50 @@ class WhisperSpeechEngine implements SpeechEngine {
       await cancel();
       rethrow;
     }
-    _micSubscription = stream.listen(_onChunk);
+    _micSubscription = stream.listen((chunk) {
+      if (fileReady) {
+        _onChunk(chunk);
+      } else {
+        early.add(chunk);
+      }
+    });
+    VoiceLog.d('local', 'microphone open after ${startClock.elapsedMilliseconds}ms');
+    try {
+      final folder = await _recordingsFolder();
+      final path = '$folder/voice_${DateTime.now().microsecondsSinceEpoch}.wav';
+      _wavWriter = WavFileWriter(path: path, sampleRate: sampleRate);
+      await _wavWriter!.open();
+    } catch (_) {
+      await cancel();
+      rethrow;
+    }
+    // Same turn of the event loop: drain what was held, then switch to live handling — order kept.
+    for (final chunk in early) {
+      _onChunk(chunk);
+    }
+    VoiceLog.d('local', 'recording started; ${early.length} early chunks kept; ready after ${startClock.elapsedMilliseconds}ms');
+    early.clear();
+    fileReady = true;
+  }
+
+  bool _micGranted = false;
+  String? _recordingsPath;
+
+  /// Asking the OS creates and disposes a whole recorder; once it said yes there is no need to ask
+  /// again on every listen.
+  Future<bool> _hasMicPermissionCached() async {
+    if (_micGranted) return true;
+    _micGranted = await hasPermission();
+    return _micGranted;
+  }
+
+  Future<String> _recordingsFolder() async {
+    final cached = _recordingsPath;
+    if (cached != null) return cached;
+    final dir = await getApplicationDocumentsDirectory();
+    final folder = Directory('${dir.path}/voice_recordings');
+    if (!await folder.exists()) await folder.create(recursive: true);
+    return _recordingsPath = folder.path;
   }
 
   void _onChunk(Uint8List chunk) {
@@ -262,6 +304,7 @@ class WhisperSpeechEngine implements SpeechEngine {
     }
     _wakeActive = true;
     _wakeSubscription = stream.listen(_onWakeChunk);
+    VoiceLog.d('local', 'wake listening started');
   }
 
   Future<void> stopWakeListening() async {
@@ -281,7 +324,10 @@ class WhisperSpeechEngine implements SpeechEngine {
     _wakeBytes += chunk.length;
     if (speaking) {
       _wakeInUtterance = true;
-      if (_wakeBytes > _wakeMaxBytes) _wakeDiscard();
+      if (_wakeBytes > _wakeMaxBytes) {
+        VoiceLog.d('local', 'wake: sound longer than 3 s ignored (a conversation, not a call)');
+        _wakeDiscard();
+      }
       return;
     }
     if (!_wakeInUtterance) {
@@ -298,7 +344,11 @@ class WhisperSpeechEngine implements SpeechEngine {
     }
     final pcm = builder.takeBytes();
     _wakeDiscard();
-    if (pcm.length < _wakeMinBytes) return;
+    if (pcm.length < _wakeMinBytes) {
+      VoiceLog.d('local', 'wake: sound too short (${pcm.length * 1000 ~/ (sampleRate * 2)}ms) ignored');
+      return;
+    }
+    VoiceLog.d('local', 'wake: checking a ${pcm.length * 1000 ~/ (sampleRate * 2)}ms sound');
     _wakeBusy = true;
     unawaited(_checkWake(pcm));
   }
@@ -315,14 +365,14 @@ class WhisperSpeechEngine implements SpeechEngine {
       final raw = await _fast.decode(_samplesFromPcm(pcm), sampleRate: sampleRate).timeout(const Duration(seconds: 5));
       final text = cleanTranscript(raw);
       final heard = isWakeWord?.call(text) ?? false;
-      if (kDebugMode) debugPrint('[voice] wake check: "${raw.trim()}" -> $heard');
+      VoiceLog.d('local', 'wake check: pcm=${pcm.length * 1000 ~/ (sampleRate * 2)}ms raw="${raw.trim()}" cleaned="$text" -> heard=$heard');
       if (_wakeActive && heard) {
         await stopWakeListening();
         if (!_wakeController.isClosed) _wakeController.add(null);
         return;
       }
     } catch (e) {
-      debugPrint('[voice] wake check failed: $e');
+      VoiceLog.d('local', 'wake check failed: $e');
     } finally {
       _wakeBusy = false;
     }
@@ -356,13 +406,13 @@ class WhisperSpeechEngine implements SpeechEngine {
       final peak = _vad.peakRms;
       final recorded = path;
       if (recorded == null || audioMs < _minAudioMs || peak < _silentPeakRms) {
-        debugPrint('[voice] whisper skipped: audio=${audioMs}ms peakRms=${peak.toStringAsFixed(4)}');
+        VoiceLog.d('local', 'whisper skipped: audio=${audioMs}ms peakRms=${peak.toStringAsFixed(4)}');
         return;
       }
       try {
         transcript = await _transcribe(recorded, audioMs);
       } catch (e) {
-        debugPrint('[voice] whisper failed: $e');
+        VoiceLog.d('local', 'whisper failed: $e');
         failure = e;
       }
     }();
@@ -389,11 +439,9 @@ class WhisperSpeechEngine implements SpeechEngine {
     if (files.option.engine == VoiceModelEngine.sherpa) {
       raw = await _decodeSherpa(audioPath, files).timeout(_decodeTimeout);
       final text = cleanTranscript(raw);
-      // Words are logged ONLY in debug builds (never in release), so recognition mistakes can be
-      // diagnosed from the log without ever leaking spoken content from a published app.
-      if (kDebugMode) debugPrint('[voice] fastconformer text: "${raw.trim()}" -> "$text"');
-      debugPrint(
-        '[voice] fastconformer: audio=${audioMs}ms decode=${DateTime.now().difference(started).inMilliseconds}ms '
+      VoiceLog.d('local', 'fastconformer text: "${raw.trim()}" -> "$text"');
+      VoiceLog.d('local',
+        'fastconformer: audio=${audioMs}ms decode=${DateTime.now().difference(started).inMilliseconds}ms '
         'raw=${raw.trim().length} chars kept=${text.length} chars peakRms=${_vad.peakRms.toStringAsFixed(3)} '
         'speechDetected=${_vad.speechStarted}',
       );
@@ -406,14 +454,15 @@ class WhisperSpeechEngine implements SpeechEngine {
     } catch (e) {
       if (files.vadPath == null) rethrow;
       // A damaged/missing VAD file must not cost the person their recognition: retry once without.
-      debugPrint('[voice] whisper decode with VAD failed ($e) — retrying without VAD');
+      VoiceLog.d('local', 'whisper decode with VAD failed ($e) — retrying without VAD');
       raw = await _decode(audioPath, files, useVad: false).timeout(_decodeTimeout);
     }
     final text = cleanTranscript(raw);
     final decodeMs = DateTime.now().difference(started).inMilliseconds;
     // Timing and sizes only — never the words. This is how decode speed per model is judged.
-    debugPrint(
-      '[voice] whisper ${files.option.id}: audio=${audioMs}ms decode=${decodeMs}ms raw=${raw.trim().length} chars '
+    VoiceLog.d('local', 'whisper text: "${raw.trim()}" -> "$text"');
+    VoiceLog.d('local',
+      'whisper ${files.option.id}: audio=${audioMs}ms decode=${decodeMs}ms raw=${raw.trim().length} chars '
       'kept=${text.length} chars peakRms=${_vad.peakRms.toStringAsFixed(3)} speechDetected=${_vad.speechStarted}',
     );
     return text;

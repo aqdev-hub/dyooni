@@ -20,6 +20,11 @@ enum SpeechEngineErrorType {
   /// This is the only case that should ever surface as "لم ألتقط أي صوت".
   noMatch,
 
+  /// The recognizer has no model for the requested language / for offline use (Android codes
+  /// `error_language_not_supported`, `error_language_unavailable`). Retrying the same recognizer
+  /// cannot help — the dialogue should switch to the local engine when it is installed.
+  languageUnavailable,
+
   /// Microphone/speech permission is missing or was revoked mid-session.
   permission,
 

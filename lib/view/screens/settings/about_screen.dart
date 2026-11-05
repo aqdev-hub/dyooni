@@ -1,18 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/app_version.dart';
+import '../../../logic/updates/app_update.dart';
+import '../../../logic/updates/update_service.dart';
+import '../../widgets/settings/update_dialog.dart';
 import '../../widgets/shared/app_logo.dart';
+import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 
 /// "حول التطبيق" — a static feature/credits page reached from the drawer. Feature copy here is
 /// kept in sync with what is ACTUALLY implemented (see دليل_المشروع_الشامل.md's feature list) —
 /// no aspirational/roadmap items are listed as if they were shipped.
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends ConsumerStatefulWidget {
   const AboutScreen({super.key});
+
+  @override
+  ConsumerState<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends ConsumerState<AboutScreen> {
+  bool _checking = false;
+
+  Future<void> _checkUpdates() async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _checking = true);
+    final result = await ref.read(updateServiceProvider).check();
+    if (!mounted) return;
+    setState(() => _checking = false);
+    if (result.failed) {
+      AppSnackBar.showError(context, l10n.updateCheckFailed);
+    } else if (result.decision.available) {
+      await showUpdateDialog(context, ref, result.decision);
+    } else {
+      AppSnackBar.showSuccess(context, l10n.updateUpToDate);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,11 +122,25 @@ class AboutScreen extends StatelessWidget {
                     const SizedBox(height: 14),
                     Center(
                       child: Text(
-                        l10n.aboutVersionLabel(kAppVersion),
+                        '${l10n.aboutVersionLabel(kAppVersion)}  ·  ${l10n.updateBuildLabel(InstalledVersion.parse(kAppVersion).build.toString())}',
                         style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 11),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: _checking ? null : _checkUpdates,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: shell.accent,
+                        side: BorderSide(color: shell.accent),
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: _checking
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.system_update_alt_rounded),
+                      label: Text(l10n.updateCheckButton, style: AppTextStyles.button(context).copyWith(color: shell.accent)),
+                    ),
+                    const SizedBox(height: 10),
                     OutlinedButton.icon(
                       onPressed: () => context.push('/contact-us'),
                       style: OutlinedButton.styleFrom(
