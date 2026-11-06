@@ -5,4 +5,4 @@
 /// a slightly stale value in old backup files' metadata, never a functional bug.
 ///
 /// Keep this in sync with pubspec.yaml's `version:` field when bumping releases.
-const String kAppVersion = '0.1.0+1';
+const String kAppVersion = '0.2.0+2';

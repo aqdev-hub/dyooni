@@ -29,6 +29,14 @@ service cloud.firestore {
     // phone->email pairs guessable by anyone who can reach Firestore. Acceptable for now: this
     // rule fixes a fully broken feature; hardening it further (e.g. a Cloud Function proxy
     // instead of direct client reads) is a separate, larger change and is listed in the report.
+    // The newest-release description the app reads to offer an update (app_config/release).
+    // Public read (the check runs before/without sign-in); NO client write — it is edited from the
+    // Firebase console, which is not subject to these rules.
+    match /app_config/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /phone_lookup/{phone} {
       allow read: if true;
       allow write: if request.auth != null;

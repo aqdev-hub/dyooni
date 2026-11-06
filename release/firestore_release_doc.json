@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "build": 2,
+  "minSupportedBuild": 0,
+  "url": "https://abdulquddus-dev.github.io/?project=dyooni",
+  "notes_ar": [
+    "ترتيب وتصفية الحسابات في الشاشة الرئيسية",
+    "البحث بالتاريخ داخل تفاصيل الحساب",
+    "تقارير أوضح: جدول لكل عملة وتصفية حسب حالة الحساب",
+    "التحويل بين الحسابات وتذكيرات السداد",
+    "رسائل الرصيد التلقائية عبر واتساب أو SMS",
+    "تحسينات كبيرة في الأوامر الصوتية"
+  ],
+  "notes_en": [
+    "Sort and filter accounts on the home screen",
+    "Search by date inside an account",
+    "Clearer reports: one table per currency, filter by account status",
+    "Transfers between accounts and payment reminders",
+    "Automatic balance messages via WhatsApp or SMS",
+    "Big voice-command improvements"
+  ]
+}

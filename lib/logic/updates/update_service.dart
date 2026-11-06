@@ -1,8 +1,6 @@
-import 'dart:convert';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/app_links.dart';
@@ -19,10 +17,10 @@ class UpdateCheckResult {
 }
 
 class UpdateService {
-  UpdateService(this._prefs, {http.Client? client}) : _client = client ?? http.Client();
+  UpdateService(this._prefs, {FirebaseFirestore? firestore}) : _firestore = firestore;
 
   final SharedPreferences _prefs;
-  final http.Client _client;
+  final FirebaseFirestore? _firestore;
 
   static const _lastCheckKey = 'update_last_check_ms';
   static const _dismissedBuildKey = 'update_dismissed_build';
@@ -31,21 +29,25 @@ class UpdateService {
   InstalledVersion get installed => InstalledVersion.parse(kAppVersion);
 
   Future<UpdateCheckResult> check() async {
-    final url = AppLinks.updateInfoUrl;
-    if (url == null) return const UpdateCheckResult(UpdateDecision(UpdateKind.none, null), failed: true);
+    const failed = UpdateCheckResult(UpdateDecision(UpdateKind.none, null), failed: true);
     try {
-      final res = await _client.get(Uri.parse(url)).timeout(const Duration(seconds: 12));
-      if (res.statusCode != 200) {
-        debugPrint('[update] HTTP ${res.statusCode}');
-        return const UpdateCheckResult(UpdateDecision(UpdateKind.none, null), failed: true);
+      // Source.server: an old cached copy must never say "you are up to date" — when the server
+      // can't be reached this throws, which is reported as "couldn't check", not as "up to date".
+      final snapshot = await (_firestore ?? FirebaseFirestore.instance)
+          .collection(AppLinks.updateCollection)
+          .doc(AppLinks.updateDocument)
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 12));
+      final release = RemoteRelease.tryParse(snapshot.data());
+      if (release == null) {
+        debugPrint('[update] release document missing or malformed');
+        return failed;
       }
-      final release = RemoteRelease.tryParse(jsonDecode(utf8.decode(res.bodyBytes)));
-      if (release == null) return const UpdateCheckResult(UpdateDecision(UpdateKind.none, null), failed: true);
       await _prefs.setInt(_lastCheckKey, DateTime.now().millisecondsSinceEpoch);
       return UpdateCheckResult(decideUpdate(installed, release));
     } catch (e) {
       debugPrint('[update] check failed: $e');
-      return const UpdateCheckResult(UpdateDecision(UpdateKind.none, null), failed: true);
+      return failed;
     }
   }
 

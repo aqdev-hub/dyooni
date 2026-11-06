@@ -14,9 +14,10 @@ abstract class AppLinks {
   /// The app's page on the developer's site (download + rating), same for every language.
   static const appPageUrl = 'https://abdulquddus-dev.github.io/?project=dyooni';
 
-  /// A small JSON file describing the newest release (see version.json in the project root).
-  /// The app reads it to tell people an update exists. `null` turns the check off.
-  static const String? updateInfoUrl = 'https://raw.githubusercontent.com/aqdev-hub/dyooni/main/version.json';
+  /// Where the newest release is described: the Firestore document `app_config/release`
+  /// (edited from the Firebase console — see release/RELEASE_GUIDE.md).
+  static const updateCollection = 'app_config';
+  static const updateDocument = 'release';
 
   /// The link a person receives when the app is shared.
   static String shareUrl(String languageCode) => playStoreUrl ?? appPageUrl;

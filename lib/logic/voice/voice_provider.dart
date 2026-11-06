@@ -12,7 +12,6 @@ import '../../core/voice/voice_output_service.dart';
 import '../../core/voice/whisper_model_provider.dart';
 import '../../core/voice/whisper_speech_engine.dart';
 import '../../data/models/account.dart';
-import '../../data/models/currency_type.dart';
 import '../../data/models/general_settings.dart';
 import '../../data/models/transaction.dart';
 import '../accounts/accounts_provider.dart';

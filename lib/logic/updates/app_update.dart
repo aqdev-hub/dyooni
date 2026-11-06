@@ -1,5 +1,5 @@
-/// Pure update logic (no network, no Flutter): parsing the installed version, reading the
-/// published release description, and deciding whether an update is on offer.
+// Pure update logic (no network, no Flutter): parsing the installed version, reading the
+// published release description, and deciding whether an update is on offer.
 
 /// The installed app version: `0.1.0+1` → name `0.1.0`, build `1`.
 class InstalledVersion {
