@@ -121,9 +121,17 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                     ),
                     const SizedBox(height: 14),
                     Center(
-                      child: Text(
-                        '${l10n.aboutVersionLabel(kAppVersion)}  ·  ${l10n.updateBuildLabel(InstalledVersion.parse(kAppVersion).build.toString())}',
-                        style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 11),
+                      child: Column(
+                        children: [
+                          Text(
+                            l10n.aboutVersionLabel(kAppVersion),
+                            style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 11),
+                          ),
+                          Text(
+                            l10n.updateBuildLabel(InstalledVersion.parse(kAppVersion).build.toString()),
+                            style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 11),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 10),

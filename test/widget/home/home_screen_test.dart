@@ -15,6 +15,8 @@ import 'package:dyooni/logic/accounts/accounts_provider.dart';
 import 'package:dyooni/logic/auth/auth_provider.dart';
 import 'package:dyooni/logic/onboarding/onboarding_provider.dart' show sharedPreferencesProvider;
 import 'package:dyooni/logic/transactions/transactions_provider.dart';
+import 'package:dyooni/logic/updates/app_update.dart';
+import 'package:dyooni/logic/updates/update_service.dart';
 import 'package:dyooni/view/screens/accounts/add_account_screen.dart';
 import 'package:dyooni/view/screens/home/home_screen.dart';
 
@@ -50,7 +52,16 @@ List<Override> _overrides(
       // ultimately depends on sharedPreferencesProvider. Without this override the provider
       // throws UnimplementedError, exactly as documented on sharedPreferencesProvider itself.
       sharedPreferencesProvider.overrideWithValue(prefs),
+      // The start-up "is there a newer version" check needs Firebase, which tests don't start.
+      updateServiceProvider.overrideWithValue(_NoUpdateService(prefs)),
     ];
+
+class _NoUpdateService extends UpdateService {
+  _NoUpdateService(super.prefs);
+
+  @override
+  Future<UpdateDecision?> checkOnStartup() async => null;
+}
 
 Widget _wrap(
   MockAccountsRepository accountsRepo,

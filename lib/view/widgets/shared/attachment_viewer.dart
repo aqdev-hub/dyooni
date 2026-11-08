@@ -39,7 +39,7 @@ class _AttachmentViewerState extends State<_AttachmentViewer> {
 
   void _toggleZoom() {
     final zoomedIn = _controller.value.getMaxScaleOnAxis() > 1.05;
-    _controller.value = zoomedIn ? Matrix4.identity() : (Matrix4.identity()..scale(2.6));
+    _controller.value = zoomedIn ? Matrix4.identity() : Matrix4.diagonal3Values(2.6, 2.6, 1);
   }
 
   @override

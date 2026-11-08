@@ -183,7 +183,7 @@ abstract class AppTheme {
         dayPeriodColor: c.background,
         dayPeriodTextColor: c.textPrimary,
         dialBackgroundColor: c.background,
-        dialTextColor: WidgetStateProperty.resolveWith(
+        dialTextColor: WidgetStateColor.resolveWith(
           (states) => states.contains(WidgetState.selected) ? c.headerBottom : c.textPrimary,
         ),
         dialHandColor: c.accent,
