@@ -85,13 +85,50 @@ void main() {
         creditHeader: 'Credit',
         balanceHeader: 'Balance',
         totalRowLabel: 'Total',
-        attachmentPresentLabel: '(attachment)',
         rows: [StatementRow(transaction: credit, runningBalance: 500)],
       );
 
       expect(bytes.length, greaterThan(500));
       expect(bytes[0], 0x50);
       expect(bytes[1], 0x4B);
+    });
+
+    test('adds the attachments column when an entry has a photo or a voice recording', () {
+      final withAttachments = Transaction(
+        id: 't2',
+        accountId: 'a1',
+        amount: 100,
+        currency: 'SAR',
+        direction: AccountDirection.debit,
+        date: DateTime(2026, 1, 2),
+        attachmentPath: '/x/photo.jpg',
+        voiceRecording: const VoiceRecording(path: '/x/v.wav', durationMs: 2000, transcript: 't', transactionId: 't2'),
+      );
+      final plain = service.buildAccountStatement(
+        reportTitle: 'r',
+        dateHeader: 'Date',
+        detailsHeader: 'Details',
+        debitHeader: 'Debit',
+        creditHeader: 'Credit',
+        balanceHeader: 'Balance',
+        totalRowLabel: 'Total',
+        rows: [StatementRow(transaction: credit, runningBalance: 500)],
+      );
+      final attached = service.buildAccountStatement(
+        reportTitle: 'r',
+        dateHeader: 'Date',
+        detailsHeader: 'Details',
+        debitHeader: 'Debit',
+        creditHeader: 'Credit',
+        balanceHeader: 'Balance',
+        totalRowLabel: 'Total',
+        rows: [
+          StatementRow(transaction: credit, runningBalance: 500),
+          StatementRow(transaction: withAttachments, runningBalance: 400),
+        ],
+      );
+      expect(attached.length, greaterThan(500));
+      expect(attached.length, isNot(plain.length));
     });
 
     test('never throws when there are no transactions', () {
@@ -104,8 +141,7 @@ void main() {
           creditHeader: 'Credit',
           balanceHeader: 'Balance',
           totalRowLabel: 'Total',
-          attachmentPresentLabel: '(attachment)',
-          rows: const [],
+            rows: const [],
         ),
         returnsNormally,
       );

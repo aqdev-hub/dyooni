@@ -2214,4 +2214,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get voiceLogCopied => 'نُسخ سجل الصوت. الصقه في المحادثة.';
+
+  @override
+  String get attachmentsLabel => 'المرفقات';
+
+  @override
+  String get attachmentTypePhoto => 'صورة';
+
+  @override
+  String get attachmentTypeVoice => 'تسجيل صوتي';
+
+  @override
+  String get attachmentViewerClose => 'إغلاق';
+
+  @override
+  String get attachmentUnavailable => 'تعذّر عرض الصورة';
 }

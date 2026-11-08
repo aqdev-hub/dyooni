@@ -2229,4 +2229,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceLogCopied => 'Voice log copied. Paste it in the chat.';
+
+  @override
+  String get attachmentsLabel => 'Attachments';
+
+  @override
+  String get attachmentTypePhoto => 'Photo';
+
+  @override
+  String get attachmentTypeVoice => 'Voice recording';
+
+  @override
+  String get attachmentViewerClose => 'Close';
+
+  @override
+  String get attachmentUnavailable => 'The picture can\'t be shown';
 }

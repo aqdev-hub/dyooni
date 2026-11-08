@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +12,7 @@ import '../../../data/models/transaction.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../shared/app_snackbar.dart';
+import '../shared/attachment_viewer.dart';
 import '../shared/entity_actions_sheet.dart';
 import '../voice/voice_recording_player.dart';
 
@@ -55,6 +58,8 @@ class TransactionTable extends ConsumerWidget {
     return !day.isBefore(from) && !day.isAfter(to);
   }
 
+  static bool _hasAttachments(Transaction t) => t.attachmentPath != null || t.voiceRecording != null;
+
   bool _visible(Transaction t) => _inDateRange(t) && _matchesSearch(t);
 
   bool _matchesSearch(Transaction t) {
@@ -73,6 +78,9 @@ class TransactionTable extends ConsumerWidget {
     final selectionMode = ref.watch(transactionSelectionModeProvider);
     final selectedIds = ref.watch(selectedTransactionIdsProvider);
     final showTime = ref.watch(generalSettingsProvider).value?.showTimeInOperations ?? true;
+    // The "المرفقات" column exists only when at least one entry on screen has a photo or a voice
+    // recording — otherwise it would be a column of dashes taking a fifth of the width.
+    final showAttachments = transactions.any((t) => _visible(t) && _hasAttachments(t));
     final chronological = [...transactions]..sort((a, b) => a.date.compareTo(b.date));
     var runningBalance = 0.0;
     final rows = <(Transaction, double)>[];
@@ -125,6 +133,7 @@ class TransactionTable extends ConsumerWidget {
                   if (showTime) _HeaderCell(l10n.dateLabel),
                   _HeaderCell(l10n.amountLabel),
                   _HeaderCell(l10n.detailsLabel),
+                  if (showAttachments) _HeaderCell(l10n.attachmentsLabel, flex: 2),
                   _HeaderCell(l10n.reportBalanceHeader),
                 ],
               ),
@@ -146,6 +155,7 @@ class TransactionTable extends ConsumerWidget {
                 selectionMode: selectionMode,
                 selected: selectedIds.contains(row.$1.id),
                 showTime: showTime,
+                showAttachments: showAttachments,
                 onTap: () => handleTap(row.$1),
                 onLongPress: () => handleLongPress(row.$1),
               ),
@@ -156,11 +166,13 @@ class TransactionTable extends ConsumerWidget {
 }
 
 class _HeaderCell extends StatelessWidget {
-  const _HeaderCell(this.label);
+  const _HeaderCell(this.label, {this.flex = 1});
   final String label;
+  final int flex;
 
   @override
   Widget build(BuildContext context) => Expanded(
+        flex: flex,
         child: Text(label, textAlign: TextAlign.center, style: AppTextStyles.bodySecondary(context).copyWith(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
       );
 }
@@ -172,6 +184,7 @@ class _DataRow extends StatelessWidget {
     required this.selectionMode,
     required this.selected,
     required this.showTime,
+    required this.showAttachments,
     required this.onTap,
     required this.onLongPress,
   });
@@ -180,6 +193,7 @@ class _DataRow extends StatelessWidget {
   final bool selectionMode;
   final bool selected;
   final bool showTime;
+  final bool showAttachments;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
@@ -215,6 +229,7 @@ class _DataRow extends StatelessWidget {
             if (showTime) _TextCell(date, color: shell.textSecondary, fontSize: 10),
             _TintedCell(transaction.amount.toStringAsFixed(0), background: amountCell, foreground: amountColor),
             _DetailsCell(transaction: transaction, color: shell.textPrimary),
+            if (showAttachments) _AttachmentsCell(transaction: transaction),
             _TintedCell(runningBalance.abs().toStringAsFixed(0), background: balanceCell, foreground: balanceColor),
           ],
         ),
@@ -236,11 +251,65 @@ class _DetailsCell extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
             Flexible(child: Text(transaction.details ?? '—', textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: AppTextStyles.bodySecondary(context).copyWith(color: color))),
-            if (transaction.voiceRecording != null) VoiceRecordingPlayer(recording: transaction.voiceRecording!),
             ],
           ),
         ),
       );
+}
+
+/// The "المرفقات" cell: the attached photo large enough to recognise (tap it to open it full
+/// screen, zoomable) and the voice recording's play button. Both used to be squeezed into the
+/// details cell, where the picture was a thumbnail nobody could read.
+class _AttachmentsCell extends StatelessWidget {
+  const _AttachmentsCell({required this.transaction});
+  final Transaction transaction;
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = context.shellColors;
+    final path = transaction.attachmentPath;
+    final recording = transaction.voiceRecording;
+    return Expanded(
+      flex: 2,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: path == null && recording == null
+            ? Text('—', textAlign: TextAlign.center, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary))
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (path != null)
+                    // Its own tap target: opening the picture must not also open the row's editor.
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => showAttachmentViewer(context, path),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.file(
+                          File(path),
+                          width: double.infinity,
+                          height: 120,
+                          // The whole picture (a receipt or a document is cropped by "cover");
+                          // tapping it opens it full screen.
+                          fit: BoxFit.contain,
+                          // Decode near display size: a full camera photo per row would flood memory.
+                          cacheWidth: 360,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            height: 120,
+                            color: shell.surface,
+                            alignment: Alignment.center,
+                            child: Icon(Icons.broken_image_outlined, color: shell.textSecondary),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (path != null && recording != null) const SizedBox(height: 4),
+                  if (recording != null) VoiceRecordingPlayer(recording: recording),
+                ],
+              ),
+      ),
+    );
+  }
 }
 
 class _TextCell extends StatelessWidget {

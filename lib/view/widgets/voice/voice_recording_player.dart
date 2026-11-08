@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/voice/voice_audio_player.dart';
@@ -18,19 +21,22 @@ class VoiceRecordingPlayer extends StatefulWidget {
 class _VoiceRecordingPlayerState extends State<VoiceRecordingPlayer> {
   late final VoiceAudioPlayer _player;
   bool _playing = false;
+  StreamSubscription<bool>? _playingSubscription;
 
   @override
   void initState() {
     super.initState();
     _player = VoiceAudioPlayer();
-    _player.playerStateStream.listen((state) {
-      if (mounted) setState(() => _playing = state.playing);
+    // Follows REAL playback: when the recording ends the button goes back to "play" by itself.
+    _playingSubscription = _player.isPlayingStream.listen((playing) {
+      if (mounted) setState(() => _playing = playing);
     });
   }
 
   @override
   void dispose() {
-    _player.dispose();
+    unawaited(_playingSubscription?.cancel());
+    unawaited(_player.dispose());
     super.dispose();
   }
 

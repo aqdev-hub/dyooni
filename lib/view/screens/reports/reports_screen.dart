@@ -291,7 +291,7 @@ class _FilterChip extends StatelessWidget {
         child: Text(
           label,
           style: AppTextStyles.bodySecondary(context).copyWith(
-            color: selected ? Colors.white : shell.textPrimary,
+            color: selected ? shell.headerBottom : shell.textPrimary,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
           ),
         ),

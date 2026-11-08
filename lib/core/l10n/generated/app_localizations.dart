@@ -3075,6 +3075,36 @@ abstract class AppLocalizations {
   /// **'"نعم" أو "احفظ" أو "عدل المبلغ إلى 3500"'**
   String get voiceYouCanSayExamples;
 
+  /// No description provided for @attachmentsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المرفقات'**
+  String get attachmentsLabel;
+
+  /// No description provided for @attachmentTypePhoto.
+  ///
+  /// In ar, this message translates to:
+  /// **'صورة'**
+  String get attachmentTypePhoto;
+
+  /// No description provided for @attachmentTypeVoice.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل صوتي'**
+  String get attachmentTypeVoice;
+
+  /// No description provided for @attachmentViewerClose.
+  ///
+  /// In ar, this message translates to:
+  /// **'إغلاق'**
+  String get attachmentViewerClose;
+
+  /// No description provided for @attachmentUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر عرض الصورة'**
+  String get attachmentUnavailable;
+
   /// No description provided for @voiceLogCopied.
   ///
   /// In ar, this message translates to:

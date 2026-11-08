@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -101,7 +103,10 @@ class PdfReportService {
       if (path == null) continue;
       try {
         final bytes = await File(path).readAsBytes();
-        images[row.transaction.id] = pw.MemoryImage(bytes);
+        // Large enough to READ in the report, small enough that ten photos don't make a 60 MB PDF:
+        // longest side capped at 1400 px, re-encoded as JPEG, on a background isolate.
+        final prepared = await compute(_prepareAttachmentBytes, bytes);
+        images[row.transaction.id] = pw.MemoryImage(prepared);
       } catch (_) {
         // Attachment file missing/unreadable — the row still renders, just without the thumbnail.
       }
@@ -370,9 +375,13 @@ class PdfReportService {
     required String signatureLabel,
     required String stampLabel,
     required List<StatementRow> rows,
+    String attachmentsHeader = 'المرفقات',
+    String voiceLabel = 'تسجيل صوتي',
   }) async {
     final (regularFont, boldFont) = await _loadFonts();
     final logo = await _loadLogo(personalData);
+    // The attachments column exists only when some row has a photo or a voice recording.
+    final withAttachments = rows.any((r) => r.transaction.attachmentPath != null || r.transaction.voiceRecording != null);
     final attachmentImages = await _loadAttachments(rows);
     final signatureImage = personalData.signatureEnabled
         ? await _loadCustomOrDefaultImage(personalData.signaturePath, 'assets/icons/default_signature.png')
@@ -415,12 +424,14 @@ class PdfReportService {
         build: (context) => [
           pw.Table(
             border: pw.TableBorder.all(color: ReportPalette.border, width: 0.5),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(2),
-              1: pw.FlexColumnWidth(2),
-              2: pw.FlexColumnWidth(2),
-              3: pw.FlexColumnWidth(3),
-              4: pw.FlexColumnWidth(2),
+            columnWidths: {
+              0: const pw.FlexColumnWidth(2),
+              1: const pw.FlexColumnWidth(2),
+              2: const pw.FlexColumnWidth(2),
+              // Attachments sit left of details (visually), wide enough for a readable photo.
+              if (withAttachments) 3: const pw.FlexColumnWidth(5),
+              (withAttachments ? 4 : 3): const pw.FlexColumnWidth(3),
+              (withAttachments ? 5 : 4): const pw.FlexColumnWidth(2),
             },
             children: [
               pw.TableRow(
@@ -429,6 +440,7 @@ class PdfReportService {
                   _headerCell(shapeArabicForPdf(balanceHeader), boldFont),
                   _headerCell(shapeArabicForPdf(creditHeader), boldFont),
                   _headerCell(shapeArabicForPdf(debitHeader), boldFont),
+                  if (withAttachments) _headerCell(shapeArabicForPdf(attachmentsHeader), boldFont),
                   _headerCell(shapeArabicForPdf(detailsHeader), boldFont),
                   _headerCell(shapeArabicForPdf(dateHeader), boldFont),
                 ],
@@ -445,11 +457,13 @@ class PdfReportService {
                       row.transaction.direction == AccountDirection.debit ? row.transaction.amount.toStringAsFixed(0) : '0',
                       regularFont,
                     ),
-                    _detailsCellWithAttachment(
-                      shapeArabicForPdf(row.transaction.details ?? '—'),
-                      regularFont,
-                      attachmentImages[row.transaction.id],
-                    ),
+                    if (withAttachments)
+                      _attachmentsCell(
+                        image: attachmentImages[row.transaction.id],
+                        voiceText: row.transaction.voiceRecording != null ? shapeArabicForPdf(voiceLabel) : null,
+                        font: regularFont,
+                      ),
+                    _bodyCell(shapeArabicForPdf(row.transaction.details ?? '—'), regularFont),
                     _bodyCell(_formatDate(row.transaction.date), regularFont),
                   ],
                 ),
@@ -458,6 +472,7 @@ class PdfReportService {
                   pw.SizedBox(),
                   _bodyCellBold(totalCredit.toStringAsFixed(0), boldFont),
                   _bodyCellBold(totalDebit.toStringAsFixed(0), boldFont),
+                  if (withAttachments) pw.SizedBox(),
                   pw.SizedBox(),
                   pw.SizedBox(),
                 ],
@@ -468,6 +483,7 @@ class PdfReportService {
                   _bodyCellBold(finalBalance.abs().toStringAsFixed(0), boldFont),
                   pw.SizedBox(),
                   pw.SizedBox(),
+                  if (withAttachments) pw.SizedBox(),
                   _headerCellPlain(shapeArabicForPdf(totalRowLabel), boldFont, PdfColors.black),
                   pw.SizedBox(),
                 ],
@@ -599,29 +615,48 @@ class PdfReportService {
         child: pw.Text(text, style: pw.TextStyle(font: font, fontSize: 9)),
       );
 
-  /// Same as [_bodyCell] but also places a small thumbnail next to the text when [image] is
-  /// non-null — this is the only cell that ever carries an attachment thumbnail.
-  pw.Widget _detailsCellWithAttachment(String text, pw.Font font, pw.MemoryImage? image) => pw.Padding(
-        padding: const pw.EdgeInsets.all(6),
-        child: pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.center,
-          children: [
-            pw.Flexible(child: pw.Text(text, style: pw.TextStyle(font: font, fontSize: 9), textAlign: pw.TextAlign.center)),
-            if (image != null) ...[
-              pw.SizedBox(width: 4),
-              pw.Container(
-                width: 22,
-                height: 22,
-                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400, width: 0.5)),
-                child: pw.Image(image, fit: pw.BoxFit.cover),
-              ),
-            ],
-          ],
-        ),
-      );
+  /// The "المرفقات" cell: the photo at a size where its text can be read (the whole picture,
+  /// never cropped), and a "voice recording" note when the entry has one (audio itself can't live
+  /// in a PDF). Empty entries show a dash.
+  pw.Widget _attachmentsCell({required pw.MemoryImage? image, required String? voiceText, required pw.Font font}) {
+    if (image == null && voiceText == null) return _bodyCell('—', font);
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Column(
+        mainAxisSize: pw.MainAxisSize.min,
+        children: [
+          if (image != null)
+            pw.Container(
+              constraints: const pw.BoxConstraints(maxHeight: 170),
+              decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400, width: 0.5)),
+              child: pw.Image(image, fit: pw.BoxFit.contain),
+            ),
+          if (image != null && voiceText != null) pw.SizedBox(height: 4),
+          if (voiceText != null) pw.Text(voiceText, style: pw.TextStyle(font: font, fontSize: 9), textAlign: pw.TextAlign.center),
+        ],
+      ),
+    );
+  }
 
   pw.Widget _bodyCellBold(String text, pw.Font font) => pw.Padding(
         padding: const pw.EdgeInsets.all(6),
         child: pw.Text(text, style: pw.TextStyle(font: font, fontSize: 10, fontWeight: pw.FontWeight.bold)),
       );
+}
+
+/// Runs on a background isolate (via `compute`): shrinks a photo to at most 1400 px on its longest
+/// side and re-encodes it as JPEG. Anything that can't be decoded is embedded as it is.
+Uint8List _prepareAttachmentBytes(Uint8List bytes) {
+  try {
+    final decoded = img.decodeImage(bytes);
+    if (decoded == null) return bytes;
+    final longest = decoded.width > decoded.height ? decoded.width : decoded.height;
+    final resized = longest > 1400
+        ? img.copyResize(decoded, width: decoded.width >= decoded.height ? 1400 : null, height: decoded.height > decoded.width ? 1400 : null)
+        : decoded;
+    // A picture with transparency stays PNG (JPEG would turn the transparent parts black).
+    return Uint8List.fromList(resized.hasAlpha ? img.encodePng(resized) : img.encodeJpg(resized, quality: 85));
+  } catch (_) {
+    return bytes;
+  }
 }

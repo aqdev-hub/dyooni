@@ -813,5 +813,10 @@
   "@updateBuildLabel": {
     "placeholders": {"build": {"type": "String"}}
   },
-  "voiceLogCopied": "Voice log copied. Paste it in the chat."
+  "voiceLogCopied": "Voice log copied. Paste it in the chat.",
+  "attachmentsLabel": "Attachments",
+  "attachmentTypePhoto": "Photo",
+  "attachmentTypeVoice": "Voice recording",
+  "attachmentViewerClose": "Close",
+  "attachmentUnavailable": "The picture can't be shown"
 }

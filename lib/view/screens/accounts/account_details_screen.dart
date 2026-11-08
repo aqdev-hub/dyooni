@@ -369,6 +369,8 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
           signatureLabel: l10n.reportSignatureLabel,
           stampLabel: l10n.reportStampLabel,
           rows: rows,
+          attachmentsHeader: l10n.attachmentsLabel,
+          voiceLabel: l10n.attachmentTypeVoice,
         );
   }
 
@@ -382,8 +384,10 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
           creditHeader: resolveCreditLabel(l10n, settings),
           balanceHeader: l10n.reportBalanceHeader,
           totalRowLabel: l10n.homeTotalBalance,
-          attachmentPresentLabel: l10n.attachmentPresentLabel,
           rows: rows,
+          attachmentsHeader: l10n.attachmentsLabel,
+          photoLabel: l10n.attachmentTypePhoto,
+          voiceLabel: l10n.attachmentTypeVoice,
         );
   }
 

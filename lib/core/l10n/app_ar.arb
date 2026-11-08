@@ -813,5 +813,10 @@
   "@updateBuildLabel": {
     "placeholders": {"build": {"type": "String"}}
   },
-  "voiceLogCopied": "نُسخ سجل الصوت. الصقه في المحادثة."
+  "voiceLogCopied": "نُسخ سجل الصوت. الصقه في المحادثة.",
+  "attachmentsLabel": "المرفقات",
+  "attachmentTypePhoto": "صورة",
+  "attachmentTypeVoice": "تسجيل صوتي",
+  "attachmentViewerClose": "إغلاق",
+  "attachmentUnavailable": "تعذّر عرض الصورة"
 }

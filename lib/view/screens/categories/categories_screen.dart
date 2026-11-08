@@ -68,7 +68,7 @@ class CategoriesScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: shell.accent,
-        foregroundColor: Colors.white,
+        foregroundColor: shell.headerBottom,
         tooltip: l10n.categoryAddTitle,
         onPressed: () => _openEditor(context),
         child: const Icon(Icons.add_rounded, size: 30),

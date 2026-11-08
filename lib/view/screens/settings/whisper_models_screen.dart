@@ -243,14 +243,14 @@ class _ModelCard extends StatelessWidget {
                 if (!isInstalled)
                   FilledButton.icon(
                     onPressed: anotherDownloading ? null : onDownload,
-                    style: FilledButton.styleFrom(backgroundColor: shell.accent, foregroundColor: Colors.white),
+                    style: FilledButton.styleFrom(backgroundColor: shell.accent, foregroundColor: shell.headerBottom),
                     icon: const Icon(Icons.download_rounded, size: 18),
                     label: Text('${l10n.whisperModelDownload} (~${option.approxMegabytes} MB)'),
                   ),
                 if (isInstalled && !isActive)
                   FilledButton.icon(
                     onPressed: onUse,
-                    style: FilledButton.styleFrom(backgroundColor: shell.accent, foregroundColor: Colors.white),
+                    style: FilledButton.styleFrom(backgroundColor: shell.accent, foregroundColor: shell.headerBottom),
                     icon: const Icon(Icons.check_rounded, size: 18),
                     label: Text(l10n.whisperModelUse),
                   ),

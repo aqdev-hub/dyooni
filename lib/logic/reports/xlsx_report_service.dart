@@ -109,16 +109,29 @@ class XlsxReportService {
     required String creditHeader,
     required String balanceHeader,
     required String totalRowLabel,
-    required String attachmentPresentLabel,
     required List<StatementRow> rows,
+    String attachmentsHeader = 'المرفقات',
+    String photoLabel = 'صورة',
+    String voiceLabel = 'تسجيل صوتي',
   }) {
     final workbook = Excel.createExcel();
     final sheet = workbook['Statement'];
     workbook.delete('Sheet1');
 
-    const columnCount = 5;
+    // Excel can't hold the audio, and an embedded photo can't be read at cell size, so the
+    // "المرفقات" column says WHAT is attached ("صورة" / "تسجيل صوتي"). It exists only when some
+    // row has an attachment.
+    final withAttachments = rows.any((r) => r.transaction.attachmentPath != null || r.transaction.voiceRecording != null);
+    final columnCount = withAttachments ? 6 : 5;
     _writeTitleRow(sheet, reportTitle, columnCount);
-    _writeHeaderRow(sheet, 1, [dateHeader, detailsHeader, debitHeader, creditHeader, balanceHeader]);
+    _writeHeaderRow(sheet, 1, [
+      dateHeader,
+      detailsHeader,
+      if (withAttachments) attachmentsHeader,
+      debitHeader,
+      creditHeader,
+      balanceHeader,
+    ]);
 
     var totalCredit = 0.0;
     var totalDebit = 0.0;
@@ -132,15 +145,17 @@ class XlsxReportService {
       }
       final date =
           '${row.transaction.date.year}-${row.transaction.date.month.toString().padLeft(2, '0')}-${row.transaction.date.day.toString().padLeft(2, '0')}';
-      final baseDetails = row.transaction.details ?? '—';
-      final detailsWithAttachment =
-          row.transaction.attachmentPath != null ? '$baseDetails $attachmentPresentLabel' : baseDetails;
+      final attachments = [
+        if (row.transaction.attachmentPath != null) photoLabel,
+        if (row.transaction.voiceRecording != null) voiceLabel,
+      ].join(' + ');
       _writeDataRow(
         sheet,
         rowIndex,
         [
           date,
-          detailsWithAttachment,
+          row.transaction.details ?? '—',
+          if (withAttachments) attachments.isEmpty ? '—' : attachments,
           isCredit ? '0' : row.transaction.amount.toStringAsFixed(0),
           isCredit ? row.transaction.amount.toStringAsFixed(0) : '0',
           row.runningBalance.abs().toStringAsFixed(0),
@@ -151,11 +166,11 @@ class XlsxReportService {
     }
 
     final finalBalance = rows.isEmpty ? 0.0 : rows.last.runningBalance;
-    _writeTotalsRow(sheet, rowIndex, ['', '', totalDebit.toStringAsFixed(0), totalCredit.toStringAsFixed(0), '']);
+    _writeTotalsRow(sheet, rowIndex, ['', '', if (withAttachments) '', totalDebit.toStringAsFixed(0), totalCredit.toStringAsFixed(0), '']);
     rowIndex++;
-    _writeTotalsRow(sheet, rowIndex, ['', totalRowLabel, '', '', finalBalance.abs().toStringAsFixed(0)]);
+    _writeTotalsRow(sheet, rowIndex, ['', totalRowLabel, if (withAttachments) '', '', '', finalBalance.abs().toStringAsFixed(0)]);
 
-    _writeColumnWidths(sheet, [14, 28, 14, 14, 14]);
+    _writeColumnWidths(sheet, [14, 28, if (withAttachments) 18, 14, 14, 14]);
     return _encode(workbook);
   }
 
