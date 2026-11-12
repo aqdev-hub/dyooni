@@ -23,6 +23,10 @@ class SpokenCurrency {
     'SAR': ['سعودي', 'sar'],
     'YER': ['يمني', 'yer'],
     'AED': ['درهم', 'اماراتي', 'aed'],
+    // The two built-in currencies answer to the words people actually use for them: the local
+    // currency is the Yemeni riyal («ريال يمني»), the other one is anything foreign.
+    'LOCAL': ['محلي', 'محليه', 'يمني', 'يمنيه'],
+    'FOREIGN': ['اجنبي', 'اجنبيه', 'خارجي', 'خارجيه'],
     'EGP': ['جنيه', 'مصري', 'egp'],
     'KWD': ['دينار', 'كويتي', 'kwd'],
   };
@@ -32,6 +36,14 @@ class SpokenCurrency {
   static const _currencyWords = {
     'دولار', 'دولارات', 'درهم', 'دراهم', 'جنيه', 'جنيهات', 'دينار', 'دنانير', 'يورو', 'ريال',
     'ريالات', 'استرليني', 'روبيه', 'يوان', 'ين', 'ليره', 'فرنك', 'تومان', 'شيكل',
+  };
+
+  /// Foreign-currency words: with a list that holds only the two built-in currencies they all
+  /// mean «أجنبي» (asking "which of yours?" would just be noise — there is only one it can be).
+  static const _foreignWords = {
+    'دولار', 'دولارات', 'درهم', 'دراهم', 'جنيه', 'جنيهات', 'دينار', 'دنانير', 'يورو', 'استرليني',
+    'روبيه', 'يوان', 'ين', 'ليره', 'فرنك', 'تومان', 'شيكل', 'سعودي', 'سعوديه', 'اماراتي', 'مصري',
+    'كويتي', 'قطري', 'عماني', 'بحريني',
   };
 
   static List<String> _tokens(String text) => [
@@ -76,7 +88,10 @@ class SpokenCurrency {
   static String? match(String spoken, List<CurrencyType> currencies) {
     final said = _tokens(spoken);
     if (said.isEmpty) return null;
-    bool has(String wanted) => said.any((s) => _sameWord(s, wanted));
+    // A recognizer often glues a one-letter preposition on: «بالأجنبي», «للمحلي», «وأجنبي».
+    bool has(String wanted) => said.any((s) =>
+        _sameWord(s, wanted) ||
+        (s.length >= 5 && 'بلوف'.contains(s[0]) && _sameWord(s.substring(1), wanted)));
 
     String? bestId;
     var bestScore = 0;
@@ -94,6 +109,13 @@ class SpokenCurrency {
       if (score > bestScore) {
         bestScore = score;
         bestId = c.id;
+      }
+    }
+    if (bestId == null) {
+      // Only the two built-in currencies exist: any foreign currency word means «أجنبي».
+      final onlyBuiltIn = currencies.every((c) => c.id == 'LOCAL' || c.id == 'FOREIGN');
+      if (onlyBuiltIn && currencies.any((c) => c.id == 'FOREIGN') && said.any(_foreignWords.contains)) {
+        return 'FOREIGN';
       }
     }
     return bestId;

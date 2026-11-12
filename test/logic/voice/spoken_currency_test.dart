@@ -62,4 +62,19 @@ void main() {
       expect(d.currencyUnsupported, isTrue);
     });
   });
+
+  group('only the two built-in currencies', () {
+    const builtIn = [CurrencyType(id: 'LOCAL', name: 'محلي'), CurrencyType(id: 'FOREIGN', name: 'أجنبي')];
+    const parser = VoiceCommandParser();
+
+    test('«ريال يمني» is the local currency, «أجنبي» and foreign words the other', () {
+      expect(parser.parse('احمد علي له خمسة الاف ريال يمني', currencies: builtIn).currency, 'LOCAL');
+      expect(parser.parse('احمد علي له خمسة الاف اجنبي', currencies: builtIn).currency, 'FOREIGN');
+      expect(parser.parse('احمد علي له خمسة الاف بالأجنبي', currencies: builtIn).currency, 'FOREIGN');
+      expect(parser.parse('احمد علي عليه مية دولار', currencies: builtIn).currency, 'FOREIGN');
+      expect(parser.parse('احمد علي عليه مية ريال سعودي', currencies: builtIn).currency, 'FOREIGN');
+      final d = parser.parse('احمد علي عليه مية دولار', currencies: builtIn);
+      expect(d.currencyUnsupported, isFalse);
+    });
+  });
 }

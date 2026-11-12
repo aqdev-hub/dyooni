@@ -646,6 +646,14 @@ class VoiceController extends StateNotifier<VoiceState> {
       bluetoothBattery: info.batteryPercent,
     );
     await Future<void>.delayed(const Duration(milliseconds: 350));
+    await _armBluetoothWakeWaiting(attempt);
+  }
+
+  /// Puts the Bluetooth flow into "waiting for «ديوني»" AND really starts the recognizer / wake
+  /// listener. Used when the headset first connects and again after every saved entry — before,
+  /// the success screen only PRINTED the waiting text and nothing was listening.
+  Future<void> _armBluetoothWakeWaiting(int attempt) async {
+    VoiceLog.d('dialogue', 'arming wake word waiting (engine=${_engine.runtimeType})');
     final engine = _engine;
     if (engine is WhisperSpeechEngine && engine.canListenForWakeWord) {
       // Local wake word: the FastConformer engine segments speech by loudness and checks each short
@@ -969,6 +977,13 @@ class VoiceController extends StateNotifier<VoiceState> {
 
     state = state.copyWith(processingStep: 1);
     var draft = _parse(effectiveTranscript);
+    VoiceLog.d(
+      'dialogue',
+      'parsed: transcript="$effectiveTranscript" (live="${current.transcript}", engine="$engineTranscript") '
+      'name=${draft.accountName} amount=${draft.amount} currency=${draft.currency} '
+      'unsupported=${draft.currencyUnsupported} direction=${draft.direction?.name} '
+      'currencies=${_ref.read(currencyTypesProvider).map((c) => '${c.id}=${c.name}').join('|')}',
+    );
     if (_amountDoubtedByAlternatives(effectiveTranscript, _engine.lastAlternatives)) {
       // Same audio, different hypotheses about the number → the recognizer itself is not sure.
       // Ask for the amount instead of saving a guess.
@@ -1212,10 +1227,11 @@ class VoiceController extends StateNotifier<VoiceState> {
     final draft = state.draft;
     if (draft == null) return;
     final tokens = _speechTokens(spoken);
+    VoiceLog.d('dialogue', 'confirmation heard: "$spoken" tokens=$tokens');
 
     // 1. Cancel is checked FIRST and acts immediately — never gated behind another question.
-    const strongCancel = {'الغ', 'الغاء', 'الغي', 'الغيه', 'cancel', 'توقف', 'كنسل'};
-    const weakCancel = {'لا', 'no', 'رجوع'};
+    const strongCancel = {'الغ', 'الغاء', 'الغي', 'الغيه', 'الغيها', 'cancel', 'توقف', 'كنسل'};
+    const weakCancel = {'لا', 'no', 'رجوع', 'كلا', 'ابدا'};
     if (tokens.any(strongCancel.contains) || (tokens.length <= 2 && tokens.any(weakCancel.contains))) {
       await _cancelWithSpeech();
       return;
@@ -1230,13 +1246,13 @@ class VoiceController extends StateNotifier<VoiceState> {
 
     // 3. Save on the FIRST utterance of any ordinary "yes"/"save" word.
     if (_isYes(tokens)) {
+      VoiceLog.d('dialogue', 'confirmation -> save');
       await confirm();
       return;
     }
 
     // 4. A bare "تعديل" — ask what to change.
-    const editWords = {'تعديل', 'عدل', 'غير', 'غيير', 'تغيير', 'بدل', 'edit', 'change'};
-    if (tokens.any((t) => editWords.contains(t) || (t.length >= 3 && _withinOneEdit(t, 'تعديل')) || (t.length >= 3 && _withinOneEdit(t, 'عدل')))) {
+    if (_isEditRequest(tokens)) {
       await _askWhatToEditThenListen();
       return;
     }
@@ -1251,9 +1267,25 @@ class VoiceController extends StateNotifier<VoiceState> {
       ];
 
   static const _yesTokens = {
-    'نعم', 'ايوه', 'ايوا', 'ايه', 'اي', 'صحيح', 'صح', 'موافق', 'تمام', 'اكد', 'تاكيد', 'اوك',
-    'yes', 'correct', 'save', 'ok', 'okay', 'yeah',
+    'نعم', 'نعمم', 'ايوه', 'ايوا', 'ايوة', 'ايه', 'اي', 'اجل', 'بلي', 'صحيح', 'صح', 'موافق', 'موافقه',
+    'تمام', 'اكيد', 'اكد', 'تاكيد', 'اوك', 'ماشي', 'طيب', 'حاضر', 'تم', 'امض', 'امضي', 'كمل', 'اكمل',
+    'yes', 'correct', 'save', 'ok', 'okay', 'yeah', 'confirm',
   };
+
+  /// A request to change something: the bare word ("تعديل") or any common form of it, with the
+  /// attached «و/ال/ب/ف» that recognizers glue on, and one wrong letter allowed for the long word.
+  static const _editWords = {
+    'تعديل', 'تعديله', 'تعديلها', 'عدل', 'عدلها', 'عدله', 'اعدل', 'عدلو', 'عدلوا', 'غير', 'غيره',
+    'غيرها', 'غيير', 'تغيير', 'بدل', 'بدله', 'بدلها', 'صحح', 'صححه', 'صححها', 'تصحيح', 'edit', 'change',
+  };
+
+  bool _isEditRequest(List<String> tokens) => tokens.any((raw) {
+        for (final t in {raw, if (raw.length > 3 && 'وبفل'.contains(raw[0])) raw.substring(1), if (raw.length > 4 && raw.startsWith('ال')) raw.substring(2)}) {
+          if (_editWords.contains(t)) return true;
+          if (t.length >= 5 && _withinOneEdit(t, 'تعديل')) return true;
+        }
+        return false;
+      });
 
   /// Words that mean "save" once the local model's typical slips are allowed for: a one-letter
   /// substitution/drop/insert ("حفض", "حفز", "احفض", "حف"). Real-device finding: a CTC model
@@ -1758,6 +1790,27 @@ class VoiceController extends StateNotifier<VoiceState> {
     // "ثم يتوقف الميكروفون عن التشغيل" from the spec. [startAnother] is the only way back in.
     state = state.copyWith(status: VoiceStatus.success);
     await _speak(_successSpeech(_ref.read(voiceRecognitionLanguageProvider)));
+    if (state.bluetoothMode && state.status == VoiceStatus.success) {
+      unawaited(_rearmBluetoothAfterSave());
+    }
+  }
+
+  /// Hands-free mode: after the "saved" acknowledgement is spoken, go back to really waiting for
+  /// the wake word so the next entry needs no touch. The success card stays visible briefly.
+  Future<void> _rearmBluetoothAfterSave() async {
+    final attempt = _bluetoothAttempt;
+    final session = _session;
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+    if (state.status != VoiceStatus.success || !state.bluetoothMode) return;
+    if (attempt != _bluetoothAttempt || session != _session) return;
+    VoiceLog.d('dialogue', 'entry saved in Bluetooth mode - re-arming the wake word');
+    try {
+      await _engine.cancel();
+    } catch (_) {}
+    state = const VoiceState(status: VoiceStatus.bluetoothConnected, bluetoothMode: true);
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (attempt != _bluetoothAttempt || !state.bluetoothMode) return;
+    await _armBluetoothWakeWaiting(attempt);
   }
 
   void startAnother() {

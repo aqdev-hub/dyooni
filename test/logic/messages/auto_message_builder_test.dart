@@ -9,8 +9,8 @@ const _texts = AutoMessageTexts(
   businessName: 'متجري',
   holderOwes: 'عليك مبلغ وقدره',
   owedToHolder: 'لك مبلغ وقدره',
-  totalHolderOwes: 'الإجمالي عليك',
-  totalOwedToHolder: 'الإجمالي لك',
+  totalHolderOwes: 'متبقي عليك',
+  totalOwedToHolder: 'متبقي لك',
   holderOwesNote: '',
   settledNote: 'مسدّد',
   detailsPrefix: 'مقابل',
@@ -27,7 +27,7 @@ Transaction _t(String id, double amount, AccountDirection d, {String currency = 
 final _account = Account(id: 'a', name: 'علي', category: AccountCategory.client, createdDate: DateTime(2026));
 
 void main() {
-  test('credit entry says the holder owes, with total after the entry', () {
+  test('credit (له) entry says «لك» and the remaining balance says «متبقي لك»', () {
     final entry = _t('2', 300, AccountDirection.credit, details: 'بضاعة', day: 2);
     final msg = buildAutoMessage(
       settings: const AutoMessageSettings(),
@@ -39,13 +39,13 @@ void main() {
       currencyNames: const {'YER': 'ريال'},
     );
     expect(msg, contains('إشعار من متجري'));
-    expect(msg, contains('عليك مبلغ وقدره 300 ريال'));
+    expect(msg, contains('لك مبلغ وقدره 300 ريال'));
     expect(msg, contains('مقابل بضاعة'));
-    expect(msg, contains('الإجمالي عليك 500 ريال'));
+    expect(msg, contains('متبقي لك 500 ريال'));
     expect(msg, contains('آخر العمليات'));
   });
 
-  test('balance-only hides details and recent entries; debit entry says owed to holder', () {
+  test('balance-only hides details and recent entries; debit (عليه) entry says «عليك»', () {
     final entry = _t('2', 100, AccountDirection.debit, details: 'سرّي');
     final msg = buildAutoMessage(
       settings: const AutoMessageSettings(showDate: false),
@@ -56,8 +56,8 @@ void main() {
       accountTransactions: [_t('1', 50, AccountDirection.credit), entry],
       currencyNames: const {'YER': 'ريال'},
     );
-    expect(msg, contains('لك مبلغ وقدره 100 ريال'));
-    expect(msg, contains('الإجمالي لك 50 ريال'));
+    expect(msg, contains('عليك مبلغ وقدره 100 ريال'));
+    expect(msg, contains('متبقي لك 50 ريال'));
     expect(msg, isNot(contains('سرّي')));
     expect(msg, isNot(contains('التاريخ')));
     expect(msg, isNot(contains('آخر العمليات')));
@@ -75,7 +75,21 @@ void main() {
       currencyNames: const {'YER': 'ريال', 'USD': 'دولار'},
     );
     expect(msg, contains('مسدّد (ريال)'));
-    expect(msg, contains('الإجمالي عليك 20 دولار'));
+    expect(msg, contains('متبقي لك 20 دولار'));
+  });
+
+  test('remaining balance on the holder (عليه) says «متبقي عليك»', () {
+    final entry = _t('2', 80, AccountDirection.debit);
+    final msg = buildAutoMessage(
+      settings: const AutoMessageSettings(showDate: false),
+      texts: _texts,
+      content: AutoMessageContent.balanceOnly,
+      account: _account,
+      entry: entry,
+      accountTransactions: [_t('1', 30, AccountDirection.credit), entry],
+      currencyNames: const {'YER': 'ريال'},
+    );
+    expect(msg, contains('متبقي عليك 50 ريال'));
   });
 
   group('resolveAutoMessage', () {

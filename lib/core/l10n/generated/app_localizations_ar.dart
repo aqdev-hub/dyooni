@@ -2033,10 +2033,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get autoDefaultOwedToHolder => 'لك مبلغ وقدره';
 
   @override
-  String get autoDefaultTotalHolderOwes => 'الإجمالي عليك';
+  String get autoDefaultTotalHolderOwes => 'متبقي عليك';
 
   @override
-  String get autoDefaultTotalOwedToHolder => 'الإجمالي لك';
+  String get autoDefaultTotalOwedToHolder => 'متبقي لك';
 
   @override
   String get autoDefaultSettled => 'الرصيد مسدّد بالكامل';

@@ -2048,10 +2048,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoDefaultOwedToHolder => 'You are owed the amount of';
 
   @override
-  String get autoDefaultTotalHolderOwes => 'Total you owe';
+  String get autoDefaultTotalHolderOwes => 'Remaining you owe';
 
   @override
-  String get autoDefaultTotalOwedToHolder => 'Total owed to you';
+  String get autoDefaultTotalOwedToHolder => 'Remaining in your favour';
 
   @override
   String get autoDefaultSettled => 'Balance fully settled';

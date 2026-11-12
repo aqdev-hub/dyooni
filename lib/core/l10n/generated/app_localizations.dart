@@ -3492,13 +3492,13 @@ abstract class AppLocalizations {
   /// No description provided for @autoDefaultTotalHolderOwes.
   ///
   /// In ar, this message translates to:
-  /// **'الإجمالي عليك'**
+  /// **'متبقي عليك'**
   String get autoDefaultTotalHolderOwes;
 
   /// No description provided for @autoDefaultTotalOwedToHolder.
   ///
   /// In ar, this message translates to:
-  /// **'الإجمالي لك'**
+  /// **'متبقي لك'**
   String get autoDefaultTotalOwedToHolder;
 
   /// No description provided for @autoDefaultSettled.

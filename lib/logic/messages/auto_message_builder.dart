@@ -61,8 +61,7 @@ class AutoMessageTexts {
   }
 }
 
-/// Net per currency id: positive = the holder owes the user (له), negative = the user owes the
-/// holder (عليه). Currencies that net to zero are kept (value 0) so "settled" can be reported.
+/// Net per currency id: positive = remaining له (لك), negative = remaining عليه (عليك). Currencies that net to zero are kept (value 0) so "settled" can be reported.
 Map<String, double> netByCurrency(List<Transaction> transactions) {
   final out = <String, double>{};
   for (final t in transactions) {
@@ -78,9 +77,9 @@ bool passesMinAmount(AutoMessageSettings s, Transaction entry) => entry.amount >
 
 /// The message sent to the account holder after [entry] was saved.
 ///
-/// Perspective: the message is written TO the holder. An entry recorded as له (the user is
-/// owed) means the holder owes — "عليك مبلغ وقدره"; an entry recorded as عليه means the user owes
-/// the holder — "لك مبلغ وقدره". The same logic picks the wording of the totals.
+/// Perspective: the message is written TO the holder and follows the direction the person sees
+/// in the app: an entry / balance recorded as له is "لك" / "متبقي لك"; one recorded as عليه is
+/// "عليك" / "متبقي عليك". (Earlier versions inverted this, which read wrong to the holder.)
 ///
 /// [accountTransactions] must already include [entry] (the balance is AFTER it).
 /// [currencyNames] maps currency id → the name to print.
@@ -101,7 +100,7 @@ String buildAutoMessage({
   if (header.isNotEmpty) lines.add(header);
   lines.add(account.name);
 
-  final holderOwesEntry = entry.direction == AccountDirection.credit;
+  final holderOwesEntry = entry.direction == AccountDirection.debit;
   lines.add('${holderOwesEntry ? texts.holderOwes : texts.owedToHolder} '
       '${ReportBuilders.formatAmount(entry.amount)} ${nameOf(entry.currency)}');
 
@@ -125,8 +124,8 @@ String buildAutoMessage({
     if (_isZero(net)) {
       lines.add('${texts.settledNote} (${nameOf(c)})');
     } else {
-      if (net > 0) anyHolderOwes = true;
-      lines.add('${net > 0 ? texts.totalHolderOwes : texts.totalOwedToHolder} '
+      if (net < 0) anyHolderOwes = true;
+      lines.add('${net < 0 ? texts.totalHolderOwes : texts.totalOwedToHolder} '
           '${ReportBuilders.formatAmount(net)} ${nameOf(c)}');
     }
   }
@@ -140,7 +139,7 @@ String buildAutoMessage({
         ..add('')
         ..add('${texts.recentHeader}:');
       for (final t in recent) {
-        final who = t.direction == AccountDirection.credit ? texts.shortHolderOwes : texts.shortOwedToHolder;
+        final who = t.direction == AccountDirection.debit ? texts.shortHolderOwes : texts.shortOwedToHolder;
         final d = t.details?.trim() ?? '';
         lines.add('• ${ReportBuilders.formatDate(t.date)}  $who ${ReportBuilders.formatAmount(t.amount)} '
             '${nameOf(t.currency)}${d.isEmpty ? '' : ' — $d'}');
