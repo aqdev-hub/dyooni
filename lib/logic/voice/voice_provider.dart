@@ -664,7 +664,7 @@ class VoiceController extends StateNotifier<VoiceState> {
       _wakeSubscription = engine.wakeWordDetected.listen((_) {
         if (state.status != VoiceStatus.bluetoothWaitingWakeWord) return;
         state = state.copyWith(status: VoiceStatus.bluetoothWakeWordDetected);
-        unawaited(_beginListening(bluetoothMode: true));
+        unawaited(_beginListening(bluetoothMode: true, announceWake: true));
       });
       try {
         await engine.startWakeListening();
@@ -740,7 +740,29 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   Future<void> openBluetoothSettings() => _ref.read(bluetoothAudioRouteServiceProvider).openBluetoothSettings();
 
-  Future<void> _beginListening({required bool bluetoothMode}) async {
+  String _wakeReplySpeech(String languageCode) => languageCode == 'en' ? "Yes, I'm listening." : 'نعم، أنا أسمعك.';
+
+  /// Spoken answer to «ديوني» so the person knows, eyes-free, that the app heard them. The
+  /// recognizer is stopped first — otherwise it would hear this very sentence as the command.
+  Future<void> _announceWakeWord() async {
+    VoiceLog.d('dialogue', 'wake word heard - speaking the reply');
+    try {
+      await _engine.cancel();
+    } catch (_) {}
+    try {
+      await _speak(_wakeReplySpeech(_ref.read(voiceRecognitionLanguageProvider)))
+          .timeout(const Duration(seconds: 4));
+    } catch (e) {
+      VoiceLog.d('dialogue', 'wake reply speech failed ($e)');
+    }
+  }
+
+  Future<void> _beginListening({required bool bluetoothMode, bool announceWake = false}) async {
+    if (announceWake) {
+      final status = state.status;
+      await _announceWakeWord();
+      if (state.status != status) return; // cancelled / changed while speaking
+    }
     final session = ++_session;
     _networkRetryCount = 0;
     state = VoiceState(status: VoiceStatus.preparing, bluetoothMode: bluetoothMode);
@@ -850,7 +872,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     final (_, wakeWordRecordingPath) = await _engine.stop();
     await _deleteRecording(wakeWordRecordingPath);
     if (state.status == VoiceStatus.bluetoothWakeWordDetected) {
-      await _beginListening(bluetoothMode: true);
+      await _beginListening(bluetoothMode: true, announceWake: true);
     }
   }
 
