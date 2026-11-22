@@ -170,7 +170,17 @@ class SystemSpeechEngine implements SpeechEngine {
                 : languageCodes.contains(code)
                     ? SpeechEngineErrorType.languageUnavailable
                     : SpeechEngineErrorType.other;
-    if (type == SpeechEngineErrorType.network) _noteNetworkTrouble('plugin $code');
+    if (type == SpeechEngineErrorType.network) {
+      if (_preferOffline) {
+        // A network error WHILE on-device means there is no usable on-device Arabic model (the
+        // log showed 14 identical failures, ~60 s lost). Stop trying it for a while.
+        _offlineBrokenAt = DateTime.now();
+        _preferOffline = false;
+        VoiceLog.d('system', 'on-device recognition unusable ($code) -> back to the online recognizer');
+      } else {
+        _noteNetworkTrouble('plugin $code');
+      }
+    }
     if (type == SpeechEngineErrorType.languageUnavailable) _preferOffline = false;
     // Kept in the logs on purpose: the exact Android code is what identifies a device-specific
     // recognizer problem.
@@ -213,8 +223,18 @@ class SystemSpeechEngine implements SpeechEngine {
     VoiceLog.d('system', 'plugin listening after ${_clock.elapsedMilliseconds}ms');
   }
 
+  /// When on-device mode last failed. Static: the next voice screen must not repeat the attempt.
+  static DateTime? _offlineBrokenAt;
+  static const _offlineRetryAfter = Duration(minutes: 30);
+
+  bool get _offlineKnownBroken {
+    final at = _offlineBrokenAt;
+    return at != null && DateTime.now().difference(at) < _offlineRetryAfter;
+  }
+
   void _noteNetworkTrouble(String why) {
     _lastNetworkErrorAt = DateTime.now();
+    if (_offlineKnownBroken) return;
     if (!_preferOffline) {
       _preferOffline = true;
       VoiceLog.d('system', 'network trouble ($why) -> switching the recognizer to on-device mode');

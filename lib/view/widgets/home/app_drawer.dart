@@ -162,7 +162,8 @@ class AppDrawer extends ConsumerWidget {
     final items = <(IconData, String, String?)>[
       (Icons.workspace_premium_outlined, l10n.drawerAdsRemoval, null),
       (Icons.card_giftcard_outlined, l10n.drawerFreePoints, null),
-      (Icons.person_outline, l10n.drawerPersonalData, '/personal-data'),
+      (Icons.account_circle_outlined, l10n.profileTitle, '/profile'),
+      (Icons.badge_outlined, l10n.drawerPersonalData, '/personal-data'),
       (Icons.settings_outlined, l10n.drawerSettings, '/general-settings'),
       (Icons.notifications_active_outlined, l10n.drawerAutoBalanceAlerts, '/auto-messages'),
       (Icons.category_outlined, l10n.drawerCategories, '/categories'),

@@ -2244,4 +2244,91 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get attachmentUnavailable => 'The picture can\'t be shown';
+
+  @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get profileGuestName => 'Dyooni user';
+
+  @override
+  String get profileEditName => 'Edit name';
+
+  @override
+  String get profileNameLabel => 'Name';
+
+  @override
+  String get profileNameHint => 'Enter your full name';
+
+  @override
+  String get profileNameRequired => 'Name is required';
+
+  @override
+  String get profileNameSaved => 'Name updated';
+
+  @override
+  String get profileSave => 'Save';
+
+  @override
+  String get profileStatsTitle => 'Your activity';
+
+  @override
+  String get profileStatAccounts => 'Accounts';
+
+  @override
+  String get profileStatTransactions => 'Entries';
+
+  @override
+  String get profileStatCurrencies => 'Currencies';
+
+  @override
+  String get profileStatMemberSince => 'Member since';
+
+  @override
+  String get profileSecurityTitle => 'Account & security';
+
+  @override
+  String get profileSignInMethod => 'Sign-in method';
+
+  @override
+  String get profileMethodGoogle => 'Google account';
+
+  @override
+  String get profileMethodFacebook => 'Facebook account';
+
+  @override
+  String get profileMethodPassword => 'Email & password';
+
+  @override
+  String get profileEmailVerified => 'Email verified';
+
+  @override
+  String get profileEmailNotVerified => 'Email not verified';
+
+  @override
+  String get profileSendVerification => 'Send verification link';
+
+  @override
+  String get profileVerificationSent => 'Verification link sent to your email';
+
+  @override
+  String get profileChangePassword => 'Change password';
+
+  @override
+  String get profileChangePasswordSub => 'We email you a link to change it';
+
+  @override
+  String get profilePasswordResetSent => 'We sent a password-reset link to your email';
+
+  @override
+  String get profileLastSignIn => 'Last sign-in';
+
+  @override
+  String get profileShortcutsTitle => 'My data';
+
+  @override
+  String get profilePhoneEmpty => 'No phone number added';
+
+  @override
+  String get profileEmailEmpty => 'No email address';
 }

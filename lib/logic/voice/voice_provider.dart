@@ -22,6 +22,7 @@ import '../transactions/transactions_provider.dart';
 import 'arabic_number_parser.dart';
 import 'transcript_cleaner.dart';
 import 'voice_command_parser.dart';
+import '../../data/models/currency_type.dart';
 import 'spoken_currency.dart';
 import 'wake_word_matcher.dart';
 
@@ -471,6 +472,9 @@ class VoiceController extends StateNotifier<VoiceState> {
 
   // ─────────────────────────── Phrase builders (all spoken aloud) ───────────────────────────
 
+  List<CurrencyType> _riyalChoices(String transcript) =>
+      SpokenCurrency.riyalChoices(transcript, _ref.read(currencyTypesProvider));
+
   /// Spoken currency names — the raw code ("LOCAL", "YER") must never reach the speech engine.
   String _currencyNamesSpoken() => _ref.read(currencyTypesProvider).map((c) => c.name).join('، ');
 
@@ -562,6 +566,7 @@ class VoiceController extends StateNotifier<VoiceState> {
           "The account name needs a first and last name. Please say the full account name.",
         'sameAccount' => 'Do you mean the existing account $detail? Say yes or no.',
         'currency' => "I couldn't match that currency. Please say one of yours: $detail.",
+        'currencyWhich' => 'Which currency do you mean: $detail?',
         'direction' => 'Is this credit or debit? Please say credit or debit.',
         'editWhat' => 'Please say your edit.',
         _ => "I didn't hear anything. Please try speaking clearly.",
@@ -574,6 +579,7 @@ class VoiceController extends StateNotifier<VoiceState> {
       'accountName' => 'اسم الحساب يجب أن يتكون من اسمين على الأقل. من فضلك أكمل الاسم الناقص.',
       'sameAccount' => 'هل تقصد الحساب الموجود $detail؟ قل نعم أو لا.',
       'currency' => 'لم أجد هذه العملة ضمن عملاتك. من فضلك قل واحدة منها: $detail.',
+      'currencyWhich' => 'هل تقصد العملة $detail؟',
       'direction' => 'لم أفهم هل هذا الدين له أم عليه. من فضلك قل له أو عليه.',
       _ => 'لم ألتقط أي صوت. من فضلك حاول التحدث بوضوح.',
     };
@@ -600,6 +606,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     ++_session;
     _networkRetryCount = 0;
     state = VoiceState(bluetoothMode: bluetoothMode);
+    unawaited(_voiceOutput.warmUp(languageCode: _ref.read(voiceRecognitionLanguageProvider)));
   }
 
   Future<void> startShortPress() async {
@@ -751,7 +758,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     } catch (_) {}
     try {
       await _speak(_wakeReplySpeech(_ref.read(voiceRecognitionLanguageProvider)))
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
       VoiceLog.d('dialogue', 'wake reply speech failed ($e)');
     }
@@ -1095,7 +1102,7 @@ class VoiceController extends StateNotifier<VoiceState> {
         // account will be created from it once it passes the full-name check below).
         final matched = _matchAccount(effective, effective);
         updatedAccount = matched;
-        updatedDraft = draft.copyWith(accountName: matched?.name ?? effective.trim());
+        updatedDraft = draft.copyWith(accountName: matched?.name ?? VoiceCommandParser.joinCompoundNames(effective.trim()));
       case 'accountName':
         // FIX: the person was only ever asked for this because the FIRST attempt already had a
         // partial name (e.g. just "عبدالقدوس") that failed the two-word minimum — see
@@ -1116,7 +1123,7 @@ class VoiceController extends StateNotifier<VoiceState> {
             : (spoken.toLowerCase().contains(existingFragment.toLowerCase()) ? spoken : '$existingFragment $spoken');
         final matched = _matchAccount(combinedName, combinedName);
         updatedAccount = matched;
-        updatedDraft = draft.copyWith(accountName: matched?.name ?? combinedName);
+        updatedDraft = draft.copyWith(accountName: matched?.name ?? VoiceCommandParser.joinCompoundNames(combinedName));
       case 'currency':
         final reparsedCurrency = _parse(effective);
         if (!reparsedCurrency.currencyUnsupported) {
@@ -1173,7 +1180,8 @@ class VoiceController extends StateNotifier<VoiceState> {
     } else if (draft.amount == null) {
       await _ask('amount', draft.amountUncertain ? 'amountUncertain' : 'amount');
     } else if (draft.currencyUnsupported) {
-      await _ask('currency', 'currency');
+      final which = _riyalChoices(draft.transcript).length >= 2;
+      await _ask('currency', which ? 'currencyWhich' : 'currency');
     } else {
       state = state.copyWith(status: VoiceStatus.awaitingConfirmation, clearError: true, clearClarifyingField: true);
       await _speakThenListenForConfirmation();
@@ -1190,7 +1198,11 @@ class VoiceController extends StateNotifier<VoiceState> {
   Future<void> _speakThenListenForClarification(String field, {String? detail}) async {
     final session = _session;
     _clearSpeechEndTimer();
-    final spokenDetail = field == 'currency' ? _currencyNamesSpoken() : detail;
+    final spokenDetail = field == 'currency'
+        ? _currencyNamesSpoken()
+        : field == 'currencyWhich'
+            ? _riyalChoices(state.draft?.transcript ?? '').map((c) => c.name).join(' أم ')
+            : detail;
     await _speak(_clarificationSpeech(field, _ref.read(voiceRecognitionLanguageProvider), detail: spokenDetail));
     if (session != _session) return;
     state = state.copyWith(
@@ -1375,7 +1387,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     if (edit.accountNameHint != null) {
       final matched = _matchAccount(edit.accountNameHint, edit.accountNameHint!);
       updatedAccount = matched;
-      updatedDraft = updatedDraft.copyWith(accountName: matched?.name ?? edit.accountNameHint);
+      updatedDraft = updatedDraft.copyWith(accountName: matched?.name ?? VoiceCommandParser.joinCompoundNames(edit.accountNameHint!));
       _nameDecided = false;
     }
     _lastEditedField = edit.field;
@@ -1612,7 +1624,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     return best;
   }
 
-  String _canonicalName(String value) => value
+  String _canonicalName(String value) => VoiceCommandParser.joinCompoundNames(value)
       .toLowerCase()
       .replaceAll(RegExp('[أإآ]'), 'ا')
       .replaceAll('ة', 'ه')
@@ -1772,7 +1784,7 @@ class VoiceController extends StateNotifier<VoiceState> {
     final draft = state.draft;
     var account = state.account;
     if (draft == null || draft.amount == null || draft.direction == null) return;
-    final accountName = account?.name ?? draft.accountName;
+    final accountName = account?.name ?? (draft.accountName == null ? null : VoiceCommandParser.joinCompoundNames(draft.accountName!));
     if (accountName == null) return;
 
     state = state.copyWith(status: VoiceStatus.saving);

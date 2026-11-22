@@ -166,6 +166,47 @@ class AuthRepositoryImpl implements AuthRepository {
     await _safeSignOut(() => FacebookAuth.instance.logOut());
   }
 
+  @override
+  AuthProfile? get currentProfile {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return null;
+    return AuthProfile(
+      displayName: (user.displayName ?? '').trim(),
+      email: (user.email ?? '').trim(),
+      phone: (user.phoneNumber ?? '').trim(),
+      photoUrl: user.photoURL,
+      createdAt: user.metadata.creationTime,
+      lastSignInAt: user.metadata.lastSignInTime,
+      emailVerified: user.emailVerified,
+      providers: [for (final info in user.providerData) info.providerId],
+    );
+  }
+
+  @override
+  Future<void> updateDisplayName(String name) async {
+    try {
+      await _firebaseAuth.currentUser?.updateDisplayName(name.trim());
+      await _firebaseAuth.currentUser?.reload();
+    } on FirebaseAuthException catch (e) {
+      throw ValidationException(_mapAuthErrorCode(e.code), internalDetail: e.message);
+    } catch (e, st) {
+      appLogger.e('updateDisplayName failed', error: e, stackTrace: st);
+      throw UnexpectedException(internalDetail: e.toString());
+    }
+  }
+
+  @override
+  Future<void> sendEmailVerification() async {
+    try {
+      await _firebaseAuth.currentUser?.sendEmailVerification();
+    } on FirebaseAuthException catch (e) {
+      throw ValidationException(_mapAuthErrorCode(e.code), internalDetail: e.message);
+    } catch (e, st) {
+      appLogger.e('sendEmailVerification failed', error: e, stackTrace: st);
+      throw UnexpectedException(internalDetail: e.toString());
+    }
+  }
+
   Future<void> _safeSignOut(Future<void> Function() signOutCall) async {
     try {
       await signOutCall();

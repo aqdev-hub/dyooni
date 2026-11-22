@@ -114,3 +114,13 @@ class SignupController extends AutoDisposeAsyncNotifier<void> {
     );
   }
 }
+
+/// Bumped after the profile changes (new name …) so [authProfileProvider] re-reads it — Firebase's
+/// `currentUser` is not observable by itself.
+final authProfileRevisionProvider = StateProvider<int>((ref) => 0);
+
+/// The signed-in person's profile (see [AuthProfile]); `null` when signed out.
+final authProfileProvider = Provider.autoDispose<AuthProfile?>((ref) {
+  ref.watch(authProfileRevisionProvider);
+  return ref.watch(authRepositoryProvider).currentProfile;
+});

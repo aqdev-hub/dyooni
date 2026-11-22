@@ -83,7 +83,8 @@ class VoiceCommandParser {
         ? _currency(lower)
         : _personCurrency(lower, currencies);
     final date = _date(prepared.toLowerCase(), now ?? DateTime.now());
-    final accountName = _accountName(cleanTokens, extraction);
+    final rawName = _accountName(cleanTokens, extraction);
+    final accountName = rawName == null ? null : joinCompoundNames(rawName);
     final details = _details(cleanedText);
     return VoiceCommandDraft(
       transcript: transcript.trim(),
@@ -173,6 +174,11 @@ class VoiceCommandParser {
   static (String code, bool unsupported) _personCurrency(String value, List<CurrencyType> currencies) {
     final id = SpokenCurrency.match(value, currencies);
     if (id != null) return (id, false);
+    // A bare «ريال» (Yemeni? Saudi? …): only the person's own ريال currencies are possible.
+    // One candidate → it is that one; several → ask which, never guess.
+    final riyals = SpokenCurrency.riyalChoices(value, currencies);
+    if (riyals.length == 1) return (riyals.first.id, false);
+    if (riyals.length >= 2) return (defaultCurrencyId, true);
     // A currency the person has not added (e.g. "يورو") must be asked about, never silently
     // recorded as the default one.
     if (SpokenCurrency.namesUnknownCurrency(value, currencies) || _containsAny(value, _unsupportedMarkers)) {
@@ -312,6 +318,28 @@ class VoiceCommandParser {
       if (directionKeys.contains(keys[i])) return collect(i + 1);
     }
     return null;
+  }
+
+  /// «عبد القدوس» → «عبدالقدوس». Speech recognizers split the compound names built on «عبد»
+  /// ("عبدالله", "عبدالوهاب", "عبدربه") into two words; saved accounts have them as one, so the
+  /// split version used to create a second account for the same person. «عبد» is joined to the
+  /// next word when that word is a «ال…» name or «رب/ربه».
+  static String joinCompoundNames(String name) {
+    final words = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final out = <String>[];
+    for (var i = 0; i < words.length; i++) {
+      final w = words[i];
+      if (w == 'عبد' && i + 1 < words.length) {
+        final next = words[i + 1];
+        if (next.startsWith('ال') || next == 'رب' || next == 'ربه') {
+          out.add('$w$next');
+          i++;
+          continue;
+        }
+      }
+      out.add(w);
+    }
+    return out.join(' ');
   }
 
   /// Whether [name] has at least two words (a first name and a last name) — the same rule the

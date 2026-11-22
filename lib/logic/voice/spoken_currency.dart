@@ -131,4 +131,16 @@ class SpokenCurrency {
     }
     return false;
   }
+
+  /// The person's currencies that are ريال-kind ("ريال يمني", "ريال سعودي" …) — offered as the
+  /// choices when the speaker said only «ريال». Empty unless a bare ريال was said AND nothing more
+  /// specific matched (so "ريال يمني" never asks anything).
+  static List<CurrencyType> riyalChoices(String spoken, List<CurrencyType> currencies) {
+    if (match(spoken, currencies) != null) return const [];
+    if (!_tokens(spoken).any(const {'ريال', 'ريالات', 'ريالا'}.contains)) return const [];
+    return [
+      for (final c in currencies)
+        if (_tokens(c.name).any(const {'ريال', 'ريالات', 'ريالا'}.contains)) c,
+    ];
+  }
 }

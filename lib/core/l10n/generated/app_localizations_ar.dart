@@ -2229,4 +2229,91 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get attachmentUnavailable => 'تعذّر عرض الصورة';
+
+  @override
+  String get profileTitle => 'الملف الشخصي';
+
+  @override
+  String get profileGuestName => 'مستخدم ديوني';
+
+  @override
+  String get profileEditName => 'تعديل الاسم';
+
+  @override
+  String get profileNameLabel => 'الاسم';
+
+  @override
+  String get profileNameHint => 'اكتب اسمك الكامل';
+
+  @override
+  String get profileNameRequired => 'الاسم مطلوب';
+
+  @override
+  String get profileNameSaved => 'تم تحديث الاسم';
+
+  @override
+  String get profileSave => 'حفظ';
+
+  @override
+  String get profileStatsTitle => 'ملخص نشاطك';
+
+  @override
+  String get profileStatAccounts => 'الحسابات';
+
+  @override
+  String get profileStatTransactions => 'العمليات';
+
+  @override
+  String get profileStatCurrencies => 'العملات';
+
+  @override
+  String get profileStatMemberSince => 'عضو منذ';
+
+  @override
+  String get profileSecurityTitle => 'الحساب والأمان';
+
+  @override
+  String get profileSignInMethod => 'طريقة تسجيل الدخول';
+
+  @override
+  String get profileMethodGoogle => 'حساب Google';
+
+  @override
+  String get profileMethodFacebook => 'حساب Facebook';
+
+  @override
+  String get profileMethodPassword => 'البريد وكلمة المرور';
+
+  @override
+  String get profileEmailVerified => 'البريد مؤكَّد';
+
+  @override
+  String get profileEmailNotVerified => 'البريد غير مؤكَّد';
+
+  @override
+  String get profileSendVerification => 'إرسال رابط التأكيد';
+
+  @override
+  String get profileVerificationSent => 'تم إرسال رابط التأكيد إلى بريدك';
+
+  @override
+  String get profileChangePassword => 'تغيير كلمة المرور';
+
+  @override
+  String get profileChangePasswordSub => 'نرسل لك رابط تغييرها على بريدك';
+
+  @override
+  String get profilePasswordResetSent => 'أرسلنا رابط تغيير كلمة المرور إلى بريدك';
+
+  @override
+  String get profileLastSignIn => 'آخر تسجيل دخول';
+
+  @override
+  String get profileShortcutsTitle => 'بياناتي';
+
+  @override
+  String get profilePhoneEmpty => 'لم تُضف رقم هاتف';
+
+  @override
+  String get profileEmailEmpty => 'لا يوجد بريد إلكتروني';
 }

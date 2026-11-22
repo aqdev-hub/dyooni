@@ -4262,6 +4262,180 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تاريخ الإنشاء'**
   String get createdDateLabel;
+
+  /// No description provided for @profileTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملف الشخصي'**
+  String get profileTitle;
+
+  /// No description provided for @profileGuestName.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستخدم ديوني'**
+  String get profileGuestName;
+
+  /// No description provided for @profileEditName.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل الاسم'**
+  String get profileEditName;
+
+  /// No description provided for @profileNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم'**
+  String get profileNameLabel;
+
+  /// No description provided for @profileNameHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب اسمك الكامل'**
+  String get profileNameHint;
+
+  /// No description provided for @profileNameRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم مطلوب'**
+  String get profileNameRequired;
+
+  /// No description provided for @profileNameSaved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تحديث الاسم'**
+  String get profileNameSaved;
+
+  /// No description provided for @profileSave.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ'**
+  String get profileSave;
+
+  /// No description provided for @profileStatsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملخص نشاطك'**
+  String get profileStatsTitle;
+
+  /// No description provided for @profileStatAccounts.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحسابات'**
+  String get profileStatAccounts;
+
+  /// No description provided for @profileStatTransactions.
+  ///
+  /// In ar, this message translates to:
+  /// **'العمليات'**
+  String get profileStatTransactions;
+
+  /// No description provided for @profileStatCurrencies.
+  ///
+  /// In ar, this message translates to:
+  /// **'العملات'**
+  String get profileStatCurrencies;
+
+  /// No description provided for @profileStatMemberSince.
+  ///
+  /// In ar, this message translates to:
+  /// **'عضو منذ'**
+  String get profileStatMemberSince;
+
+  /// No description provided for @profileSecurityTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحساب والأمان'**
+  String get profileSecurityTitle;
+
+  /// No description provided for @profileSignInMethod.
+  ///
+  /// In ar, this message translates to:
+  /// **'طريقة تسجيل الدخول'**
+  String get profileSignInMethod;
+
+  /// No description provided for @profileMethodGoogle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حساب Google'**
+  String get profileMethodGoogle;
+
+  /// No description provided for @profileMethodFacebook.
+  ///
+  /// In ar, this message translates to:
+  /// **'حساب Facebook'**
+  String get profileMethodFacebook;
+
+  /// No description provided for @profileMethodPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'البريد وكلمة المرور'**
+  String get profileMethodPassword;
+
+  /// No description provided for @profileEmailVerified.
+  ///
+  /// In ar, this message translates to:
+  /// **'البريد مؤكَّد'**
+  String get profileEmailVerified;
+
+  /// No description provided for @profileEmailNotVerified.
+  ///
+  /// In ar, this message translates to:
+  /// **'البريد غير مؤكَّد'**
+  String get profileEmailNotVerified;
+
+  /// No description provided for @profileSendVerification.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال رابط التأكيد'**
+  String get profileSendVerification;
+
+  /// No description provided for @profileVerificationSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرسال رابط التأكيد إلى بريدك'**
+  String get profileVerificationSent;
+
+  /// No description provided for @profileChangePassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير كلمة المرور'**
+  String get profileChangePassword;
+
+  /// No description provided for @profileChangePasswordSub.
+  ///
+  /// In ar, this message translates to:
+  /// **'نرسل لك رابط تغييرها على بريدك'**
+  String get profileChangePasswordSub;
+
+  /// No description provided for @profilePasswordResetSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'أرسلنا رابط تغيير كلمة المرور إلى بريدك'**
+  String get profilePasswordResetSent;
+
+  /// No description provided for @profileLastSignIn.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر تسجيل دخول'**
+  String get profileLastSignIn;
+
+  /// No description provided for @profileShortcutsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'بياناتي'**
+  String get profileShortcutsTitle;
+
+  /// No description provided for @profilePhoneEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تُضف رقم هاتف'**
+  String get profilePhoneEmpty;
+
+  /// No description provided for @profileEmailEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد بريد إلكتروني'**
+  String get profileEmailEmpty;
 }
 
 class _AppLocalizationsDelegate

@@ -77,4 +77,66 @@ void main() {
       expect(d.currencyUnsupported, isFalse);
     });
   });
+
+  group('bare «ريال»', () {
+    const parser = VoiceCommandParser();
+    const two = [
+      CurrencyType(id: 'LOCAL', name: 'محلي'),
+      CurrencyType(id: 'FOREIGN', name: 'أجنبي'),
+      CurrencyType(id: 'ريال يمني', name: 'ريال يمني'),
+      CurrencyType(id: 'ريال سعودي', name: 'ريال سعودي'),
+    ];
+
+    test('with two ريال currencies it asks which, never guesses', () {
+      final d = parser.parse('محمد علي عليه خمسة الاف ريال', currencies: two);
+      expect(d.currencyUnsupported, isTrue);
+      expect(SpokenCurrency.riyalChoices('خمسة الاف ريال', two).map((c) => c.id), ['ريال يمني', 'ريال سعودي']);
+    });
+
+    test('a named one is not ambiguous', () {
+      final d = parser.parse('محمد علي عليه خمسة الاف ريال يمني', currencies: two);
+      expect(d.currency, 'ريال يمني');
+      expect(d.currencyUnsupported, isFalse);
+      expect(parser.parse('محمد علي عليه خمسة الاف ريال سعودي', currencies: two).currency, 'ريال سعودي');
+    });
+
+    test('the answer «يمني» / «سعودي» picks the right one', () {
+      expect(parser.parse('يمني', currencies: two).currency, 'ريال يمني');
+      expect(parser.parse('سعودي', currencies: two).currency, 'ريال سعودي');
+    });
+
+    test('only one ريال currency → that one, no question', () {
+      const one = [CurrencyType(id: 'LOCAL', name: 'محلي'), CurrencyType(id: 'ريال يمني', name: 'ريال يمني')];
+      final d = parser.parse('محمد علي عليه الف ريال', currencies: one);
+      expect(d.currency, 'ريال يمني');
+      expect(d.currencyUnsupported, isFalse);
+    });
+
+    test('no ريال currency at all → the default as before', () {
+      const none = [CurrencyType(id: 'LOCAL', name: 'محلي'), CurrencyType(id: 'FOREIGN', name: 'أجنبي')];
+      final d = parser.parse('محمد علي عليه الف ريال', currencies: none);
+      expect(d.currency, 'LOCAL');
+      expect(d.currencyUnsupported, isFalse);
+    });
+  });
+
+  group('compound names built on «عبد»', () {
+    test('are joined', () {
+      expect(VoiceCommandParser.joinCompoundNames('عبد القدوس محمد'), 'عبدالقدوس محمد');
+      expect(VoiceCommandParser.joinCompoundNames('محمد عبد الله'), 'محمد عبدالله');
+      expect(VoiceCommandParser.joinCompoundNames('عبد الوهاب علي'), 'عبدالوهاب علي');
+      expect(VoiceCommandParser.joinCompoundNames('عبد ربه سالم'), 'عبدربه سالم');
+    });
+
+    test('other names are left alone', () {
+      expect(VoiceCommandParser.joinCompoundNames('عبد سالم'), 'عبد سالم');
+      expect(VoiceCommandParser.joinCompoundNames('عبدالله محمد'), 'عبدالله محمد');
+    });
+
+    test('the parsed account name comes out joined', () {
+      const parser = VoiceCommandParser();
+      final d = parser.parse('عبد القدوس محمد عليه خمسة الاف');
+      expect(d.accountName, 'عبدالقدوس محمد');
+    });
+  });
 }
