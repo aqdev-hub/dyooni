@@ -440,7 +440,9 @@ class _SecurityCard extends ConsumerWidget {
 
     return Container(
       decoration: _cardDecoration(shell),
-      child: Column(
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
         children: [
           row(Icons.login_rounded, l10n.profileSignInMethod, subtitle: _method(l10n)),
           if (last != null) ...[Divider(height: 1, color: shell.border), row(Icons.history_rounded, l10n.profileLastSignIn, subtitle: last)],
@@ -469,6 +471,7 @@ class _SecurityCard extends ConsumerWidget {
           ],
         ],
       ),
+      ),
     );
   }
 }
@@ -482,7 +485,9 @@ class _ShortcutsCard extends StatelessWidget {
     final shell = context.shellColors;
     return Container(
       decoration: _cardDecoration(shell),
-      child: Column(
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
         children: [
           for (var i = 0; i < items.length; i++) ...[
             if (i > 0) Divider(height: 1, color: shell.border),
@@ -494,6 +499,7 @@ class _ShortcutsCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
       ),
     );
   }

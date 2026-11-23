@@ -91,7 +91,7 @@ class SpokenCurrency {
     // A recognizer often glues a one-letter preposition on: «بالأجنبي», «للمحلي», «وأجنبي».
     bool has(String wanted) => said.any((s) =>
         _sameWord(s, wanted) ||
-        (s.length >= 5 && 'بلوف'.contains(s[0]) && _sameWord(s.substring(1), wanted)));
+        (s.length >= 5 && 'بلوف'.contains(s[0]) && _sameWord(_clean(s.substring(1)), wanted)));
 
     String? bestId;
     var bestScore = 0;

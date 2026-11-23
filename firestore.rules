@@ -37,9 +37,21 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Hardened: a single mapping can still be read before sign-in (that is its purpose), but the
+    // directory can no longer be LISTED, a mapping can only be created under the caller's own uid,
+    // and only that owner can change or delete it — so nobody can re-point another person's phone
+    // number at their own e-mail. (Old documents without a uid become read-only; re-saved on the
+    // owner's next sign-up flow or by an admin from the console.)
     match /phone_lookup/{phone} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+                    && request.resource.data.keys().hasOnly(['email', 'uid'])
+                    && request.resource.data.uid == request.auth.uid;
+      allow update: if request.auth != null
+                    && resource.data.get('uid', '') == request.auth.uid
+                    && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.get('uid', '') == request.auth.uid;
     }
   }
 }

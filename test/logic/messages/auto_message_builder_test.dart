@@ -57,7 +57,7 @@ void main() {
       currencyNames: const {'YER': 'ريال'},
     );
     expect(msg, contains('عليك مبلغ وقدره 100 ريال'));
-    expect(msg, contains('متبقي لك 50 ريال'));
+    expect(msg, contains('متبقي عليك 50 ريال')); // 50 له − 100 عليه = 50 عليه
     expect(msg, isNot(contains('سرّي')));
     expect(msg, isNot(contains('التاريخ')));
     expect(msg, isNot(contains('آخر العمليات')));

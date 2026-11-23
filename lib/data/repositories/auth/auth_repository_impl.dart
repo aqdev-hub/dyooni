@@ -75,10 +75,12 @@ class AuthRepositoryImpl implements AuthRepository {
       // Firebase account above was already created successfully, the account exists but won't be
       // findable by phone until the person signs in with email at least once and this batch adds
       // a retry — no silent data loss of the account itself, just of the phone shortcut.
-      if (phone.trim().isNotEmpty) {
+      final uid = credential.user?.uid;
+      if (phone.trim().isNotEmpty && uid != null) {
         await _userDirectory.savePhoneMapping(
           normalizedPhone: normalizePhoneForLookup(phone),
           email: email,
+          uid: uid,
         );
       }
       // TODO(flutter-architect): persist phone + names to a Firestore `users/{uid}` document once
