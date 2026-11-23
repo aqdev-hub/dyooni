@@ -160,8 +160,10 @@ class AppDrawer extends ConsumerWidget {
     // "تواصل معنا" and "حول التطبيق" now both point at real screens too (ContactUsScreen /
     // AboutScreen) — see core/routes/app_router.dart.
     final items = <(IconData, String, String?)>[
-      (Icons.workspace_premium_outlined, l10n.drawerAdsRemoval, null),
-      (Icons.card_giftcard_outlined, l10n.drawerFreePoints, null),
+      // Hidden until they are built (they only showed a "coming soon" message). Uncomment to bring
+      // them back — their texts and the "coming soon" handling are still in place:
+      // (Icons.workspace_premium_outlined, l10n.drawerAdsRemoval, null),
+      // (Icons.card_giftcard_outlined, l10n.drawerFreePoints, null),
       (Icons.account_circle_outlined, l10n.profileTitle, '/profile'),
       (Icons.badge_outlined, l10n.drawerPersonalData, '/personal-data'),
       (Icons.settings_outlined, l10n.drawerSettings, '/general-settings'),

@@ -9,8 +9,23 @@ void main() {
       }
     });
 
+    test('hears it inside a sentence, glued, or after a wrong word', () {
+      for (final heard in [
+        'ياديوني سجل لي',
+        'عيوني ديوني',
+        'نعم لا ديوني احمد',
+        'ديوني اضف عملية',
+        'اه ديوني',
+        'دي وني احمد',
+        'قل ديوني الان',
+        'ديونيي',
+      ]) {
+        expect(WakeWordMatcher.matches(heard), isTrue, reason: heard);
+      }
+    });
+
     test('rejects ordinary speech', () {
-      for (final heard in ['', 'نعم', 'احمد عليه الف ريال', 'مرحبا', 'حفظ', 'ديوان']) {
+      for (final heard in ['', 'نعم', 'احمد عليه الف ريال', 'مرحبا', 'حفظ', 'ديوان', 'محمد عليه خمسة الاف ريال يمني']) {
         expect(WakeWordMatcher.matches(heard), isFalse, reason: heard);
       }
     });

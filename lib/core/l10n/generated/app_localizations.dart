@@ -4436,6 +4436,60 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'لا يوجد بريد إلكتروني'**
   String get profileEmailEmpty;
+
+  /// No description provided for @appLockForgot.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسيت كلمة المرور؟'**
+  String get appLockForgot;
+
+  /// No description provided for @appLockResetTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة تعيين قفل التطبيق'**
+  String get appLockResetTitle;
+
+  /// No description provided for @appLockResetBodyPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'للتأكد أنك صاحب الحساب، أدخل كلمة مرور حسابك في ديوني. سيُلغى القفل الحالي، ثم تعيّن كلمة مرور جديدة من الإعدادات.'**
+  String get appLockResetBodyPassword;
+
+  /// No description provided for @appLockResetBodySocial.
+  ///
+  /// In ar, this message translates to:
+  /// **'للتأكد أنك صاحب الحساب، سنطلب منك تأكيد دخولك بالحساب الذي سجّلت به. سيُلغى القفل الحالي، ثم تعيّن كلمة مرور جديدة من الإعدادات.'**
+  String get appLockResetBodySocial;
+
+  /// No description provided for @appLockResetPasswordHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة مرور حسابك'**
+  String get appLockResetPasswordHint;
+
+  /// No description provided for @appLockResetConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد وإلغاء القفل'**
+  String get appLockResetConfirm;
+
+  /// No description provided for @appLockResetDone.
+  ///
+  /// In ar, this message translates to:
+  /// **'أُلغي القفل. عيّن كلمة مرور جديدة من الإعدادات.'**
+  String get appLockResetDone;
+
+  /// No description provided for @appLockResetFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر التأكد من هويتك. تحقق من كلمة المرور والاتصال.'**
+  String get appLockResetFailed;
+
+  /// No description provided for @appLockTooManyAttempts.
+  ///
+  /// In ar, this message translates to:
+  /// **'محاولات كثيرة خاطئة، انتظر نحو نصف دقيقة ثم حاول.'**
+  String get appLockTooManyAttempts;
 }
 
 class _AppLocalizationsDelegate

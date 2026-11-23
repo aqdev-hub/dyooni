@@ -44,7 +44,8 @@ class AutoMessageTexts {
     String pick(String custom, String fallback) => custom.trim().isEmpty ? fallback : custom.trim();
     return AutoMessageTexts(
       intro: pick(s.intro, l10n.autoDefaultIntro),
-      businessName: s.businessName.trim(),
+      // Not edited → the notice comes from the app itself: «إشعار من ديوني».
+      businessName: pick(s.businessName, l10n.appName),
       holderOwes: pick(s.holderOwesText, l10n.autoDefaultHolderOwes),
       owedToHolder: pick(s.owedToHolderText, l10n.autoDefaultOwedToHolder),
       totalHolderOwes: pick(s.totalHolderOwesText, l10n.autoDefaultTotalHolderOwes),

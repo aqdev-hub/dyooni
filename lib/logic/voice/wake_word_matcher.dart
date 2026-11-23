@@ -26,6 +26,22 @@ class WakeWordMatcher {
     for (final t in tokens) {
       if (t.length >= 4 && _distance(t, target) <= 1) return true;
     }
+    // Inside a sentence / glued to other words ("ياديوني", "ديونيسجل", "دي وني احمد"): look at
+    // every window of 5-6 letters (the wake word's length ±1) across each word and across each
+    // pair of neighbouring words (the recognizer sometimes splits it in two). Windows shorter than
+    // five letters are NOT used here, so ordinary words like "ديني" inside speech do not wake it.
+    final spans = <String>[...tokens];
+    for (var i = 0; i + 1 < tokens.length; i++) {
+      spans.add(tokens[i] + tokens[i + 1]);
+    }
+    for (final span in spans) {
+      for (final len in [target.length, target.length + 1]) {
+        if (span.length < len) continue;
+        for (var start = 0; start + len <= span.length; start++) {
+          if (_distance(span.substring(start, start + len), target) <= 1) return true;
+        }
+      }
+    }
     return false;
   }
 

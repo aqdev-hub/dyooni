@@ -847,5 +847,14 @@
   "profileLastSignIn": "Last sign-in",
   "profileShortcutsTitle": "My data",
   "profilePhoneEmpty": "No phone number added",
-  "profileEmailEmpty": "No email address"
+  "profileEmailEmpty": "No email address",
+  "appLockForgot": "Forgot password?",
+  "appLockResetTitle": "Reset app lock",
+  "appLockResetBodyPassword": "To confirm it's you, enter your Dyooni account password. The current lock will be removed and you can set a new one in Settings.",
+  "appLockResetBodySocial": "To confirm it's you, we'll ask you to sign in again with the account you registered with. The current lock will be removed and you can set a new one in Settings.",
+  "appLockResetPasswordHint": "Your account password",
+  "appLockResetConfirm": "Confirm & remove lock",
+  "appLockResetDone": "Lock removed. Set a new password in Settings.",
+  "appLockResetFailed": "Couldn't verify your identity. Check the password and your connection.",
+  "appLockTooManyAttempts": "Too many wrong attempts. Wait about 30 seconds and try again."
 }

@@ -2316,4 +2316,31 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get profileEmailEmpty => 'لا يوجد بريد إلكتروني';
+
+  @override
+  String get appLockForgot => 'نسيت كلمة المرور؟';
+
+  @override
+  String get appLockResetTitle => 'إعادة تعيين قفل التطبيق';
+
+  @override
+  String get appLockResetBodyPassword => 'للتأكد أنك صاحب الحساب، أدخل كلمة مرور حسابك في ديوني. سيُلغى القفل الحالي، ثم تعيّن كلمة مرور جديدة من الإعدادات.';
+
+  @override
+  String get appLockResetBodySocial => 'للتأكد أنك صاحب الحساب، سنطلب منك تأكيد دخولك بالحساب الذي سجّلت به. سيُلغى القفل الحالي، ثم تعيّن كلمة مرور جديدة من الإعدادات.';
+
+  @override
+  String get appLockResetPasswordHint => 'كلمة مرور حسابك';
+
+  @override
+  String get appLockResetConfirm => 'تأكيد وإلغاء القفل';
+
+  @override
+  String get appLockResetDone => 'أُلغي القفل. عيّن كلمة مرور جديدة من الإعدادات.';
+
+  @override
+  String get appLockResetFailed => 'تعذّر التأكد من هويتك. تحقق من كلمة المرور والاتصال.';
+
+  @override
+  String get appLockTooManyAttempts => 'محاولات كثيرة خاطئة، انتظر نحو نصف دقيقة ثم حاول.';
 }

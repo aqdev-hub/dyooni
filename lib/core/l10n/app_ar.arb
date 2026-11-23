@@ -847,5 +847,14 @@
   "profileLastSignIn": "آخر تسجيل دخول",
   "profileShortcutsTitle": "بياناتي",
   "profilePhoneEmpty": "لم تُضف رقم هاتف",
-  "profileEmailEmpty": "لا يوجد بريد إلكتروني"
+  "profileEmailEmpty": "لا يوجد بريد إلكتروني",
+  "appLockForgot": "نسيت كلمة المرور؟",
+  "appLockResetTitle": "إعادة تعيين قفل التطبيق",
+  "appLockResetBodyPassword": "للتأكد أنك صاحب الحساب، أدخل كلمة مرور حسابك في ديوني. سيُلغى القفل الحالي، ثم تعيّن كلمة مرور جديدة من الإعدادات.",
+  "appLockResetBodySocial": "للتأكد أنك صاحب الحساب، سنطلب منك تأكيد دخولك بالحساب الذي سجّلت به. سيُلغى القفل الحالي، ثم تعيّن كلمة مرور جديدة من الإعدادات.",
+  "appLockResetPasswordHint": "كلمة مرور حسابك",
+  "appLockResetConfirm": "تأكيد وإلغاء القفل",
+  "appLockResetDone": "أُلغي القفل. عيّن كلمة مرور جديدة من الإعدادات.",
+  "appLockResetFailed": "تعذّر التأكد من هويتك. تحقق من كلمة المرور والاتصال.",
+  "appLockTooManyAttempts": "محاولات كثيرة خاطئة، انتظر نحو نصف دقيقة ثم حاول."
 }

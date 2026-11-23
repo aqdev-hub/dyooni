@@ -92,6 +92,54 @@ void main() {
     expect(msg, contains('متبقي عليك 50 ريال'));
   });
 
+  // The scenarios the wording must get right. The OPERATION just saved decides «لك/عليك مبلغ
+  // وقدره»; the final balance (له / عليه) decides «متبقي لك / متبقي عليك»; they may differ.
+  group('wording by scenario', () {
+    String msg(AccountDirection entryDir, double amount, List<Transaction> before) {
+      final entry = _t('new', amount, entryDir, day: 20);
+      return buildAutoMessage(
+        settings: const AutoMessageSettings(showDate: false),
+        texts: _texts,
+        content: AutoMessageContent.balanceOnly,
+        account: _account,
+        entry: entry,
+        accountTransactions: [...before, entry],
+        currencyNames: const {'YER': 'ريال'},
+      );
+    }
+
+    test('first operation له → «لك مبلغ وقدره» and «متبقي لك»', () {
+      final m = msg(AccountDirection.credit, 300, []);
+      expect(m, contains('لك مبلغ وقدره 300 ريال'));
+      expect(m, contains('متبقي لك 300 ريال'));
+      expect(m, isNot(contains('عليك')));
+    });
+
+    test('first operation عليه → «عليك مبلغ وقدره» and «متبقي عليك»', () {
+      final m = msg(AccountDirection.debit, 300, []);
+      expect(m, contains('عليك مبلغ وقدره 300 ريال'));
+      expect(m, contains('متبقي عليك 300 ريال'));
+      expect(m, isNot(contains('لك مبلغ')));
+    });
+
+    test('عليه 100 against an earlier له 500 → operation «عليك», balance still «متبقي لك 400»', () {
+      final m = msg(AccountDirection.debit, 100, [_t('1', 500, AccountDirection.credit)]);
+      expect(m, contains('عليك مبلغ وقدره 100 ريال'));
+      expect(m, contains('متبقي لك 400 ريال'));
+    });
+
+    test('له 100 against an earlier عليه 500 → operation «لك», balance still «متبقي عليك 400»', () {
+      final m = msg(AccountDirection.credit, 100, [_t('1', 500, AccountDirection.debit)]);
+      expect(m, contains('لك مبلغ وقدره 100 ريال'));
+      expect(m, contains('متبقي عليك 400 ريال'));
+    });
+
+    test('the balance never prints a minus sign', () {
+      final m = msg(AccountDirection.debit, 80, [_t('1', 30, AccountDirection.credit)]);
+      expect(m, isNot(contains('-')));
+    });
+  });
+
   group('resolveAutoMessage', () {
     test('account override beats global; off silences; explicit mode is active even if global off', () {
       const global = AutoMessageSettings(enabled: false, channel: AutoMessageChannel.sms);

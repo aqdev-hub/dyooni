@@ -135,7 +135,7 @@ class AutoMessageSettingsScreen extends ConsumerWidget {
                     child: Text(l10n.autoTextsHint, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
                   ),
                   _ValueRow(label: l10n.autoFieldIntro, value: s.intro, hint: l10n.autoDefaultIntro, onSaved: (t) => ctl.update((x) => x.copyWith(intro: t.trim()))),
-                  _ValueRow(label: l10n.autoFieldBusiness, value: s.businessName, onSaved: (t) => ctl.update((x) => x.copyWith(businessName: t.trim()))),
+                  _ValueRow(label: l10n.autoFieldBusiness, value: s.businessName, hint: l10n.appName, onSaved: (t) => ctl.update((x) => x.copyWith(businessName: t.trim()))),
                   _ValueRow(label: l10n.autoFieldHolderOwes, value: s.holderOwesText, hint: l10n.autoDefaultHolderOwes, onSaved: (t) => ctl.update((x) => x.copyWith(holderOwesText: t.trim()))),
                   _ValueRow(label: l10n.autoFieldOwedToHolder, value: s.owedToHolderText, hint: l10n.autoDefaultOwedToHolder, onSaved: (t) => ctl.update((x) => x.copyWith(owedToHolderText: t.trim()))),
                   _ValueRow(label: l10n.autoFieldTotalHolderOwes, value: s.totalHolderOwesText, hint: l10n.autoDefaultTotalHolderOwes, onSaved: (t) => ctl.update((x) => x.copyWith(totalHolderOwesText: t.trim()))),

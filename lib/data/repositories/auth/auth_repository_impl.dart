@@ -167,6 +167,42 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> reauthenticate({String? password}) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) throw const ValidationException('userNotFound');
+    try {
+      final providers = {for (final info in user.providerData) info.providerId};
+      final AuthCredential credential;
+      if (providers.contains('password') && (user.email ?? '').isNotEmpty) {
+        if (password == null || password.isEmpty) throw const ValidationException('invalidCredentials');
+        credential = EmailAuthProvider.credential(email: user.email!, password: password);
+      } else if (providers.contains('google.com')) {
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) throw const ValidationException('cancelled');
+        final googleAuth = await googleUser.authentication;
+        credential = GoogleAuthProvider.credential(accessToken: googleAuth.accessToken, idToken: googleAuth.idToken);
+      } else if (providers.contains('facebook.com')) {
+        final result = await FacebookAuth.instance.login();
+        if (result.status == LoginStatus.cancelled) throw const ValidationException('cancelled');
+        if (result.status != LoginStatus.success || result.accessToken == null) {
+          throw const UnexpectedException(internalDetail: 'Facebook re-authentication returned no token');
+        }
+        credential = FacebookAuthProvider.credential(result.accessToken!.tokenString);
+      } else {
+        throw const ValidationException('invalidCredentials');
+      }
+      await user.reauthenticateWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      throw ValidationException(_mapAuthErrorCode(e.code), internalDetail: e.message);
+    } on AppException {
+      rethrow;
+    } catch (e, st) {
+      appLogger.e('reauthenticate failed', error: e, stackTrace: st);
+      throw UnexpectedException(internalDetail: e.toString());
+    }
+  }
+
+  @override
   AuthProfile? get currentProfile {
     final user = _firebaseAuth.currentUser;
     if (user == null) return null;

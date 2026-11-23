@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +7,7 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../logic/auth/auth_provider.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../widgets/shared/app_logo.dart';
 import '../../widgets/shared/app_snackbar.dart';
@@ -27,6 +30,17 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   final _controller = TextEditingController();
   bool _biometricTried = false;
   bool _biometricFailed = false;
+
+  // Wrong tries made with the button / keyboard "done" (typing a number never counts — it is
+  // checked silently on every keystroke). Five misses pause the button for 30 s.
+  int _failedAttempts = 0;
+  DateTime? _blockedUntil;
+
+  // «نسيت كلمة المرور؟» is an inline panel, not a dialog: this screen is built ABOVE the app's
+  // Navigator (MaterialApp.router builder), where showDialog has no Navigator to use.
+  bool _resetting = false;
+  bool _resetBusy = false;
+  final _accountPasswordController = TextEditingController();
 
   @override
   void initState() {
@@ -56,17 +70,117 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
 
   void _attemptLogin() {
     final l10n = AppLocalizations.of(context)!;
+    final blocked = _blockedUntil;
+    if (blocked != null && DateTime.now().isBefore(blocked)) {
+      AppSnackBar.showError(context, l10n.appLockTooManyAttempts);
+      return;
+    }
     final ok = ref.read(generalSettingsProvider.notifier).verifyPassword(_controller.text);
     if (ok) {
       widget.onUnlocked();
+      return;
+    }
+    _failedAttempts++;
+    if (_failedAttempts >= 5) {
+      _failedAttempts = 0;
+      _blockedUntil = DateTime.now().add(const Duration(seconds: 30));
+      AppSnackBar.showError(context, l10n.appLockTooManyAttempts);
     } else {
       AppSnackBar.showError(context, l10n.appLockWrongPasswordMessage);
     }
+    _controller.clear();
+  }
+
+  /// Proves the person owns the signed-in Dyooni account (see AuthRepository.reauthenticate) and
+  /// only then removes the local lock password. The lock is a local convenience lock, so the
+  /// account is the right proof of ownership — never a bypass without one.
+  Future<void> _resetLock() async {
+    final l10n = AppLocalizations.of(context)!;
+    final profile = ref.read(authProfileProvider);
+    if (profile == null) {
+      AppSnackBar.showError(context, l10n.appLockResetFailed);
+      return;
+    }
+    setState(() => _resetBusy = true);
+    try {
+      await ref
+          .read(authRepositoryProvider)
+          .reauthenticate(password: profile.usesPassword ? _accountPasswordController.text : null);
+      await ref.read(generalSettingsProvider.notifier).disablePassword();
+      if (!mounted) return;
+      AppSnackBar.showSuccess(context, l10n.appLockResetDone);
+      widget.onUnlocked();
+    } catch (e) {
+      if (!mounted) return;
+      // ignore: avoid_dynamic_calls
+      final code = (e as dynamic).code as String?;
+      if (code != 'cancelled') AppSnackBar.showError(context, l10n.appLockResetFailed);
+    } finally {
+      if (mounted) setState(() => _resetBusy = false);
+    }
+  }
+
+  Widget _resetPanel(AppLocalizations l10n, AppShellColors shell) {
+    final usesPassword = ref.watch(authProfileProvider)?.usesPassword ?? true;
+    return SizedBox(
+      width: 280,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.appLockResetTitle,
+            style: AppTextStyles.title(context).copyWith(color: shell.textPrimary, fontSize: 16),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            usesPassword ? l10n.appLockResetBodyPassword : l10n.appLockResetBodySocial,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          if (usesPassword)
+            TextField(
+              controller: _accountPasswordController,
+              obscureText: true,
+              autofocus: true,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: shell.textPrimary),
+              decoration: InputDecoration(
+                hintText: l10n.appLockResetPasswordHint,
+                hintStyle: TextStyle(color: shell.textSecondary),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: shell.accent)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: shell.accent, width: 2)),
+              ),
+              onSubmitted: (_) {
+                if (!_resetBusy) unawaited(_resetLock());
+              },
+            ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _resetBusy ? null : () => unawaited(_resetLock()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: shell.accent,
+              foregroundColor: shell.headerBottom,
+              minimumSize: const Size.fromHeight(46),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: _resetBusy
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : Text(l10n.appLockResetConfirm, style: AppTextStyles.button(context).copyWith(color: shell.headerBottom, fontWeight: FontWeight.w700)),
+          ),
+          TextButton(
+            onPressed: _resetBusy ? null : () => setState(() => _resetting = false),
+            child: Text(l10n.cancel, style: TextStyle(color: shell.textSecondary)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _accountPasswordController.dispose();
     super.dispose();
   }
 
@@ -98,7 +212,9 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                     style: AppTextStyles.title(context).copyWith(color: shell.textPrimary, fontSize: 17),
                   ),
                   const SizedBox(height: 24),
-                  if (passwordEnabled) ...[
+                  if (_resetting)
+                    _resetPanel(l10n, shell)
+                  else if (passwordEnabled) ...[
                     Text(
                       biometricEnabled ? l10n.appLockEnterPasswordOrBiometric : l10n.appLockEnterPasswordOnly,
                       textAlign: TextAlign.center,
@@ -139,8 +255,12 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                         ),
                       ),
                     ),
+                    TextButton(
+                      onPressed: () => setState(() => _resetting = true),
+                      child: Text(l10n.appLockForgot, style: TextStyle(color: shell.accent, fontWeight: FontWeight.w600)),
+                    ),
                   ],
-                  if (biometricEnabled) ...[
+                  if (biometricEnabled && !_resetting) ...[
                     const SizedBox(height: 24),
                     InkWell(
                       onTap: () {

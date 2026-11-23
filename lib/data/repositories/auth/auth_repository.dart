@@ -48,6 +48,12 @@ abstract class AuthRepository {
 
   Future<void> signOut();
 
+  /// Proves the person at the keyboard owns the signed-in account, without changing the session:
+  /// e-mail accounts must pass their account [password]; Google / Facebook accounts are asked to
+  /// sign in with that provider again. Throws [ValidationException] (`invalidCredentials`, …) when
+  /// it fails and `ValidationException('cancelled')` when the person backs out of the provider.
+  Future<void> reauthenticate({String? password});
+
   /// The signed-in person's profile, or `null` when nobody is signed in.
   AuthProfile? get currentProfile;
 

@@ -2331,4 +2331,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileEmailEmpty => 'No email address';
+
+  @override
+  String get appLockForgot => 'Forgot password?';
+
+  @override
+  String get appLockResetTitle => 'Reset app lock';
+
+  @override
+  String get appLockResetBodyPassword => 'To confirm it\'s you, enter your Dyooni account password. The current lock will be removed and you can set a new one in Settings.';
+
+  @override
+  String get appLockResetBodySocial => 'To confirm it\'s you, we\'ll ask you to sign in again with the account you registered with. The current lock will be removed and you can set a new one in Settings.';
+
+  @override
+  String get appLockResetPasswordHint => 'Your account password';
+
+  @override
+  String get appLockResetConfirm => 'Confirm & remove lock';
+
+  @override
+  String get appLockResetDone => 'Lock removed. Set a new password in Settings.';
+
+  @override
+  String get appLockResetFailed => 'Couldn\'t verify your identity. Check the password and your connection.';
+
+  @override
+  String get appLockTooManyAttempts => 'Too many wrong attempts. Wait about 30 seconds and try again.';
 }

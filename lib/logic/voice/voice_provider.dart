@@ -866,7 +866,9 @@ class VoiceController extends StateNotifier<VoiceState> {
     try {
       await _engine.cancel();
     } catch (_) {}
-    await Future<void>.delayed(const Duration(milliseconds: 400));
+    // Short on purpose: anything said during this gap is lost, and «ديوني» right after a wrong
+    // word is exactly the case that used to fail.
+    await Future<void>.delayed(const Duration(milliseconds: 120));
     if (state.status != VoiceStatus.bluetoothWaitingWakeWord) return;
     try {
       await _startEngine();
