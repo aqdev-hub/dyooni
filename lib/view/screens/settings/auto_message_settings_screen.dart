@@ -12,6 +12,7 @@ import '../../../data/models/transaction.dart';
 import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/messages/auto_message_builder.dart';
 import '../../../logic/messages/auto_message_provider.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 
 /// "إعدادات الرسائل التلقائية" (drawer → إشعارات الرصيد التلقائية).
@@ -266,15 +267,14 @@ class _ValueRow extends StatelessWidget {
   Future<void> _edit(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController(text: value);
-    final result = await showDialog<String>(
+    final result = await showAppPopup<String>(
       context: context,
       builder: (dialogContext) {
         final d = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: d.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(label, style: AppTextStyles.title(dialogContext).copyWith(color: d.textPrimary)),
-          content: TextField(
+        return AppPopup(
+          title: label,
+          icon: Icons.edit_outlined,
+          child: TextField(
             controller: controller,
             autofocus: true,
             keyboardType: numeric ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,

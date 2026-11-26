@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import 'app_popup.dart';
 
-Future<double?> showAmountCalculatorDialog(BuildContext context, {String initialValue = ''}) => showDialog<double?>(
+Future<double?> showAmountCalculatorDialog(BuildContext context, {String initialValue = ''}) => showAppPopup<double?>(
       context: context,
       builder: (_) => _AmountCalculatorDialog(initialValue: initialValue),
     );
@@ -74,11 +75,10 @@ class _AmountCalculatorDialogState extends State<_AmountCalculatorDialog> {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
     final keys = ['C', '⌫', '÷', '×', '7', '8', '9', '-', '4', '5', '6', '+', '1', '2', '3', '=', '0', '00', '000', '.'];
-    return AlertDialog(
-      backgroundColor: shell.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      title: Text(l10n.calculatorTitle, textAlign: TextAlign.center, style: AppTextStyles.title(context).copyWith(color: shell.textPrimary)),
-      content: SizedBox(
+    return AppPopup(
+      title: l10n.calculatorTitle,
+      icon: Icons.calculate_outlined,
+      child: SizedBox(
         width: 310,
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/voice/whisper_model_provider.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 
 /// "نماذج التعرف المحلي" — opened from الإعدادات. At any time the person can download either
@@ -105,15 +106,14 @@ class WhisperModelsScreen extends ConsumerWidget {
     required bool lastOne,
   }) async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppPopup<bool>(
       context: context,
       builder: (dialogContext) {
         final shell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: shell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(l10n.whisperModelDeleteTitle, style: AppTextStyles.title(dialogContext).copyWith(color: shell.textPrimary)),
-          content: Text(
+        return AppPopup(
+          title: l10n.whisperModelDeleteTitle,
+          icon: Icons.delete_outline_rounded,
+          child: Text(
             lastOne ? '${l10n.whisperModelDeleteBody}\n\n${l10n.whisperModelDeleteLastNote}' : l10n.whisperModelDeleteBody,
             style: AppTextStyles.body(dialogContext).copyWith(color: shell.textSecondary),
           ),

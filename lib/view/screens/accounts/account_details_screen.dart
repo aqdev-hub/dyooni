@@ -33,7 +33,9 @@ import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/personal_data_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/accounts/account_action_icon_row.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
+import '../../widgets/shared/modal_header_bar.dart';
 import '../../widgets/accounts/account_auto_message_dialog.dart';
 import '../../widgets/accounts/account_message_sheet.dart';
 import '../../widgets/accounts/account_phone_row.dart';
@@ -104,15 +106,14 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
       });
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppPopup<bool>(
       context: context,
       builder: (dialogContext) {
         final dShell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: dShell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(l10n.deleteAccountConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
-          content: Text(l10n.deleteAccountConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+        return AppPopup(
+          title: l10n.deleteAccountConfirmTitle,
+          icon: Icons.delete_outline_rounded,
+          child: Text(l10n.deleteAccountConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
           actions: [
             TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
             TextButton(
@@ -137,15 +138,14 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
   }
 
   Future<void> _confirmDeleteTransaction(BuildContext context, WidgetRef ref, AppLocalizations l10n, Transaction transaction) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppPopup<bool>(
       context: context,
       builder: (dialogContext) {
         final dShell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: dShell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(l10n.deleteTransactionConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
-          content: Text(l10n.deleteTransactionConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+        return AppPopup(
+          title: l10n.deleteTransactionConfirmTitle,
+          icon: Icons.delete_outline_rounded,
+          child: Text(l10n.deleteTransactionConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
           actions: [
             TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
             TextButton(
@@ -168,15 +168,14 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
   }
 
   Future<void> _confirmDeleteSelectedTransactions(BuildContext context, WidgetRef ref, AppLocalizations l10n, Set<String> ids) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppPopup<bool>(
       context: context,
       builder: (dialogContext) {
         final dShell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: dShell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(l10n.deleteTransactionConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
-          content: Text(l10n.deleteSelectedTransactionsConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+        return AppPopup(
+          title: l10n.deleteTransactionConfirmTitle,
+          icon: Icons.delete_outline_rounded,
+          child: Text(l10n.deleteSelectedTransactionsConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
           actions: [
             TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
             TextButton(
@@ -206,20 +205,13 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
   /// menu's "تعديل" on this screen's own header. Deliberately separate from
   /// [_openEditTransaction] below: this is the account itself, not one of its transactions.
   void _openEditAccount(BuildContext context) {
-    showDialog<void>(
+    showAppPopup<void>(
       context: context,
       barrierColor: Colors.black54,
-      builder: (_) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 54),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: SizedBox(
-          width: 340,
-          height: 540,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
-            child: AddAccountScreen(existingAccount: account),
-          ),
-        ),
+      builder: (_) => AppPopupFrame(
+        maxWidth: 400,
+        height: 540,
+        child: AddAccountScreen(existingAccount: account),
       ),
     );
   }
@@ -261,15 +253,14 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
   }
 
   Future<_TransferChoice?> _askTransferChoice(BuildContext context, AppLocalizations l10n, {required bool allowEdit}) {
-    return showDialog<_TransferChoice>(
+    return showAppPopup<_TransferChoice>(
       context: context,
       builder: (dialogContext) {
         final dShell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: dShell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(l10n.transferEntryTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
-          content: Text(l10n.transferEntryBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+        return AppPopup(
+          title: l10n.transferEntryTitle,
+          icon: Icons.swap_horiz_rounded,
+          child: Text(l10n.transferEntryBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
           actions: [
             TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
             if (allowEdit)
@@ -288,23 +279,16 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
   }
 
   void _openEditTransaction(BuildContext context, Transaction transaction) {
-    showDialog<void>(
+    showAppPopup<void>(
       context: context,
       barrierColor: Colors.black54,
-      builder: (_) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 54),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: SizedBox(
-          width: 340,
-          height: 540,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
-            child: AddTransactionScreen(
-              accountId: account.id,
-              accountName: account.name,
-              existingTransaction: transaction,
-            ),
-          ),
+      builder: (_) => AppPopupFrame(
+        maxWidth: 400,
+        height: 540,
+        child: AddTransactionScreen(
+          accountId: account.id,
+          accountName: account.name,
+          existingTransaction: transaction,
         ),
       ),
     );
@@ -499,10 +483,8 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
   }
 
   Future<void> _openReportsSheet(BuildContext context, WidgetRef ref, AppLocalizations l10n, List<Transaction> transactions) async {
-    await showModalBottomSheet<void>(
+    await showAppPopup<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => ReportOptionsSheet<AccountReportType>(
         initialType: AccountReportType.statement,
         options: [
@@ -624,7 +606,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                 // read right-to-left in RTL, same as Home.
                 child: Row(
                   children: [
-                    IconButton(icon: Icon(Icons.arrow_back_rounded, color: context.voicePalette.headerGold, size: 20), onPressed: () => context.pop()),
+                    AppBackButton(onPressed: () => context.pop()),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -740,20 +722,13 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
               totalCredit: credit,
               totalDebit: debit,
               currencyName: currencyName,
-              onAdd: () => showDialog<void>(
+              onAdd: () => showAppPopup<void>(
                 context: context,
                 barrierColor: Colors.black54,
-                builder: (_) => Dialog(
-                  insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 54),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: SizedBox(
-                    width: 340,
-                    height: 440,
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.all(Radius.circular(12)),
-                      child: AddTransactionScreen(accountId: account.id, accountName: account.name),
-                    ),
-                  ),
+                builder: (_) => AppPopupFrame(
+                  maxWidth: 400,
+                  height: 440,
+                  child: AddTransactionScreen(accountId: account.id, accountName: account.name),
                 ),
               ),
               addTooltip: l10n.addTransactionTitle,

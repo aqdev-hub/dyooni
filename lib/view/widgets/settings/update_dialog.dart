@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/web_launcher.dart';
 import '../../../logic/updates/app_update.dart';
 import '../../../logic/updates/update_service.dart';
+import '../shared/app_popup.dart';
 
 /// "يتوفر تحديث جديد": the new version, what it brings, "تحديث الآن" and (unless the update is
 /// mandatory) "لاحقًا". A mandatory update can't be dismissed by back or by tapping outside.
@@ -19,50 +20,41 @@ Future<void> showUpdateDialog(BuildContext context, WidgetRef ref, UpdateDecisio
   final shell = context.shellColors;
   final notes = release.notesFor(Localizations.localeOf(context).languageCode);
 
-  await showDialog<void>(
+  await showAppPopup<void>(
     context: context,
     barrierDismissible: !forced,
     builder: (ctx) => PopScope(
       canPop: !forced,
-      child: AlertDialog(
-        backgroundColor: shell.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
+      child: AppPopup(
+        title: l10n.updateAvailableTitle,
+        icon: Icons.system_update_alt_rounded,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.system_update_alt_rounded, color: shell.accent),
-            const SizedBox(width: 10),
-            Expanded(child: Text(l10n.updateAvailableTitle, style: AppTextStyles.title(ctx).copyWith(color: shell.textPrimary))),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.updateNewVersion('${release.version} (${release.build})'),
-                  style: AppTextStyles.body(ctx).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w800)),
-              if (forced) ...[
-                const SizedBox(height: 6),
-                Text(l10n.updateRequiredNote, style: AppTextStyles.bodySecondary(ctx).copyWith(color: shell.textSecondary)),
-              ],
-              if (notes.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(l10n.updateWhatsNew, style: AppTextStyles.bodySecondary(ctx).copyWith(color: shell.textSecondary)),
-                const SizedBox(height: 6),
-                for (final n in notes)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('• ', style: TextStyle(color: shell.accent, fontWeight: FontWeight.w900)),
-                        Expanded(child: Text(n, style: AppTextStyles.body(ctx).copyWith(color: shell.textPrimary))),
-                      ],
-                    ),
-                  ),
-              ],
+            Text(l10n.updateNewVersion('${release.version} (${release.build})'),
+                style: AppTextStyles.body(ctx).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w800)),
+            if (forced) ...[
+              const SizedBox(height: 6),
+              Text(l10n.updateRequiredNote, style: AppTextStyles.bodySecondary(ctx).copyWith(color: shell.textSecondary)),
             ],
-          ),
+            if (notes.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(l10n.updateWhatsNew, style: AppTextStyles.bodySecondary(ctx).copyWith(color: shell.textSecondary)),
+              const SizedBox(height: 6),
+              for (final n in notes)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('• ', style: TextStyle(color: shell.accent, fontWeight: FontWeight.w900)),
+                      Expanded(child: Text(n, style: AppTextStyles.body(ctx).copyWith(color: shell.textPrimary))),
+                    ],
+                  ),
+                ),
+            ],
+          ],
         ),
         actions: [
           if (!forced)

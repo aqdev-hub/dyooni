@@ -494,6 +494,8 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
             children: [
               ModalHeaderBar(
                 title: widget.isEditing ? l10n.editAccountTitle : l10n.addAccountTitle,
+                icon: Icons.keyboard_hide_rounded,
+                onIconTap: () => FocusScope.of(context).unfocus(),
                 onClose: _close,
               ),
               const SizedBox(height: 8),

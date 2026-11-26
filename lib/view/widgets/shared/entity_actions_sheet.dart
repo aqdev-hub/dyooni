@@ -4,6 +4,7 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import 'app_popup.dart';
 
 /// The six actions offered on a long-press, for both an account row (Home) and a transaction row
 /// (Account Details) — one shared sheet so the two never visually drift apart.
@@ -25,26 +26,22 @@ Future<EntityAction?> showEntityActionsSheet(BuildContext context) {
         onTap: () => Navigator.of(context).pop(action),
       );
 
-  return showModalBottomSheet<EntityAction>(
+  return showAppPopup<EntityAction>(
     context: context,
-    backgroundColor: Colors.transparent,
-    builder: (_) => SafeArea(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(16)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            tile(Icons.edit_outlined, l10n.edit, EntityAction.edit),
-            tile(Icons.delete_outline_rounded, l10n.delete, EntityAction.delete, color: AppColors.debit),
-            tile(Icons.share_outlined, l10n.shareAction, EntityAction.share),
-            tile(Icons.swap_horiz_rounded, l10n.transferAction, EntityAction.transfer),
-            tile(Icons.check_circle_outline_rounded, l10n.selectOne, EntityAction.select),
-            tile(Icons.select_all_rounded, l10n.selectAllAction, EntityAction.selectAll),
-            const SizedBox(height: 8),
-          ],
-        ),
+    builder: (_) => AppPopup(
+      title: l10n.edit,
+      icon: Icons.more_horiz_rounded,
+      contentPadding: const EdgeInsets.fromLTRB(0, 6, 0, 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          tile(Icons.edit_outlined, l10n.edit, EntityAction.edit),
+          tile(Icons.delete_outline_rounded, l10n.delete, EntityAction.delete, color: AppColors.debit),
+          tile(Icons.share_outlined, l10n.shareAction, EntityAction.share),
+          tile(Icons.swap_horiz_rounded, l10n.transferAction, EntityAction.transfer),
+          tile(Icons.check_circle_outline_rounded, l10n.selectOne, EntityAction.select),
+          tile(Icons.select_all_rounded, l10n.selectAllAction, EntityAction.selectAll),
+        ],
       ),
     ),
   );

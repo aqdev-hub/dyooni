@@ -4,6 +4,7 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/report_options.dart';
+import '../shared/app_popup.dart';
 import 'report_share_format_sheet.dart';
 import 'report_sort_sheet.dart';
 
@@ -59,9 +60,8 @@ class _ReportOptionsSheetState<T> extends State<ReportOptionsSheet<T>> {
       });
       return;
     }
-    final chosen = await showModalBottomSheet<ReportSortOption>(
+    final chosen = await showAppPopup<ReportSortOption>(
       context: context,
-      backgroundColor: Colors.transparent,
       builder: (_) => const ReportSortSheet(),
     );
     if (chosen == null || !mounted) return; // dismissed without choosing — leave unchecked
@@ -93,9 +93,8 @@ class _ReportOptionsSheetState<T> extends State<ReportOptionsSheet<T>> {
   }
 
   Future<void> _openShareFormatSheet() async {
-    final format = await showModalBottomSheet<ReportShareFormat>(
+    final format = await showAppPopup<ReportShareFormat>(
       context: context,
-      backgroundColor: Colors.transparent,
       builder: (_) => const ReportShareFormatSheet(),
     );
     if (format == null || !mounted) return;
@@ -108,43 +107,13 @@ class _ReportOptionsSheetState<T> extends State<ReportOptionsSheet<T>> {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
 
-    return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(16)),
-        // The list tiles paint their ink on the nearest Material; without this one they would paint
-        // behind the coloured Container above (Flutter asserts about exactly that).
-        child: Material(
-          type: MaterialType.transparency,
-          child: SingleChildScrollView(
-          child: Column(
+    // The shared header (title + back arrow) closes the popup without generating anything.
+    return AppPopup(
+      title: l10n.reportsSheetTitle,
+      icon: Icons.description_outlined,
+      child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(color: shell.accent, borderRadius: BorderRadius.circular(10)),
-                      alignment: Alignment.center,
-                      child: Text(
-                        l10n.reportsSheetTitle,
-                        style: AppTextStyles.button(context).copyWith(color: shell.headerBottom, fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // Back / cancel: closes the sheet without generating anything. (It used to open the
-                  // WhatsApp share chooser, which already has its own icon at the bottom.)
-                  IconButton(
-                    icon: Icon(Icons.arrow_forward_ios_rounded, color: shell.accent),
-                    onPressed: () => Navigator.of(context).pop(),
-                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
               // `RadioListTile.groupValue`/`.onChanged` are deprecated on newer Flutter — the
               // group's shared state now comes from this ancestor `RadioGroup<T>` instead, with
               // each tile below only specifying its own `value`.
@@ -269,9 +238,6 @@ class _ReportOptionsSheetState<T> extends State<ReportOptionsSheet<T>> {
                 ],
               ),
             ],
-          ),
-        ),
-        ),
       ),
     );
   }

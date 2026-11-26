@@ -7,6 +7,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/currency_type.dart';
 import '../../../logic/currencies/currencies_provider.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
@@ -19,7 +20,7 @@ class CurrenciesScreen extends ConsumerWidget {
   const CurrenciesScreen({super.key});
 
   Future<void> _openEditor(BuildContext context, {CurrencyType? existing}) {
-    return showDialog<void>(
+    return showAppPopup<void>(
       context: context,
       builder: (_) => _CurrencyEditorDialog(existing: existing),
     );
@@ -174,15 +175,14 @@ class _CurrencyEditorDialogState extends ConsumerState<_CurrencyEditorDialog> {
     final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppPopup<bool>(
       context: context,
       builder: (dialogContext) {
         final dShell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: dShell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(l10n.delete, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
-          content: Text(l10n.currencyDeleteConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+        return AppPopup(
+          title: l10n.delete,
+          icon: Icons.delete_outline_rounded,
+          child: Text(l10n.currencyDeleteConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
           actions: [
             TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
             TextButton(
@@ -216,14 +216,10 @@ class _CurrencyEditorDialogState extends ConsumerState<_CurrencyEditorDialog> {
     final shell = context.shellColors;
     final existing = widget.existing;
 
-    return AlertDialog(
-      backgroundColor: shell.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: Text(
-        existing == null ? l10n.currencyAddTitle : l10n.currencyEditTitle,
-        style: AppTextStyles.title(context).copyWith(color: shell.textPrimary),
-      ),
-      content: TextField(
+    return AppPopup(
+      title: existing == null ? l10n.currencyAddTitle : l10n.currencyEditTitle,
+      icon: Icons.currency_exchange_rounded,
+      child: TextField(
         controller: _controller,
         autofocus: true,
         maxLength: 24,

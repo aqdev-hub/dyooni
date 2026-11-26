@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/voice_palette.dart';
+import 'modal_header_bar.dart';
 
 /// The look of the voice screen, shared by every screen: the soft blue body gradient with the two
 /// waves along the bottom, the navy header with a centred gold title, and (see MainBottomNav) the
@@ -117,10 +118,7 @@ class AppHeaderBar extends StatelessWidget {
       child: Row(
         children: [
           leading ??
-              IconButton(
-                icon: Icon(Icons.arrow_forward_ios_rounded, color: palette.headerGold, size: 20),
-                onPressed: onBack ?? () => context.pop(),
-              ),
+              AppBackButton(onPressed: onBack ?? () => context.pop()),
           Expanded(
             child: Text(
               title,

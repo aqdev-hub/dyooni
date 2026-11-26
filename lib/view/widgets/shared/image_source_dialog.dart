@@ -4,9 +4,10 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import 'app_popup.dart';
 
 /// Lets the user explicitly choose the camera or gallery before image_picker is called.
-Future<XFile?> showImageSourceDialog(BuildContext context) => showDialog<XFile?>(
+Future<XFile?> showImageSourceDialog(BuildContext context) => showAppPopup<XFile?>(
       context: context,
       builder: (_) => const _ImageSourceDialog(),
     );
@@ -56,26 +57,10 @@ class _ImageSourceDialogState extends State<_ImageSourceDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
-    return AlertDialog(
-      backgroundColor: shell.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      titlePadding: const EdgeInsets.fromLTRB(20, 18, 12, 8),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              l10n.imageOptionsTitle,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.title(context).copyWith(color: shell.textPrimary),
-            ),
-          ),
-          IconButton(
-            onPressed: _picking ? null : () => Navigator.of(context).pop(),
-            icon: Icon(Icons.close_rounded, color: shell.textSecondary),
-          ),
-        ],
-      ),
-      content: Column(
+    return AppPopup(
+      title: l10n.imageOptionsTitle,
+      icon: Icons.photo_camera_outlined,
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         // `RadioListTile.groupValue`/`.onChanged` are deprecated on newer Flutter — the group's
         // shared state now comes from this ancestor `RadioGroup<ImageSource>` instead, with each

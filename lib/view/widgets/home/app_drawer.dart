@@ -15,6 +15,7 @@ import '../../../logic/settings/locale_provider.dart';
 import '../../../logic/auth/auth_provider.dart';
 import '../../../logic/reports/report_delivery.dart';
 import '../shared/app_logo.dart';
+import '../shared/app_popup.dart';
 import 'rate_app_sheet.dart';
 import '../shared/app_snackbar.dart';
 import '../shared/language_toggle_button.dart';
@@ -41,13 +42,12 @@ class AppDrawer extends ConsumerWidget {
   /// Asks first: the file is NOT encrypted, so the person must know that before it leaves.
   Future<void> _exportData(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
     final shell = context.shellColors;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppPopup<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: shell.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Text(l10n.exportAllDataTitle, style: AppTextStyles.title(dialogContext).copyWith(color: shell.textPrimary)),
-        content: Text(l10n.exportAllDataBody, style: AppTextStyles.body(dialogContext).copyWith(color: shell.textSecondary)),
+      builder: (dialogContext) => AppPopup(
+        title: l10n.exportAllDataTitle,
+        icon: Icons.save_alt_rounded,
+        child: Text(l10n.exportAllDataBody, style: AppTextStyles.body(dialogContext).copyWith(color: shell.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -70,19 +70,14 @@ class AppDrawer extends ConsumerWidget {
   }
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppPopup<bool>(
       context: context,
       builder: (dialogContext) {
-        // Styled explicitly with the shell's own colors — previously this AlertDialog had NO
-        // color styling at all, which is exactly what made the title/body text unreadable: it
-        // silently inherited whatever the ambient Material default happened to be for the
-        // current brightness instead of Dyooni's own navy/gold identity.
         final dShell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: dShell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(l10n.logoutConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
-          content: Text(l10n.logoutConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+        return AppPopup(
+          title: l10n.logoutConfirmTitle,
+          icon: Icons.logout_rounded,
+          child: Text(l10n.logoutConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),

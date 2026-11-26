@@ -10,6 +10,7 @@ import '../../../logic/auth/auth_provider.dart';
 import '../../widgets/shared/app_logo.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/app_text_field.dart';
+import '../../widgets/shared/modal_header_bar.dart';
 import '../../widgets/shared/primary_button.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
@@ -98,7 +99,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               Align(
                 alignment: AlignmentDirectional.topStart,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18, color: AppColors.textPrimary),
+                  icon: const AppBackArrow(),
                   onPressed: () => context.go('/login'),
                 ),
               ),

@@ -23,6 +23,7 @@ import '../../../logic/reminders/reminders_provider.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/settings/drive_backup_controller.dart';
 import '../../widgets/home/account_list_tile.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/main_bottom_nav.dart';
 import '../../widgets/home/app_drawer.dart';
@@ -47,17 +48,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _searchController = TextEditingController();
   String _query = '';
 
-  Future<void> _openAddAccount() => showDialog<void>(
+  Future<void> _openAddAccount() => showAppPopup<void>(
         context: context,
         barrierColor: Colors.black54,
-        builder: (_) => Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 54),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: const SizedBox(
-            width: 340,
-            height: 540,
-            child: ClipRRect(borderRadius: BorderRadius.all(Radius.circular(12)), child: AddAccountScreen()),
-          ),
+        builder: (_) => const AppPopupFrame(
+          maxWidth: 400,
+          height: 540,
+          child: AddAccountScreen(),
         ),
       );
 
@@ -71,15 +68,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _confirmDeleteAccounts(Set<String> ids, {required bool multiple}) async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppPopup<bool>(
       context: context,
       builder: (dialogContext) {
         final dShell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: dShell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(l10n.deleteAccountConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
-          content: Text(
+        return AppPopup(
+          title: l10n.deleteAccountConfirmTitle,
+          icon: Icons.delete_outline_rounded,
+          child: Text(
             multiple ? l10n.deleteSelectedAccountsConfirmBody : l10n.deleteAccountConfirmBody,
             style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary),
           ),
@@ -108,20 +104,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _openEditAccount(Account account) {
-    showDialog<void>(
+    showAppPopup<void>(
       context: context,
       barrierColor: Colors.black54,
-      builder: (_) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 54),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: SizedBox(
-          width: 340,
-          height: 540,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
-            child: AddAccountScreen(existingAccount: account),
-          ),
-        ),
+      builder: (_) => AppPopupFrame(
+        maxWidth: 400,
+        height: 540,
+        child: AddAccountScreen(existingAccount: account),
       ),
     );
   }

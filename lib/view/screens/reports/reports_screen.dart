@@ -20,6 +20,7 @@ import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/home/summary_card.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/home/app_drawer.dart';
 import '../../widgets/reports/report_options_sheet.dart';
@@ -128,10 +129,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final l10n = AppLocalizations.of(context)!;
     _statusFilter.value = null; // every time the sheet opens, start without a status filter
     final settings = ref.read(generalSettingsProvider).value;
-    await showModalBottomSheet<void>(
+    await showAppPopup<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => ReportOptionsSheet<SummaryReportType>(
         initialType: SummaryReportType.totalAmounts,
         statusFilter: _statusFilter,

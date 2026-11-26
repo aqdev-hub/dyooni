@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../logic/auth/auth_provider.dart';
 import '../../widgets/auth/social_login_button.dart';
 import '../../widgets/shared/app_logo.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/app_text_field.dart';
 import '../../widgets/shared/language_toggle_button.dart';
@@ -87,12 +88,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final l10n = AppLocalizations.of(context)!;
     final emailController = TextEditingController(text: _identifierController.text.trim());
 
-    final email = await showDialog<String>(
+    final email = await showAppPopup<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(l10n.forgotPasswordDialogTitle, style: AppTextStyles.title(dialogContext)),
-        content: Column(
+      builder: (dialogContext) => AppPopup(
+        title: l10n.forgotPasswordDialogTitle,
+        icon: Icons.lock_reset_rounded,
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -28,6 +28,7 @@ import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
 import '../../widgets/shared/amount_in_words.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/accounts/auto_message_prompt.dart';
 import '../../widgets/shared/app_snackbar.dart';
@@ -307,20 +308,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   Future<void> _openEditAccountForCeiling(Account account) {
-    return showDialog<void>(
+    return showAppPopup<void>(
       context: context,
       barrierColor: Colors.black54,
-      builder: (_) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 54),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: SizedBox(
-          width: 340,
-          height: 540,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
-            child: AddAccountScreen(existingAccount: account),
-          ),
-        ),
+      builder: (_) => AppPopupFrame(
+        maxWidth: 400,
+        height: 540,
+        child: AddAccountScreen(existingAccount: account),
       ),
     );
   }
@@ -413,15 +407,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final existing = widget.existingTransaction;
     if (existing == null) return;
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppPopup<bool>(
       context: context,
       builder: (dialogContext) {
         final dShell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: dShell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(l10n.deleteTransactionConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
-          content: Text(l10n.deleteTransactionConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+        return AppPopup(
+          title: l10n.deleteTransactionConfirmTitle,
+          icon: Icons.delete_outline_rounded,
+          child: Text(l10n.deleteTransactionConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
           actions: [
             TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
             TextButton(
@@ -467,6 +460,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             children: [
               ModalHeaderBar(
                 title: isEditing ? l10n.editTransactionTitle : l10n.addTransactionTitle,
+                icon: Icons.keyboard_hide_rounded,
+                onIconTap: () => FocusScope.of(context).unfocus(),
                 onClose: _close,
               ),
               const SizedBox(height: 8),

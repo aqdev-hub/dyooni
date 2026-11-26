@@ -9,6 +9,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/repositories/backup/backup_repository.dart';
 import '../../../logic/settings/local_backup_provider.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
@@ -36,7 +37,7 @@ class _LocalBackupScreenState extends ConsumerState<LocalBackupScreen> {
 
   Future<void> _createBackup() async {
     final l10n = AppLocalizations.of(context)!;
-    final password = await showDialog<String>(
+    final password = await showAppPopup<String>(
       context: context,
       builder: (_) => const _PasswordSetupDialog(),
     );
@@ -73,7 +74,7 @@ class _LocalBackupScreenState extends ConsumerState<LocalBackupScreen> {
     final pickedPath = picked?.files.single.path;
     if (pickedPath == null || !mounted) return; // person backed out of the picker
 
-    final choice = await showDialog<(String, RestoreMode)>(
+    final choice = await showAppPopup<(String, RestoreMode)>(
       context: context,
       builder: (_) => const _RestoreOptionsDialog(),
     );
@@ -238,11 +239,10 @@ class _PasswordSetupDialogState extends State<_PasswordSetupDialog> {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
 
-    return AlertDialog(
-      backgroundColor: shell.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: Text(l10n.localBackupSetPasswordTitle, style: AppTextStyles.title(context).copyWith(color: shell.textPrimary)),
-      content: Form(
+    return AppPopup(
+      title: l10n.localBackupSetPasswordTitle,
+      icon: Icons.lock_outline_rounded,
+      child: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -327,11 +327,10 @@ class _RestoreOptionsDialogState extends State<_RestoreOptionsDialog> {
     final shell = context.shellColors;
     final isReplace = _mode == RestoreMode.replace;
 
-    return AlertDialog(
-      backgroundColor: shell.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: Text(l10n.localBackupRestoreConfirmTitle, style: AppTextStyles.title(context).copyWith(color: shell.textPrimary)),
-      content: Form(
+    return AppPopup(
+      title: l10n.localBackupRestoreConfirmTitle,
+      icon: Icons.restore_rounded,
+      child: Form(
         key: _formKey,
         child: SingleChildScrollView(
           child: Column(

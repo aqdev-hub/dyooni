@@ -13,6 +13,7 @@ import '../../../logic/categories/categories_provider.dart';
 import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
@@ -54,22 +55,18 @@ class _GeneralSettingsScreenState extends ConsumerState<GeneralSettingsScreen> {
   Future<void> _togglePassword(bool value) async {
     final l10n = AppLocalizations.of(context)!;
     if (value) {
-      final password = await showDialog<String>(context: context, builder: (_) => const _SetPasswordDialog());
+      final password = await showAppPopup<String>(context: context, builder: (_) => const _SetPasswordDialog());
       if (password == null || !mounted) return; // ألغى المستخدم — لا تفعيل بلا كلمة مرور فعلية
       await ref.read(generalSettingsProvider.notifier).setPassword(password);
     } else {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showAppPopup<bool>(
         context: context,
         builder: (dialogContext) {
           final dShell = dialogContext.shellColors;
-          return AlertDialog(
-            backgroundColor: dShell.surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            title: Text(
-              l10n.generalSettingsDisablePasswordConfirmTitle,
-              style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary),
-            ),
-            content: Text(
+          return AppPopup(
+            title: l10n.generalSettingsDisablePasswordConfirmTitle,
+            icon: Icons.lock_open_rounded,
+            child: Text(
               l10n.generalSettingsDisablePasswordConfirmBody,
               style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary),
             ),
@@ -95,18 +92,14 @@ class _GeneralSettingsScreenState extends ConsumerState<GeneralSettingsScreen> {
   Future<void> _editLabel({required bool isCredit, required String current}) async {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController(text: current);
-    final result = await showDialog<String>(
+    final result = await showAppPopup<String>(
       context: context,
       builder: (dialogContext) {
         final dShell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: dShell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(
-            isCredit ? l10n.generalSettingsEditCreditLabelTitle : l10n.generalSettingsEditDebitLabelTitle,
-            style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary),
-          ),
-          content: TextField(
+        return AppPopup(
+          title: isCredit ? l10n.generalSettingsEditCreditLabelTitle : l10n.generalSettingsEditDebitLabelTitle,
+          icon: Icons.edit_outlined,
+          child: TextField(
             controller: controller,
             textAlign: TextAlign.center,
             autofocus: true,
@@ -144,18 +137,14 @@ class _GeneralSettingsScreenState extends ConsumerState<GeneralSettingsScreen> {
     );
     if (picked == null || !mounted) return;
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppPopup<bool>(
       context: context,
       builder: (dialogContext) {
         final dShell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: dShell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(
-            l10n.generalSettingsAnnualClosingConfirmTitle,
-            style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary),
-          ),
-          content: Text(
+        return AppPopup(
+          title: l10n.generalSettingsAnnualClosingConfirmTitle,
+          icon: Icons.event_available_outlined,
+          child: Text(
             l10n.generalSettingsAnnualClosingConfirmBody,
             style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary),
           ),
@@ -583,11 +572,10 @@ class _SetPasswordDialogState extends State<_SetPasswordDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
-    return AlertDialog(
-      backgroundColor: shell.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: Text(l10n.generalSettingsSetPasswordTitle, style: AppTextStyles.title(context).copyWith(color: shell.textPrimary)),
-      content: Form(
+    return AppPopup(
+      title: l10n.generalSettingsSetPasswordTitle,
+      icon: Icons.lock_outline_rounded,
+      child: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,

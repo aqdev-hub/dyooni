@@ -17,6 +17,7 @@ import '../../../logic/messages/message_templates.dart';
 import '../../../logic/reports/tabular_report.dart' show ReportBuilders;
 import '../../../logic/settings/direction_labels.dart';
 import '../../../logic/settings/general_settings_provider.dart';
+import '../shared/app_popup.dart';
 import '../shared/app_snackbar.dart';
 
 /// The "الرسائل" button of Account Details: pick a ready-made message (reminder, request, thanks,
@@ -29,10 +30,8 @@ Future<void> showAccountMessageSheet(
   required List<Transaction> transactions,
   required String currencyName,
 }) =>
-    showModalBottomSheet<void>(
+    showAppPopup<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => _MessageSheet(account: account, transactions: transactions, currencyName: currencyName),
     );
 
@@ -103,116 +102,102 @@ class _MessageSheetState extends ConsumerState<_MessageSheet> {
     final hasPhone = normalizePhoneForMessaging(widget.account.phone ?? '') != null;
     final templates = templatesFor(net);
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SafeArea(
-        child: Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(16)),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.messageSheetTitle(widget.account.name),
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.title(context).copyWith(color: shell.textPrimary),
-                ),
-                const SizedBox(height: 12),
-                if (!hasPhone) ...[
-                  Icon(Icons.phone_disabled_outlined, size: 40, color: shell.textSecondary),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.messageNoPhoneTitle,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    l10n.messageNoPhoneBody,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
-                  ),
-                ] else ...[
-                  Text(l10n.messageChooseTemplate, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
-                  const SizedBox(height: 8),
-                  for (final template in templates)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: InkWell(
-                        onTap: () => _select(template, l10n),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: _selected == template ? shell.accent : shell.border, width: _selected == template ? 1.6 : 1),
-                          ),
-                          child: Row(
+    return AppPopup(
+      title: l10n.messageSheetTitle(widget.account.name),
+      icon: Icons.sms_outlined,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!hasPhone) ...[
+            Icon(Icons.phone_disabled_outlined, size: 40, color: shell.textSecondary),
+            const SizedBox(height: 8),
+            Text(
+              l10n.messageNoPhoneTitle,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l10n.messageNoPhoneBody,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
+            ),
+          ] else ...[
+            Text(l10n.messageChooseTemplate, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
+            const SizedBox(height: 8),
+            for (final template in templates)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: InkWell(
+                  onTap: () => _select(template, l10n),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _selected == template ? shell.accent : shell.border, width: _selected == template ? 1.6 : 1),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(templateTitle(l10n, template), style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700)),
-                                    if (log[MessageLogController.keyFor(widget.account.id, template)] != null)
-                                      Text(
-                                        l10n.messageLastSent(ReportBuilders.formatDate(log[MessageLogController.keyFor(widget.account.id, template)]!)),
-                                        style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 11),
-                                      ),
-                                  ],
+                              Text(templateTitle(l10n, template), style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700)),
+                              if (log[MessageLogController.keyFor(widget.account.id, template)] != null)
+                                Text(
+                                  l10n.messageLastSent(ReportBuilders.formatDate(log[MessageLogController.keyFor(widget.account.id, template)]!)),
+                                  style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 11),
                                 ),
-                              ),
-                              if (_selected == template) Icon(Icons.check_circle, color: shell.accent),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                  if (_selected != null) ...[
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _controller,
-                      minLines: 4,
-                      maxLines: 9,
-                      decoration: InputDecoration(helperText: l10n.messageEditHint, border: const OutlineInputBorder()),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => unawaited(_send(l10n, whatsapp: true)),
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.credit, foregroundColor: Colors.white),
-                            icon: const Icon(Icons.chat_outlined),
-                            label: Text(l10n.messageSendWhatsapp),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => unawaited(_send(l10n, whatsapp: false)),
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.backgroundTop, foregroundColor: Colors.white),
-                            icon: const Icon(Icons.sms_outlined),
-                            label: Text(l10n.messageSendSms),
-                          ),
-                        ),
+                        if (_selected == template) Icon(Icons.check_circle, color: shell.accent),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    TextButton.icon(
-                      onPressed: () => unawaited(_copy(l10n)),
-                      icon: const Icon(Icons.copy_rounded),
-                      label: Text(l10n.messageCopy),
+                  ),
+                ),
+              ),
+            if (_selected != null) ...[
+              const SizedBox(height: 8),
+              TextField(
+                controller: _controller,
+                minLines: 4,
+                maxLines: 9,
+                decoration: InputDecoration(helperText: l10n.messageEditHint, border: const OutlineInputBorder()),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => unawaited(_send(l10n, whatsapp: true)),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.credit, foregroundColor: Colors.white),
+                      icon: const Icon(Icons.chat_outlined),
+                      label: Text(l10n.messageSendWhatsapp),
                     ),
-                  ],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => unawaited(_send(l10n, whatsapp: false)),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.backgroundTop, foregroundColor: Colors.white),
+                      icon: const Icon(Icons.sms_outlined),
+                      label: Text(l10n.messageSendSms),
+                    ),
+                  ),
                 ],
-              ],
-            ),
-          ),
-        ),
+              ),
+              const SizedBox(height: 6),
+              TextButton.icon(
+                onPressed: () => unawaited(_copy(l10n)),
+                icon: const Icon(Icons.copy_rounded),
+                label: Text(l10n.messageCopy),
+              ),
+            ],
+          ],
+        ],
       ),
     );
   }

@@ -12,14 +12,13 @@ import '../../../data/models/account.dart';
 import '../../../data/models/account_reminder.dart';
 import '../../../logic/reminders/reminder_schedule.dart';
 import '../../../logic/reminders/reminders_provider.dart';
+import '../shared/app_popup.dart';
 import '../shared/app_snackbar.dart';
 
 /// The "التنبيه" button of Account Details: payment-date reminders for ONE account, delivered as
 /// phone notifications (also while the app is closed). Tapping the notification opens the account.
-Future<void> showAccountRemindersSheet(BuildContext context, {required Account account}) => showModalBottomSheet<void>(
+Future<void> showAccountRemindersSheet(BuildContext context, {required Account account}) => showAppPopup<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => _RemindersSheet(account: account),
     );
 
@@ -109,11 +108,12 @@ class _RemindersSheetState extends ConsumerState<_RemindersSheet> {
 
   Future<void> _confirmDelete(AppLocalizations l10n, AccountReminder reminder) async {
     final shell = context.shellColors;
-    final ok = await showDialog<bool>(
+    final ok = await showAppPopup<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: shell.surface,
-        title: Text(l10n.reminderDeleteConfirm, style: AppTextStyles.title(dialogContext).copyWith(color: shell.textPrimary)),
+      builder: (dialogContext) => AppPopup(
+        title: l10n.reminderDeleteConfirm,
+        icon: Icons.delete_outline_rounded,
+        child: const SizedBox.shrink(),
         actions: [
           TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel, style: TextStyle(color: shell.textSecondary))),
           TextButton(
@@ -162,142 +162,128 @@ class _RemindersSheetState extends ConsumerState<_RemindersSheet> {
           ),
         );
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SafeArea(
-        child: Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(16)),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  '${l10n.reminderSheetTitle} — ${widget.account.name}',
+    return AppPopup(
+      title: '${l10n.reminderSheetTitle} — ${widget.account.name}',
+      icon: Icons.notifications_active_outlined,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!_adding) ...[
+            if (reminders.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                child: Text(
+                  l10n.reminderEmpty,
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.title(context).copyWith(color: shell.textPrimary),
+                  style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
                 ),
-                const SizedBox(height: 12),
-                if (!_adding) ...[
-                  if (reminders.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      child: Text(
-                        l10n.reminderEmpty,
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
-                      ),
-                    ),
-                  for (final r in reminders)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: shell.border)),
-                      child: Row(
+              ),
+            for (final r in reminders)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: shell.border)),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  nextOf(r) != null ? l10n.reminderNext(_formatWhen(nextOf(r)!)) : (r.enabled ? l10n.reminderFinished : _formatWhen(r.firstDue)),
-                                  style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700),
-                                ),
-                                Text(
-                                  [_repeatLabel(l10n, r.repeat), if ((r.note ?? '').isNotEmpty) r.note!].join(' • '),
-                                  style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 12),
-                                ),
-                              ],
-                            ),
+                          Text(
+                            nextOf(r) != null ? l10n.reminderNext(_formatWhen(nextOf(r)!)) : (r.enabled ? l10n.reminderFinished : _formatWhen(r.firstDue)),
+                            style: AppTextStyles.body(context).copyWith(color: shell.textPrimary, fontWeight: FontWeight.w700),
                           ),
-                          Switch(
-                            value: r.enabled,
-                            onChanged: (v) => unawaited(ref.read(remindersProvider.notifier).setEnabled(r.id, v, l10n)),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.debit),
-                            onPressed: () => unawaited(_confirmDelete(l10n, r)),
+                          Text(
+                            [_repeatLabel(l10n, r.repeat), if ((r.note ?? '').isNotEmpty) r.note!].join(' • '),
+                            style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary, fontSize: 12),
                           ),
                         ],
                       ),
                     ),
-                  const SizedBox(height: 4),
-                  ElevatedButton.icon(
-                    onPressed: () => setState(() => _adding = true),
+                    Switch(
+                      value: r.enabled,
+                      onChanged: (v) => unawaited(ref.read(remindersProvider.notifier).setEnabled(r.id, v, l10n)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.debit),
+                      onPressed: () => unawaited(_confirmDelete(l10n, r)),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 4),
+            ElevatedButton.icon(
+              onPressed: () => setState(() => _adding = true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.backgroundTop,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(48),
+              ),
+              icon: const Icon(Icons.add_alarm_rounded),
+              label: Text(l10n.reminderAdd),
+            ),
+          ] else ...[
+            Row(
+              children: [
+                pickerBox(Icons.calendar_today_outlined, '${_date.year}-${_two(_date.month)}-${_two(_date.day)}', () => unawaited(_pickDate())),
+                const SizedBox(width: 8),
+                pickerBox(Icons.access_time_rounded, '${_two(_time.hour)}:${_two(_time.minute)}', () => unawaited(_pickTime())),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(l10n.reminderRepeatLabel, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final r in ReminderRepeat.values)
+                  ChoiceChip(
+                    label: Text(_repeatLabel(l10n, r)),
+                    selected: _repeat == r,
+                    selectedColor: shell.accent,
+                    onSelected: (_) => setState(() => _repeat = r),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _note,
+              maxLength: 120,
+              decoration: InputDecoration(hintText: l10n.reminderNoteHint, border: const OutlineInputBorder(), isDense: true),
+            ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+              ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _saving ? null : () => setState(() => _adding = false),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                    child: Text(l10n.cancel),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _saving ? null : () => unawaited(_save(l10n)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.backgroundTop,
                       foregroundColor: Colors.white,
                       minimumSize: const Size.fromHeight(48),
                     ),
-                    icon: const Icon(Icons.add_alarm_rounded),
-                    label: Text(l10n.reminderAdd),
+                    child: _saving
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
+                        : Text(l10n.reminderSave),
                   ),
-                ] else ...[
-                  Row(
-                    children: [
-                      pickerBox(Icons.calendar_today_outlined, '${_date.year}-${_two(_date.month)}-${_two(_date.day)}', () => unawaited(_pickDate())),
-                      const SizedBox(width: 8),
-                      pickerBox(Icons.access_time_rounded, '${_two(_time.hour)}:${_two(_time.minute)}', () => unawaited(_pickTime())),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(l10n.reminderRepeatLabel, style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary)),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      for (final r in ReminderRepeat.values)
-                        ChoiceChip(
-                          label: Text(_repeatLabel(l10n, r)),
-                          selected: _repeat == r,
-                          selectedColor: shell.accent,
-                          onSelected: (_) => setState(() => _repeat = r),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _note,
-                    maxLength: 120,
-                    decoration: InputDecoration(hintText: l10n.reminderNoteHint, border: const OutlineInputBorder(), isDense: true),
-                  ),
-                  if (_error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _saving ? null : () => setState(() => _adding = false),
-                          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                          child: Text(l10n.cancel),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _saving ? null : () => unawaited(_save(l10n)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.backgroundTop,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size.fromHeight(48),
-                          ),
-                          child: _saving
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
-                              : Text(l10n.reminderSave),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ],
             ),
-          ),
-        ),
+          ],
+        ],
       ),
     );
   }

@@ -4,6 +4,7 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/currency_type.dart';
+import 'app_popup.dart';
 
 /// The ONE currency picker for the whole app. Previously tapping the currency FIELD opened
 /// Flutter's own default [DropdownButton] menu, while tapping the pencil icon next to it opened
@@ -27,64 +28,39 @@ Future<String?> showCurrencyPickerSheet(
   final l10n = AppLocalizations.of(context)!;
   final shell = context.shellColors;
 
-  return showModalBottomSheet<String>(
+  return showAppPopup<String>(
     context: context,
-    backgroundColor: Colors.transparent,
-    builder: (_) => SafeArea(
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 300),
-          child: Container(
-            margin: const EdgeInsets.all(16),
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(14)),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  color: shell.headerBottom,
-                  child: Text(
-                    l10n.currencyLabel,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.button(context).copyWith(color: shell.accent, fontWeight: FontWeight.w800, fontSize: 14),
-                  ),
+    builder: (_) => AppPopup(
+      title: l10n.currencyLabel,
+      icon: Icons.currency_exchange_rounded,
+      maxWidth: 300,
+      scrollable: false,
+      contentPadding: const EdgeInsets.fromLTRB(0, 6, 0, 8),
+      child: ListView(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        children: [
+          for (final currency in options)
+            ListTile(
+              dense: true,
+              visualDensity: const VisualDensity(vertical: -3),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+              title: Text(
+                counts == null ? currency.name : '${currency.name}  (${counts[currency.id] ?? 0})',
+                textAlign: TextAlign.end,
+                style: AppTextStyles.bodySecondary(context).copyWith(
+                  color: shell.textPrimary,
+                  fontWeight: currency.id == selectedCode ? FontWeight.w800 : FontWeight.w400,
                 ),
-                Flexible(
-                  child: ListView(
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    children: [
-                      for (final currency in options)
-                        ListTile(
-                          dense: true,
-                          visualDensity: const VisualDensity(vertical: -3),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-                          title: Text(
-                            counts == null ? currency.name : '${currency.name}  (${counts[currency.id] ?? 0})',
-                            textAlign: TextAlign.end,
-                            style: AppTextStyles.bodySecondary(context).copyWith(
-                              color: shell.textPrimary,
-                              fontWeight: currency.id == selectedCode ? FontWeight.w800 : FontWeight.w400,
-                            ),
-                          ),
-                          trailing: Icon(
-                            currency.id == selectedCode ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
-                            size: 18,
-                            color: currency.id == selectedCode ? shell.accent : shell.textSecondary,
-                          ),
-                          onTap: () => Navigator.of(context).pop(currency.id),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 6),
-              ],
+              ),
+              trailing: Icon(
+                currency.id == selectedCode ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
+                size: 18,
+                color: currency.id == selectedCode ? shell.accent : shell.textSecondary,
+              ),
+              onTap: () => Navigator.of(context).pop(currency.id),
             ),
-          ),
-        ),
+        ],
       ),
     ),
   );

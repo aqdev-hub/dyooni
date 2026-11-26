@@ -10,6 +10,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/app_sharing.dart';
 import '../../../core/utils/contact_launcher.dart';
 import '../../../core/utils/web_launcher.dart';
+import '../shared/app_popup.dart';
 import '../shared/app_snackbar.dart';
 
 /// "قيّم التطبيق". The app is not on the store yet, so the sheet works without it:
@@ -17,10 +18,8 @@ import '../shared/app_snackbar.dart';
 ///    share the app;
 ///  * 1–3 stars → ask what to improve and send it to support by WhatsApp or e-mail, so a
 ///    disappointed person reaches us instead of leaving a public review.
-Future<void> showRateAppSheet(BuildContext context) => showModalBottomSheet<void>(
+Future<void> showRateAppSheet(BuildContext context) => showAppPopup<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => const _RateAppSheet(),
     );
 
@@ -78,100 +77,87 @@ class _RateAppSheetState extends State<_RateAppSheet> {
     final shell = context.shellColors;
     final high = _stars >= 4;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SafeArea(
-        child: Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(16)),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    return AppPopup(
+      title: l10n.rateSheetTitle,
+      icon: Icons.star_rounded,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 6),
+          Text(
+            l10n.rateSheetSubtitle,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
+          ),
+          const SizedBox(height: 14),
+          // Stars are always laid out left→right as 1…5 whatever the language, so "tap the
+          // 4th star" means the same in Arabic and English.
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  l10n.rateSheetTitle,
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.title(context).copyWith(color: shell.textPrimary),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.rateSheetSubtitle,
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
-                ),
-                const SizedBox(height: 14),
-                // Stars are always laid out left→right as 1…5 whatever the language, so "tap the
-                // 4th star" means the same in Arabic and English.
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      for (var i = 1; i <= 5; i++)
-                        IconButton(
-                          iconSize: 38,
-                          tooltip: '$i',
-                          onPressed: () => setState(() => _stars = i),
-                          icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_border_rounded, color: shell.accent),
-                        ),
-                    ],
+                for (var i = 1; i <= 5; i++)
+                  IconButton(
+                    iconSize: 38,
+                    tooltip: '$i',
+                    onPressed: () => setState(() => _stars = i),
+                    icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_border_rounded, color: shell.accent),
                   ),
-                ),
-                if (_stars > 0) const SizedBox(height: 8),
-                if (_stars > 0 && high) ...[
-                  Text(
-                    l10n.rateHighBody,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
-                  ),
-                  const SizedBox(height: 14),
-                  ElevatedButton.icon(
-                    onPressed: () => unawaited(_openRatingPage(l10n)),
-                    style: ElevatedButton.styleFrom(backgroundColor: shell.accent, foregroundColor: shell.headerBottom),
-                    icon: const Icon(Icons.star_rounded),
-                    label: Text(AppLinks.playStoreUrl != null ? l10n.rateStoreButton : l10n.rateOnPageButton),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: () => unawaited(_share(l10n)),
-                    icon: const Icon(Icons.share_outlined),
-                    label: Text(l10n.drawerShareApp),
-                  ),
-                ],
-                if (_stars > 0 && !high) ...[
-                  Text(
-                    l10n.rateLowBody,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _note,
-                    minLines: 3,
-                    maxLines: 5,
-                    maxLength: 500,
-                    decoration: InputDecoration(hintText: l10n.rateFeedbackHint, border: const OutlineInputBorder()),
-                  ),
-                  const SizedBox(height: 6),
-                  ElevatedButton.icon(
-                    onPressed: () => unawaited(_sendWhatsapp(l10n)),
-                    style: ElevatedButton.styleFrom(backgroundColor: shell.accent, foregroundColor: shell.headerBottom),
-                    icon: const Icon(Icons.chat_outlined),
-                    label: Text(l10n.rateSendWhatsapp),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: () => unawaited(_sendEmail(l10n)),
-                    icon: const Icon(Icons.mail_outline),
-                    label: Text(l10n.rateSendEmail),
-                  ),
-                ],
               ],
             ),
           ),
-        ),
+          if (_stars > 0) const SizedBox(height: 8),
+          if (_stars > 0 && high) ...[
+            Text(
+              l10n.rateHighBody,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
+            ),
+            const SizedBox(height: 14),
+            ElevatedButton.icon(
+              onPressed: () => unawaited(_openRatingPage(l10n)),
+              style: ElevatedButton.styleFrom(backgroundColor: shell.accent, foregroundColor: shell.headerBottom),
+              icon: const Icon(Icons.star_rounded),
+              label: Text(AppLinks.playStoreUrl != null ? l10n.rateStoreButton : l10n.rateOnPageButton),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => unawaited(_share(l10n)),
+              icon: const Icon(Icons.share_outlined),
+              label: Text(l10n.drawerShareApp),
+            ),
+          ],
+          if (_stars > 0 && !high) ...[
+            Text(
+              l10n.rateLowBody,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _note,
+              minLines: 3,
+              maxLines: 5,
+              maxLength: 500,
+              decoration: InputDecoration(hintText: l10n.rateFeedbackHint, border: const OutlineInputBorder()),
+            ),
+            const SizedBox(height: 6),
+            ElevatedButton.icon(
+              onPressed: () => unawaited(_sendWhatsapp(l10n)),
+              style: ElevatedButton.styleFrom(backgroundColor: shell.accent, foregroundColor: shell.headerBottom),
+              icon: const Icon(Icons.chat_outlined),
+              label: Text(l10n.rateSendWhatsapp),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => unawaited(_sendEmail(l10n)),
+              icon: const Icon(Icons.mail_outline),
+              label: Text(l10n.rateSendEmail),
+            ),
+          ],
+        ],
       ),
     );
   }

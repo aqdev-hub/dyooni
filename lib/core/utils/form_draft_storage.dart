@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// a lightweight safety net against Android killing the app's process while a memory-heavy
 /// native Activity (the camera) is in the foreground.
 ///
-/// WHY THIS EXISTS: AddAccountScreen/AddTransactionScreen are opened via `showDialog(...)`, not
+/// WHY THIS EXISTS: AddAccountScreen/AddTransactionScreen are opened via `showAppPopup(...)`, not
 /// a GoRouter route — so when Android reclaims this app's process to free memory while the
 /// native camera app is in the foreground (see AndroidManifest.xml's "Camera-crash mitigation
 /// notes"), the Flutter engine restarts fresh at SplashGate → Home, and that dialog is gone for

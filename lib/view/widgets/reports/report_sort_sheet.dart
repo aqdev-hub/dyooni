@@ -4,6 +4,7 @@ import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/report_options.dart';
+import '../shared/app_popup.dart';
 
 /// Pops with the chosen [ReportSortOption], or `null` if dismissed without choosing.
 class ReportSortSheet extends StatelessWidget {
@@ -22,37 +23,25 @@ class ReportSortSheet extends StatelessWidget {
       (ReportSortOption.nameDesc, l10n.reportSortNameDesc),
     ];
 
-    return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(16)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              color: shell.accent,
-              child: Text(
-                l10n.reportSortSheetTitle,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.button(context).copyWith(color: shell.headerBottom, fontWeight: FontWeight.w800),
+    return AppPopup(
+      title: l10n.reportSortSheetTitle,
+      icon: Icons.sort_rounded,
+      scrollable: false,
+      contentPadding: const EdgeInsets.only(top: 6, bottom: 8),
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          for (final (value, label) in options)
+            ListTile(
+              title: Text(
+                label,
+                textAlign: TextAlign.end,
+                style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
               ),
+              trailing: Icon(Icons.radio_button_off_rounded, color: shell.textSecondary),
+              onTap: () => Navigator.of(context).pop(value),
             ),
-            for (final (value, label) in options)
-              ListTile(
-                title: Text(
-                  label,
-                  textAlign: TextAlign.end,
-                  style: AppTextStyles.body(context).copyWith(color: shell.textPrimary),
-                ),
-                trailing: Icon(Icons.radio_button_off_rounded, color: shell.textSecondary),
-                onTap: () => Navigator.of(context).pop(value),
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
+        ],
       ),
     );
   }

@@ -14,7 +14,9 @@ import '../../../logic/voice/voice_provider.dart';
 import '../../../logic/settings/general_settings_provider.dart';
 import '../../../data/models/general_settings.dart';
 import '../../widgets/home/app_drawer.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
+import '../../widgets/shared/modal_header_bar.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/main_bottom_nav.dart';
 import '../../widgets/voice/voice_command_sheet.dart';
@@ -49,13 +51,12 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
   Future<void> _showInfo(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
-    await showDialog<void>(
+    await showAppPopup<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: shell.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Text(l10n.voiceInfoTitle, style: AppTextStyles.title(dialogContext).copyWith(color: shell.textPrimary)),
-        content: Text(l10n.voiceInfoBody, style: AppTextStyles.body(dialogContext).copyWith(color: shell.textSecondary)),
+      builder: (dialogContext) => AppPopup(
+        title: l10n.voiceInfoTitle,
+        icon: Icons.info_outline_rounded,
+        child: Text(l10n.voiceInfoBody, style: AppTextStyles.body(dialogContext).copyWith(color: shell.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
@@ -113,10 +114,9 @@ class _VoiceCommandScreenState extends ConsumerState<VoiceCommandScreen> {
                     ),
                   ),
                   if (isConfirming)
-                    // Reference stage 5: a left-pointing arrow in the info slot. `textDirection:
-                    // ltr` pins the glyph to "←" in both languages; it cancels the pending entry.
+                    // Reference stage 5: the shared back arrow in the info slot; it cancels the pending entry.
                     IconButton(
-                      icon: Icon(Icons.arrow_back_rounded, color: palette.headerGold, size: 30, textDirection: TextDirection.ltr),
+                      icon: const AppBackArrow(size: 30),
                       onPressed: () => unawaited(ref.read(voiceProvider.notifier).cancel()),
                     )
                   else

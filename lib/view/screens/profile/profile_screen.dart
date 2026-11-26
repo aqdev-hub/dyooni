@@ -13,6 +13,7 @@ import '../../../logic/accounts/accounts_provider.dart';
 import '../../../logic/auth/auth_provider.dart';
 import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
@@ -105,15 +106,14 @@ String? _formatDate(DateTime? d) {
 }
 
 Future<void> _confirmLogout(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
-  final confirmed = await showDialog<bool>(
+  final confirmed = await showAppPopup<bool>(
     context: context,
     builder: (dialogContext) {
       final shell = dialogContext.shellColors;
-      return AlertDialog(
-        backgroundColor: shell.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Text(l10n.logoutConfirmTitle, style: AppTextStyles.title(dialogContext).copyWith(color: shell.textPrimary)),
-        content: Text(l10n.logoutConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: shell.textSecondary)),
+      return AppPopup(
+        title: l10n.logoutConfirmTitle,
+        icon: Icons.logout_rounded,
+        child: Text(l10n.logoutConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: shell.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -173,7 +173,7 @@ class _IdentityCard extends ConsumerWidget {
 
   Future<void> _editName(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
-    final newName = await showDialog<String>(
+    final newName = await showAppPopup<String>(
       context: context,
       builder: (_) => _EditNameDialog(initial: profile?.displayName ?? ''),
     );
@@ -316,11 +316,10 @@ class _EditNameDialogState extends State<_EditNameDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final shell = context.shellColors;
-    return AlertDialog(
-      backgroundColor: shell.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: Text(l10n.profileEditName, style: AppTextStyles.title(context).copyWith(color: shell.textPrimary)),
-      content: Form(
+    return AppPopup(
+      title: l10n.profileEditName,
+      icon: Icons.edit_outlined,
+      child: Form(
         key: _formKey,
         child: TextFormField(
           controller: _controller,

@@ -7,6 +7,7 @@ import '../../../core/theme/app_shell_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/category_type.dart';
 import '../../../logic/categories/categories_provider.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
@@ -20,7 +21,7 @@ class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
 
   Future<void> _openEditor(BuildContext context, {CategoryType? existing}) {
-    return showDialog<void>(context: context, builder: (_) => _CategoryEditorDialog(existing: existing));
+    return showAppPopup<void>(context: context, builder: (_) => _CategoryEditorDialog(existing: existing));
   }
 
   Future<void> _toggle(BuildContext context, WidgetRef ref, CategoryType category, bool visible) async {
@@ -199,15 +200,14 @@ class _CategoryEditorDialogState extends ConsumerState<_CategoryEditorDialog> {
     final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppPopup<bool>(
       context: context,
       builder: (dialogContext) {
         final dShell = dialogContext.shellColors;
-        return AlertDialog(
-          backgroundColor: dShell.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: Text(l10n.delete, style: AppTextStyles.title(dialogContext).copyWith(color: dShell.textPrimary)),
-          content: Text(l10n.categoryDeleteConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
+        return AppPopup(
+          title: l10n.delete,
+          icon: Icons.delete_outline_rounded,
+          child: Text(l10n.categoryDeleteConfirmBody, style: AppTextStyles.body(dialogContext).copyWith(color: dShell.textSecondary)),
           actions: [
             TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel, style: TextStyle(color: dShell.textSecondary))),
             TextButton(
@@ -245,14 +245,10 @@ class _CategoryEditorDialogState extends ConsumerState<_CategoryEditorDialog> {
     final shell = context.shellColors;
     final existing = widget.existing;
 
-    return AlertDialog(
-      backgroundColor: shell.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: Text(
-        existing == null ? l10n.categoryAddTitle : l10n.categoryEditTitle,
-        style: AppTextStyles.title(context).copyWith(color: shell.textPrimary),
-      ),
-      content: TextField(
+    return AppPopup(
+      title: existing == null ? l10n.categoryAddTitle : l10n.categoryEditTitle,
+      icon: Icons.category_outlined,
+      child: TextField(
         controller: _controller,
         autofocus: true,
         maxLength: 24,

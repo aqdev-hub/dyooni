@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shell_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/contact_launcher.dart';
 import '../../../core/utils/phone_number.dart';
 import '../../../data/models/account.dart';
@@ -18,6 +17,7 @@ import '../../../logic/currencies/currencies_provider.dart';
 import '../../../logic/messages/auto_message_builder.dart';
 import '../../../logic/messages/auto_message_provider.dart';
 import '../../../logic/transactions/transactions_provider.dart';
+import '../shared/app_popup.dart';
 import '../shared/app_snackbar.dart';
 
 /// Called right after a NEW entry was saved. When the automatic message applies to that
@@ -68,10 +68,8 @@ Future<void> offerAutoMessage(BuildContext context, WidgetRef ref, Transaction e
       return;
     }
     if (!context.mounted) return;
-    await showModalBottomSheet<void>(
+    await showAppPopup<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => _PromptSheet(account: account, phone: phone, initialText: text, channel: effective.channel),
     );
   } catch (_) {
@@ -136,45 +134,31 @@ class _PromptSheetState extends State<_PromptSheet> {
       label: Text(ask ? l10n.autoPromptSendSms : l10n.autoPromptSend),
     );
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SafeArea(
-        child: Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(16)),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.autoPromptTitle(widget.account.name),
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.title(context).copyWith(color: shell.textPrimary),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _controller,
-                  minLines: 5,
-                  maxLines: 12,
-                  decoration: const InputDecoration(border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                if (ask)
-                  Row(children: [Expanded(child: whatsappButton), const SizedBox(width: 8), Expanded(child: smsButton)])
-                else if (widget.channel == AutoMessageChannel.whatsapp)
-                  whatsappButton
-                else
-                  smsButton,
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(l10n.autoPromptSkip, style: TextStyle(color: shell.textSecondary)),
-                ),
-              ],
-            ),
+    return AppPopup(
+      title: l10n.autoPromptTitle(widget.account.name),
+      icon: Icons.send_rounded,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _controller,
+            minLines: 5,
+            maxLines: 12,
+            decoration: const InputDecoration(border: OutlineInputBorder()),
           ),
-        ),
+          const SizedBox(height: 12),
+          if (ask)
+            Row(children: [Expanded(child: whatsappButton), const SizedBox(width: 8), Expanded(child: smsButton)])
+          else if (widget.channel == AutoMessageChannel.whatsapp)
+            whatsappButton
+          else
+            smsButton,
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.autoPromptSkip, style: TextStyle(color: shell.textSecondary)),
+          ),
+        ],
       ),
     );
   }

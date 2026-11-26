@@ -21,6 +21,7 @@ import '../../../logic/transactions/transactions_provider.dart';
 import '../../../logic/transactions/transfer_logic.dart';
 import '../../widgets/shared/amount_calculator_dialog.dart';
 import '../../widgets/shared/amount_in_words.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 import '../../widgets/shared/currency_picker_sheet.dart';
@@ -67,10 +68,8 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
       AppSnackBar.showError(context, l10n.transferNoOtherAccounts);
       return;
     }
-    final picked = await showModalBottomSheet<Account>(
+    final picked = await showAppPopup<Account>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => _AccountPickerSheet(accounts: accounts),
     );
     if (picked != null && mounted) {
@@ -361,43 +360,39 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
     final shell = context.shellColors;
     final q = _query.trim().toLowerCase();
     final shown = q.isEmpty ? widget.accounts : widget.accounts.where((a) => a.name.toLowerCase().contains(q)).toList();
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SafeArea(
-        child: Container(
-          margin: const EdgeInsets.all(12),
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
-          decoration: BoxDecoration(color: shell.surface, borderRadius: BorderRadius.circular(16)),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: TextField(
-                  autofocus: false,
-                  onChanged: (v) => setState(() => _query = v),
-                  decoration: InputDecoration(
-                    hintText: l10n.transferSearchHint,
-                    prefixIcon: const Icon(Icons.search),
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
+    return AppPopup(
+      title: l10n.transferChooseAccount,
+      icon: Icons.swap_horiz_rounded,
+      scrollable: false,
+      contentPadding: EdgeInsets.zero,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              autofocus: false,
+              onChanged: (v) => setState(() => _query = v),
+              decoration: InputDecoration(
+                hintText: l10n.transferSearchHint,
+                prefixIcon: const Icon(Icons.search),
+                border: const OutlineInputBorder(),
+                isDense: true,
               ),
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: shown.length,
-                  itemBuilder: (_, i) => ListTile(
-                    leading: Icon(Icons.person_outline_rounded, color: shell.textSecondary),
-                    title: Text(shown[i].name, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary)),
-                    onTap: () => Navigator.of(context).pop(shown[i]),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: shown.length,
+              itemBuilder: (_, i) => ListTile(
+                leading: Icon(Icons.person_outline_rounded, color: shell.textSecondary),
+                title: Text(shown[i].name, style: AppTextStyles.body(context).copyWith(color: shell.textPrimary)),
+                onTap: () => Navigator.of(context).pop(shown[i]),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

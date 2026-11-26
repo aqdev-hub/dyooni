@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/drive_backup_metadata.dart';
 import '../../../data/repositories/backup/backup_repository.dart' show RestoreMode;
 import '../../../logic/settings/drive_backup_controller.dart';
+import '../../widgets/shared/app_popup.dart';
 import '../../widgets/shared/app_screen_chrome.dart';
 import '../../widgets/shared/app_snackbar.dart';
 
@@ -41,7 +42,7 @@ class _DriveBackupListScreenState extends ConsumerState<DriveBackupListScreen> {
 
   Future<void> _restore(DriveBackupMetadata backup) async {
     final l10n = AppLocalizations.of(context)!;
-    final mode = await showDialog<RestoreMode>(
+    final mode = await showAppPopup<RestoreMode>(
       context: context,
       builder: (_) => const _DriveRestoreConfirmDialog(),
     );
@@ -158,11 +159,10 @@ class _DriveRestoreConfirmDialogState extends State<_DriveRestoreConfirmDialog> 
     final shell = context.shellColors;
     final isReplace = _mode == RestoreMode.replace;
 
-    return AlertDialog(
-      backgroundColor: shell.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: Text(l10n.localBackupRestoreConfirmTitle, style: AppTextStyles.title(context).copyWith(color: shell.textPrimary)),
-      content: SingleChildScrollView(
+    return AppPopup(
+      title: l10n.localBackupRestoreConfirmTitle,
+      icon: Icons.restore_rounded,
+      child: SingleChildScrollView(
         child: RadioGroup<RestoreMode>(
           groupValue: _mode,
           onChanged: (v) {
