@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/generated/app_localizations.dart';
@@ -26,7 +28,7 @@ class AppLockScreen extends ConsumerStatefulWidget {
   ConsumerState<AppLockScreen> createState() => _AppLockScreenState();
 }
 
-class _AppLockScreenState extends ConsumerState<AppLockScreen> {
+class _AppLockScreenState extends ConsumerState<AppLockScreen> with SingleTickerProviderStateMixin {
   final _controller = TextEditingController();
   bool _biometricTried = false;
   bool _biometricFailed = false;
@@ -41,6 +43,15 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   bool _resetting = false;
   bool _resetBusy = false;
   final _accountPasswordController = TextEditingController();
+
+  // A short horizontal shake + a red line tell the person a full-length entry was wrong.
+  late final AnimationController _shake = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
+  bool _showWrong = false;
+
+  bool get _isBlocked {
+    final b = _blockedUntil;
+    return b != null && DateTime.now().isBefore(b);
+  }
 
   @override
   void initState() {
@@ -62,33 +73,68 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
     }
   }
 
-  void _onPasswordChanged(String value) {
-    // فتح فوري بمجرد صحة كلمة المرور — بلا زر تأكيد، تمامًا كما طُلب.
-    final ok = ref.read(generalSettingsProvider.notifier).verifyPassword(value);
-    if (ok) widget.onUnlocked();
-  }
+  void _clearField() => _controller.value = TextEditingValue.empty;
 
-  void _attemptLogin() {
-    final l10n = AppLocalizations.of(context)!;
-    final blocked = _blockedUntil;
-    if (blocked != null && DateTime.now().isBefore(blocked)) {
-      AppSnackBar.showError(context, l10n.appLockTooManyAttempts);
-      return;
-    }
-    final ok = ref.read(generalSettingsProvider.notifier).verifyPassword(_controller.text);
-    if (ok) {
-      widget.onUnlocked();
-      return;
-    }
+  /// Counts a miss; five misses pause entry for 30 s. Shared by typing and the button so neither
+  /// path can be used to guess without limit.
+  void _registerMiss(AppLocalizations l10n) {
+    HapticFeedback.heavyImpact();
     _failedAttempts++;
     if (_failedAttempts >= 5) {
       _failedAttempts = 0;
       _blockedUntil = DateTime.now().add(const Duration(seconds: 30));
       AppSnackBar.showError(context, l10n.appLockTooManyAttempts);
-    } else {
-      AppSnackBar.showError(context, l10n.appLockWrongPasswordMessage);
     }
-    _controller.clear();
+    _clearField();
+    unawaited(_shake.forward(from: 0));
+    setState(() => _showWrong = true);
+  }
+
+  void _unlock(int length) {
+    // Old settings do not carry the length yet: learn it now so the next unlock is automatic.
+    unawaited(ref.read(generalSettingsProvider.notifier).rememberPasswordLength(length));
+    widget.onUnlocked();
+  }
+
+  /// Runs on every keystroke. The length is known (stored when the password was set), so:
+  ///  * the moment the typed length equals it the entry is checked — right → unlocked at once, no
+  ///    button; wrong → shake + message + field cleared, and a longer entry is impossible
+  ///    (the field is capped at that length);
+  ///  * old settings without a stored length are checked silently on every keystroke instead.
+  void _onPasswordChanged(String value) {
+    if (_showWrong && value.isNotEmpty) setState(() => _showWrong = false);
+    if (value.isEmpty) return;
+    if (_isBlocked) {
+      _clearField();
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final notifier = ref.read(generalSettingsProvider.notifier);
+    final length = ref.read(generalSettingsProvider).value?.passwordLength;
+    if (length == null) {
+      if (notifier.verifyPassword(value)) _unlock(value.length);
+      return;
+    }
+    if (value.length < length) return;
+    if (notifier.verifyPassword(value)) {
+      _unlock(length);
+    } else {
+      _registerMiss(l10n);
+    }
+  }
+
+  void _attemptLogin() {
+    final l10n = AppLocalizations.of(context)!;
+    if (_isBlocked) {
+      AppSnackBar.showError(context, l10n.appLockTooManyAttempts);
+      return;
+    }
+    final text = _controller.text;
+    if (ref.read(generalSettingsProvider.notifier).verifyPassword(text)) {
+      _unlock(text.length);
+      return;
+    }
+    _registerMiss(l10n);
   }
 
   /// Proves the person owns the signed-in Dyooni account (see AuthRepository.reauthenticate) and
@@ -180,6 +226,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _shake.dispose();
     _accountPasswordController.dispose();
     super.dispose();
   }
@@ -191,6 +238,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
     final settings = ref.watch(generalSettingsProvider).value;
     final passwordEnabled = settings?.passwordEnabled ?? false;
     final biometricEnabled = settings?.biometricEnabled ?? false;
+    final passwordLength = settings?.passwordLength;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -221,22 +269,54 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                       style: AppTextStyles.bodySecondary(context).copyWith(color: shell.textSecondary),
                     ),
                     const SizedBox(height: 14),
-                    SizedBox(
-                      width: 220,
-                      child: TextField(
-                        controller: _controller,
-                        obscureText: true,
-                        autofocus: !biometricEnabled,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.title(context).copyWith(color: shell.textPrimary, letterSpacing: 8),
-                        decoration: InputDecoration(
-                          border: UnderlineInputBorder(borderSide: BorderSide(color: shell.accent)),
-                          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: shell.accent, width: 2)),
-                        ),
-                        onChanged: _onPasswordChanged,
-                        onSubmitted: (_) => _attemptLogin(),
+                    AnimatedBuilder(
+                      animation: _shake,
+                      builder: (_, child) => Transform.translate(
+                        offset: Offset(math.sin(_shake.value * math.pi * 6) * 10 * (1 - _shake.value), 0),
+                        child: child,
                       ),
+                      child: SizedBox(
+                        width: 220,
+                        child: TextField(
+                          controller: _controller,
+                          obscureText: true,
+                          autofocus: !biometricEnabled,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          textAlign: TextAlign.center,
+                          // Never let the keyboard suggest / autofill an earlier (wrong) entry.
+                          enableSuggestions: false,
+                          autocorrect: false,
+                          enableIMEPersonalizedLearning: false,
+                          autofillHints: null,
+                          inputFormatters: [
+                            if (passwordLength != null) LengthLimitingTextInputFormatter(passwordLength),
+                          ],
+                          style: AppTextStyles.title(context).copyWith(color: shell.textPrimary, letterSpacing: 8),
+                          decoration: InputDecoration(
+                            counterText: '',
+                            border: UnderlineInputBorder(
+                                borderSide: BorderSide(color: _showWrong ? AppColors.error : shell.accent)),
+                            focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: _showWrong ? AppColors.error : shell.accent, width: 2)),
+                          ),
+                          onChanged: _onPasswordChanged,
+                          onSubmitted: (_) => _attemptLogin(),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 22,
+                      child: _showWrong
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                l10n.appLockWrongPasswordMessage,
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.bodySecondary(context).copyWith(color: AppColors.error, fontSize: 12),
+                              ),
+                            )
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     SizedBox(

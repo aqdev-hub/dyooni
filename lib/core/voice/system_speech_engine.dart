@@ -257,7 +257,7 @@ class SystemSpeechEngine implements SpeechEngine {
         onDevice: _preferOffline,
         partialResults: true,
         listenFor: const Duration(minutes: 2),
-        pauseFor: const Duration(seconds: 3),
+        pauseFor: const Duration(seconds: 8),
         listenMode: stt.ListenMode.dictation,
       ),
       onResult: (result) => _handleResult(

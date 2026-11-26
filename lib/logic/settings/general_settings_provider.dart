@@ -44,7 +44,17 @@ class GeneralSettingsController extends AsyncNotifier<GeneralSettings> {
   Future<void> setBiometricEnabled(bool value) => _update((s) => s.copyWith(biometricEnabled: value));
 
   Future<void> setPassword(String rawPassword) =>
-      _update((s) => s.copyWith(passwordEnabled: true, passwordHash: hashAppLockPassword(rawPassword)));
+      _update((s) => s.copyWith(
+            passwordEnabled: true,
+            passwordHash: hashAppLockPassword(rawPassword),
+            passwordLength: rawPassword.length,
+          ));
+
+  /// يحفظ طول كلمة المرور لإعدادات قديمة لا تحمله (تُستدعى بعد فتح ناجح فقط).
+  Future<void> rememberPasswordLength(int length) {
+    if (state.value?.passwordLength != null) return Future.value();
+    return _update((s) => s.copyWith(passwordLength: length));
+  }
 
   Future<void> disablePassword() => _update((s) => s.copyWith(passwordEnabled: false, clearPasswordHash: true));
 

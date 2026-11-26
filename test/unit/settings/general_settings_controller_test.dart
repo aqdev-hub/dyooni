@@ -45,6 +45,32 @@ void main() {
     expect(notifier.verifyPassword('0000'), isFalse);
   });
 
+  test('the password length is stored with the password, survives JSON, and is cleared with it', () async {
+    await container.read(generalSettingsProvider.future);
+    final notifier = container.read(generalSettingsProvider.notifier);
+    await notifier.setPassword('55555');
+
+    var state = container.read(generalSettingsProvider).value!;
+    expect(state.passwordLength, 5);
+    expect(GeneralSettings.fromJson(state.toJson()).passwordLength, 5);
+
+    await notifier.disablePassword();
+    state = container.read(generalSettingsProvider).value!;
+    expect(state.passwordLength, isNull);
+  });
+
+  test('settings saved before the length existed learn it once, and never overwrite it', () async {
+    await container.read(generalSettingsProvider.future);
+    final notifier = container.read(generalSettingsProvider.notifier);
+    await notifier.setPassword('1234');
+    // Simulate an old save: no length.
+    final old = GeneralSettings.fromJson({...container.read(generalSettingsProvider).value!.toJson()}..remove('passwordLength'));
+    expect(old.passwordLength, isNull);
+
+    await notifier.rememberPasswordLength(9);
+    expect(container.read(generalSettingsProvider).value!.passwordLength, 4); // already known: kept
+  });
+
   test('disablePassword() turns protection off and clears the stored hash', () async {
     await container.read(generalSettingsProvider.future);
     final notifier = container.read(generalSettingsProvider.notifier);

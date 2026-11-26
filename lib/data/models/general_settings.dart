@@ -16,6 +16,7 @@ class GeneralSettings {
     this.biometricEnabled = false,
     this.passwordEnabled = false,
     this.passwordHash,
+    this.passwordLength,
     this.pinMatchingAccountsOnSearch = true,
     this.showAmountInWordsWhileTyping = true,
     this.showAccountCeilingOnAdd = false,
@@ -38,6 +39,11 @@ class GeneralSettings {
   /// تجزئة (hash) كلمة مرور قفل التطبيق — لا تُخزَّن أبدًا كنص صريح (انظر
   /// core/utils/app_lock_password.dart، بنفس مبدأ عدم تخزين أسرار خام كـ backup_crypto.dart).
   final String? passwordHash;
+
+  /// عدد خانات كلمة مرور القفل. يتيح لشاشة القفل أن تتحقق تلقائيًا لحظة اكتمال الخانات وتمنع
+  /// إدخال خانة زائدة. تخزين الطول وحده يكشف قليلًا جدًا؛ `null` = إعدادات قديمة (تُرحَّل عند
+  /// أول فتح ناجح).
+  final int? passwordLength;
 
   final bool pinMatchingAccountsOnSearch;
   final bool showAmountInWordsWhileTyping;
@@ -78,6 +84,7 @@ class GeneralSettings {
     bool? biometricEnabled,
     bool? passwordEnabled,
     String? passwordHash,
+    int? passwordLength,
     bool clearPasswordHash = false,
     bool? pinMatchingAccountsOnSearch,
     bool? showAmountInWordsWhileTyping,
@@ -103,6 +110,7 @@ class GeneralSettings {
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
       passwordEnabled: passwordEnabled ?? this.passwordEnabled,
       passwordHash: clearPasswordHash ? null : (passwordHash ?? this.passwordHash),
+      passwordLength: clearPasswordHash ? null : (passwordLength ?? this.passwordLength),
       pinMatchingAccountsOnSearch: pinMatchingAccountsOnSearch ?? this.pinMatchingAccountsOnSearch,
       showAmountInWordsWhileTyping: showAmountInWordsWhileTyping ?? this.showAmountInWordsWhileTyping,
       showAccountCeilingOnAdd: showAccountCeilingOnAdd ?? this.showAccountCeilingOnAdd,
@@ -124,6 +132,7 @@ class GeneralSettings {
         'biometricEnabled': biometricEnabled,
         'passwordEnabled': passwordEnabled,
         'passwordHash': passwordHash,
+        'passwordLength': passwordLength,
         'pinMatchingAccountsOnSearch': pinMatchingAccountsOnSearch,
         'showAmountInWordsWhileTyping': showAmountInWordsWhileTyping,
         'showAccountCeilingOnAdd': showAccountCeilingOnAdd,
@@ -144,6 +153,7 @@ class GeneralSettings {
         biometricEnabled: json['biometricEnabled'] as bool? ?? false,
         passwordEnabled: json['passwordEnabled'] as bool? ?? false,
         passwordHash: json['passwordHash'] as String?,
+        passwordLength: json['passwordLength'] as int?,
         pinMatchingAccountsOnSearch: json['pinMatchingAccountsOnSearch'] as bool? ?? true,
         showAmountInWordsWhileTyping: json['showAmountInWordsWhileTyping'] as bool? ?? true,
         showAccountCeilingOnAdd: json['showAccountCeilingOnAdd'] as bool? ?? false,
